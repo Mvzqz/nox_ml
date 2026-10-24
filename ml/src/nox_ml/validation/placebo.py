@@ -13,7 +13,8 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-from nox_ml.inversion.normalized import CDMX_UTC_OFFSET_H, interval, local_day
+from nox_ml.inversion.normalized import interval
+from nox_ml.time import local_day, local_hour
 
 WINDOW = 28  # days searched on each side for reference days
 MIN_HOURS = 4  # a day needs this many valid hours to enter the daily table
@@ -45,8 +46,7 @@ def hourly_to_daily(
     hourly: pd.DataFrame, hours: tuple[int, int], holidays: Collection[str] = (), min_hours: int = MIN_HOURS
 ) -> pd.DataFrame:
     """Daily table of the local start hours in ``hours`` (inclusive) from a table with a UTC column ``h``."""
-    local = hourly.h - pd.Timedelta(hours=CDMX_UTC_OFFSET_H)
-    sel = hourly[local.dt.hour.between(*hours)].assign(day=lambda x: local_day(x.h))
+    sel = hourly[local_hour(hourly.h).between(*hours)].assign(day=lambda x: local_day(x.h))
     return daily_table(sel, holidays, min_hours)
 
 
