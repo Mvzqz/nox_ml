@@ -79,7 +79,7 @@ def station_nox(
     """
     rows = nox[
         nox["local"].between(start, f"{end} 23:59")
-        & nox["hour"].between(*local_hours)
+        & nox["local"].dt.hour.between(*local_hours)
         & nox["id_station"].isin(stations)
     ]
     both = rows[rows["NOX"].notna() & rows["NO2"].notna()]
