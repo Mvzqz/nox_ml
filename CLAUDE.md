@@ -4,7 +4,8 @@
 - Language: code, comments and code docs in English; notebooks, reports and `context/` (except ADRs) in Spanish.
 - Research code to migrate lives on the `research-archive` branch (`git show research-archive:scripts/<file>`). Never merge that branch. Migrate one module at a time into `ml/src/nox_ml/`, with tests per `docs/testing.md`, and keep the numbers it reproduces (see `reports/RESUMEN.md` and `reports/PENDIENTES.md` on that branch).
 - Every change must pass `bin/check`.
-- Commit and push only to your own feature branch; never to `main`. Open a pull request; the owner reviews and merges.
+- Commit and push only to your own feature branch; never to `main`. Name the branch after the change (e.g. `physics/time-module`, `data/stuck-sensors`); never include `claude` in branch names. Open a pull request; the owner reviews and merges.
+- Open tasks live in `context/management/tareas.md`; mark a task done with the date and PR number.
 - Never add AI co-author lines to commits and never add collaborators.
 - Never print, commit or log credentials (DagsHub token, `.netrc`).
 - Prefer simple solutions; keep tests expressive and fast.
