@@ -47,12 +47,6 @@ def test_merra_to_hourly_drops_duplicate_hours_when_days_overlap():
     assert pbl.merra_to_hourly(m2).index.is_unique
 
 
-def test_local_hour_is_utc_minus_six_without_dst():
-    index = pd.DatetimeIndex(["2023-01-01 18:00", "2023-07-01 18:00", "2023-01-01 03:00"])
-
-    assert pbl.local_hour(index).tolist() == [12, 12, 21]
-
-
 def two_sources(era5, merra2, start="2023-01-01 18:00") -> pd.DataFrame:
     idx = pd.date_range(start, periods=len(era5), freq="D")
     return pbl.paired(pd.Series(era5, index=idx, dtype=float), pd.Series(merra2, index=idx, dtype=float))

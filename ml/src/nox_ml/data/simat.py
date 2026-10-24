@@ -19,8 +19,9 @@ from typing import IO
 import numpy as np
 import pandas as pd
 
-from nox_ml.data.domain import AFTERNOON_HOURS, DRY_MONTHS, LAT, LON, local_to_utc
+from nox_ml.data.domain import AFTERNOON_HOURS, DRY_MONTHS, LAT, LON
 from nox_ml.data.qc import Check
+from nox_ml.time import local_to_utc
 
 HEADER_LINES = 9
 # REDMET 2024 reports wind speed in mph labelled as m/s (step at 2024-01-01, ~2.2x ERA5 and METAR MMMX).
