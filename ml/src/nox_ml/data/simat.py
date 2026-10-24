@@ -105,6 +105,21 @@ def stuck_hours_by_station(wide: pd.DataFrame, column: str = "NOX") -> pd.Series
     return ordered.groupby("id_station")[column].apply(lambda s: int(stuck_mask(s).sum()))
 
 
+def mask_stuck(wide: pd.DataFrame, column: str = "NOX") -> pd.DataFrame:
+    """Copy of `wide` with NO, NO2 and NOX set to NaN in the hours where `column` is stuck (see `stuck_mask`).
+
+    The analyzer reads NO and NOX, so a stuck NOX hour makes the three columns unreliable. `flag_hi`, when
+    present, is cleared on those hours. Other hours and stations are untouched.
+    """
+    stuck = wide.sort_values("local").groupby("id_station")[column].transform(stuck_mask).astype(bool)
+    stuck = stuck.reindex(wide.index)
+    out = wide.copy()
+    out.loc[stuck, [c for c in NOX_PARAMETERS if c in out]] = np.nan
+    if "flag_hi" in out:
+        out.loc[stuck, "flag_hi"] = False
+    return out
+
+
 def clean_wind(met: pd.DataFrame) -> pd.DataFrame:
     """WSP and WDR per station-hour; WSP of 2024 is converted from mph to m/s (see `fix_wind_speed`)."""
     return fix_wind_speed(pivot_hourly(met, WIND_PARAMETERS))
@@ -279,9 +294,13 @@ def load_units(raw_dir: Path) -> pd.Series:
         return parse_units(f)
 
 
-def run_qc(raw_dir: Path, out_dir: Path, years: list[int]) -> list[Check]:
+def run_qc(raw_dir: Path, out_dir: Path, years: list[int], mask: bool = True) -> list[Check]:
     """Load, clean and check SIMAT NOx and wind; write `simat_nox.parquet`, `simat_wind.parquet` and
-    `simat_nox_completeness.csv` to `out_dir`. Returns all checks."""
+    `simat_nox_completeness.csv` to `out_dir`. Returns all checks.
+
+    The checks report the stuck-sensor hours; with `mask` they are then set to NaN (see `mask_stuck`) before
+    the tables are written.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     catalog, units = load_catalog(raw_dir), load_units(raw_dir)
     domain_stations = set(catalog.loc[catalog["in_domain"], "station"])
@@ -291,6 +310,14 @@ def run_qc(raw_dir: Path, out_dir: Path, years: list[int]) -> list[Check]:
     wide = clean_nox(pol)
     checks = [Check(None, f"SIMAT {years[0]}-{years[-1]}")]
     checks += nox_checks(pol, wide, catalog, units)
+    if mask:
+        masked = mask_stuck(wide)
+        checks.append(
+            Check(
+                None, f"Stuck NOX hours set to NaN: {int((wide['NOX'].notna() & masked['NOX'].isna()).sum())}"
+            )
+        )
+        wide = masked
     checks.append(Check(None, f"Catalog stations inside the domain: {len(domain_stations)}"))
     completeness = afternoon_completeness(wide, domain_stations)
     n_valid = (completeness >= MIN_AFTERNOON_COMPLETENESS).sum(axis=1)
