@@ -10,6 +10,7 @@ from nox_ml.validation.placebo import (
     hourly_to_daily,
     placebo,
     reference_days,
+    split_placebo,
 )
 
 EVENTS = list(pd.date_range("2024-03-12", periods=8, freq="9D"))  # every 9 days
@@ -159,3 +160,19 @@ def test_episodes_group_consecutive_days():
     days = pd.to_datetime(["2024-03-01", "2024-03-02", "2024-03-05", "2024-03-09", "2024-03-10"])
 
     assert [len(e) for e in episodes(list(days))] == [2, 1, 2]
+
+
+def test_split_placebo_is_centered_on_one_when_the_days_share_one_emission(make_hourly):
+    d = daily_table(make_hourly(n_days=60, noise=0.05, seed=4))
+
+    samples = split_placebo(d, 8, 500, np.random.default_rng(0))
+
+    assert len(samples) == 500
+    assert np.median(samples) == pytest.approx(1.0, abs=0.02)
+
+
+def test_split_placebo_widens_with_the_noise_of_the_days(make_hourly):
+    quiet = split_placebo(daily_table(make_hourly(noise=0.02, seed=1)), 8, 300, np.random.default_rng(0))
+    noisy = split_placebo(daily_table(make_hourly(noise=0.3, seed=1)), 8, 300, np.random.default_rng(0))
+
+    assert noisy.std() > 2 * quiet.std()
