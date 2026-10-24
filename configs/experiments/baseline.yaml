@@ -1,0 +1,10 @@
+# Baseline of the evaluation harness: Mexico City, Nov-Dec 2023, afternoons (SIMAT labels 12-17 local).
+# Run: uv run nox-ml run configs/experiments/baseline.yaml  ->  runs/baseline/
+# Only the fields that differ from the baseline need to appear in other configs.
+name: baseline
+period:
+  start: 2023-11-01
+  end: 2023-12-31
+simat_hours: [12, 17]
+bootstrap: {n: 200, seed: 7, level: 0.90}  # whole days, resolved from the hour systems
+placebo: {n: 2000, seed: 3, level: 0.90}  # fake Sundays among weekdays

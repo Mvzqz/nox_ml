@@ -3,15 +3,18 @@
 Commands are added as research scripts are migrated.
 """
 
+import json
 from pathlib import Path
 from typing import Annotated
 
 import pandas as pd
 import typer
+from pydantic import ValidationError
 
 from nox_ml import __version__
 from nox_ml.data import pbl, simat, tempo
 from nox_ml.data.qc import render
+from nox_ml.validation import experiment
 
 RAW = Path("data/raw")
 INTERIM = Path("data/interim")
@@ -78,6 +81,22 @@ def fill_pbl(
 ) -> None:
     """Fill the ERA5 boundary-layer gap with bias-corrected MERRA-2."""
     typer.echo(render(pbl.run_fill(merra_dir, era5_dir, out_dir)))
+
+
+@app.command()
+def run(
+    config: Annotated[Path, typer.Argument(help="Experiment YAML, e.g. configs/experiments/baseline.yaml.")],
+    runs_dir: Annotated[Path, typer.Option(help="Where runs/<name>/ is written.")] = Path("runs"),
+) -> None:
+    """Run an experiment: invert, validate and write config, metrics and code version to runs/<name>/."""
+    try:
+        cfg = experiment.read_config(config)
+    except ValidationError as error:
+        typer.echo(f"Invalid config {config}:\n{error}", err=True)
+        raise typer.Exit(2) from error
+    out = experiment.run_experiment(cfg, runs_dir)
+    typer.echo(experiment.headline(json.loads((out / "metrics.json").read_text())))
+    typer.echo(f"Written to {out}/")
 
 
 if __name__ == "__main__":
