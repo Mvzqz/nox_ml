@@ -30,14 +30,17 @@ Hours are already filtered as in research (hours with station rows and wind, loc
 
 ```python
 class Model(Protocol):
-    name: str                       # registry key, e.g. "inversion_plume"
+    name: str  # registry key, e.g. "inversion_plume"
     role: Literal["model", "reference"]  # references (IDW, kriging) only predict concentrations
-    params: BaseModel               # pydantic hyperparameters (validated, serializable)
+    params: BaseModel  # pydantic hyperparameters (validated, serializable)
 
     def fit(self, data: Dataset, *, exclude_stations: Sequence[str] = ()) -> Self: ...
-    def predict_stations(self, data: Dataset, stations: Sequence[str]) -> pd.DataFrame: ...
+    def predict_stations(self, data: Dataset, stations: Sequence[str]) -> pd.DataFrame:
+        ...
         # columns: station, utc, nox_ppb_pred
-    def estimate_emissions(self) -> EmissionEstimate: ...
+
+    def estimate_emissions(self) -> EmissionEstimate:
+        ...
         # required when role == "model". kind="absolute": mean and sd (t/yr) per zone × day type;
         # kind="relative": emission index per day type (and zone if available), mean and CI,
         # for methods that only resolve changes (e.g. meteorological normalization).
