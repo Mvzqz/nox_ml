@@ -35,9 +35,10 @@ def qc_simat(
     years: Annotated[list[int], typer.Argument(help="Years to load, e.g. 2023 2024.")],
     raw_dir: Annotated[Path, typer.Option(help="SIMAT raw files.")] = RAW / "simat",
     out_dir: Annotated[Path, typer.Option(help="Where tables are written.")] = INTERIM,
+    mask: Annotated[bool, typer.Option(help="Set stuck-sensor NOx hours to NaN in the output.")] = True,
 ) -> None:
     """Load SIMAT NOx and wind, run the quality checks and write simat_nox/simat_wind parquet files."""
-    typer.echo(render(simat.run_qc(raw_dir, out_dir, years)))
+    typer.echo(render(simat.run_qc(raw_dir, out_dir, years, mask)))
 
 
 @app.command("qc-tempo")
