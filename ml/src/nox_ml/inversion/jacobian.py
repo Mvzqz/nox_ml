@@ -21,7 +21,15 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from nox_ml.inversion.normalized import day_type
-from nox_ml.physics.plume import MOLEC_CM2_PER_GM2, PPB_PER_GM3, T_PER_YR_TO_GS, plume, speed
+from nox_ml.physics.plume import (
+    MOLEC_CM2_PER_GM2,
+    PPB_PER_GM3,
+    SIGMA_THETA,
+    T_PER_YR_TO_GS,
+    U_MIN,
+    plume,
+    speed,
+)
 from nox_ml.physics.puff import (
     MAX_AGE_H,
     TRAFFIC_PROFILE,
@@ -175,3 +183,44 @@ def _block(
     cells = (cells_steady * roads_now + cells_aged) * sources.cell_prior
     zones = np.stack([cells[:, sources.cell_zone == z].sum(axis=1) for z in range(sources.n_zones)], axis=1)
     return np.hstack([(points_steady + points_aged) * scale, zones * scale])
+
+
+def jacobian_hour_plume(
+    wind_h: tuple[float, float],
+    pbl_h: float,
+    sources: Sources,
+    stations: Receptors,
+    pixels: Receptors,
+    no2_nox_ratio: float,
+    sigma_theta: float = SIGMA_THETA,
+    u_min: float = U_MIN,
+) -> HourJacobian:
+    """Matrix of one hour with the stationary plume: the wind `wind_h` = (u, v) (m/s) of the whole domain
+    blows forever, with no memory of earlier hours and a constant emission through the day. Migrated from
+    `jacobian_hour` (`scripts/feasibility_linear.py`, research-archive). `sigma_theta` (rad) and `u_min`
+    (m/s) are the wind-direction uncertainty and the transport-speed floor. Same columns and units as
+    `jacobian_hour_puff`."""
+    to_ppb = T_PER_YR_TO_GS * PPB_PER_GM3
+    to_molec = T_PER_YR_TO_GS * MOLEC_CM2_PER_GM2 * no2_nox_ratio
+
+    def block(receptors: Receptors, extra_sy: float, ground: bool, scale: float) -> Array:
+        if not len(receptors.x):
+            return np.zeros((0, sources.n_columns))
+        pick = 0 if ground else 1
+
+        def response(xs: Array, ys: Array) -> Array:
+            u, v = wind_h
+            return plume(
+                xs, ys, receptors.x, receptors.y, u, v, pbl_h, extra_sy, sigma_theta=sigma_theta, u_min=u_min
+            )[pick]
+
+        cells = response(sources.cell_x, sources.cell_y) * sources.cell_prior
+        zones = np.stack(
+            [cells[:, sources.cell_zone == z].sum(axis=1) for z in range(sources.n_zones)], axis=1
+        )
+        return np.hstack([response(sources.point_x, sources.point_y) * scale, zones * scale])
+
+    return HourJacobian(
+        stations=block(stations, 0.0, ground=True, scale=to_ppb),
+        pixels=block(pixels, PIXEL_SIGMA_Y, ground=False, scale=to_molec),
+    )
