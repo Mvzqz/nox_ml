@@ -133,6 +133,75 @@ def test_stuck_hours_by_station_counts_each_station_separately():
     assert simat.stuck_hours_by_station(wide).to_dict() == {"MER": 0, "TAH": 8}
 
 
+def stuck_wide() -> pd.DataFrame:
+    """TAH is stuck at 7 ppb for 8 hours among varying readings; MER varies throughout."""
+    local = pd.date_range("2024-01-01", periods=12, freq="h")
+    tah = np.r_[[3.0, 4.0], [7.0] * 8, [5.0, 6.0]]
+    wide = pd.concat(
+        [
+            pd.DataFrame({"id_station": s, "local": local, "NO": v - 1, "NO2": v - 2, "NOX": v})
+            for s, v in (("TAH", tah), ("MER", np.arange(12) + 10.0))
+        ],
+        ignore_index=True,
+    )
+    wide["flag_hi"] = wide["NOX"] > simat.HIGH_NOX_PPB
+    return wide
+
+
+def test_mask_stuck_sets_nox_to_nan_only_in_the_stuck_run():
+    masked = simat.mask_stuck(stuck_wide())
+
+    tah = masked[masked["id_station"] == "TAH"]
+    assert tah["NOX"].isna().tolist() == [False] * 2 + [True] * 8 + [False] * 2
+    assert tah["NOX"].dropna().tolist() == [3.0, 4.0, 5.0, 6.0]
+
+
+def test_mask_stuck_masks_no_and_no2_together_with_nox():
+    masked = simat.mask_stuck(stuck_wide())
+
+    stuck = masked[(masked["id_station"] == "TAH") & masked["NOX"].isna()]
+    assert len(stuck) == 8
+    assert stuck[["NO", "NO2"]].isna().all().all()
+
+
+def test_mask_stuck_leaves_other_stations_untouched():
+    wide = stuck_wide()
+
+    masked = simat.mask_stuck(wide)
+
+    mer = wide["id_station"] == "MER"
+    pd.testing.assert_frame_equal(masked[mer], wide[mer])
+
+
+def test_mask_stuck_keeps_the_input_unchanged():
+    wide = stuck_wide()
+    before = wide.copy()
+
+    simat.mask_stuck(wide)
+
+    pd.testing.assert_frame_equal(wide, before)
+
+
+def test_mask_stuck_is_a_no_op_without_stuck_runs():
+    wide = stuck_wide()
+    wide = wide[wide["id_station"] == "MER"].reset_index(drop=True)
+
+    pd.testing.assert_frame_equal(simat.mask_stuck(wide), wide)
+
+
+def test_mask_stuck_leaves_nothing_for_the_stuck_check_to_report():
+    masked = simat.mask_stuck(stuck_wide())
+
+    assert simat.stuck_hours_by_station(masked).to_dict() == {"MER": 0, "TAH": 0}
+
+
+def test_mask_stuck_clears_flag_hi_on_masked_hours():
+    wide = stuck_wide()
+    wide.loc[(wide["id_station"] == "TAH") & (wide["NOX"] == 7.0), ["NOX", "flag_hi"]] = [300.0, True]
+
+    assert not simat.mask_stuck(wide)["flag_hi"].any()
+
+
 def wind_wide(local, wsp, wdr=90.0):
     df = pd.DataFrame({"id_station": "MER", "local": pd.to_datetime(local), "WSP": wsp, "WDR": wdr})
     df["utc"] = df["local"] + pd.Timedelta(hours=6)
@@ -347,3 +416,34 @@ def test_run_qc_lists_the_stations_of_the_catalog_inside_the_domain(simat_dir, t
     checks = simat.run_qc(simat_dir, tmp_path, [2024])
 
     assert "Catalog stations inside the domain: 2" in [c.message for c in checks]
+
+
+def write_stuck_mer(simat_dir, hours=12, value=40.0):
+    """Overwrite the first `hours` NOX readings of MER in the standard fixture with one flat run."""
+    pol = nox_long(simat_hours())
+    stuck = (pol["id_station"] == "MER") & (pol["id_parameter"] == "NOX")
+    first = pol.index[stuck][:hours]
+    pol.loc[first, "value"] = value
+    write_simat_zip(simat_dir / "contaminantes_2024.csv.gz", pol)
+
+
+def test_run_qc_masks_stuck_hours_by_default_and_still_reports_them(simat_dir, tmp_path):
+    write_stuck_mer(simat_dir)
+
+    checks = simat.run_qc(simat_dir, tmp_path, [2024])
+
+    nox = pd.read_parquet(tmp_path / "simat_nox.parquet")
+    assert nox.loc[nox["id_station"] == "MER", "NOX"].isna().sum() == 12
+    assert nox.loc[nox["id_station"] == "AJM", "NOX"].notna().all()
+    messages = [c.message for c in checks]
+    assert any("identical value: 12 (MER:12)" in m for m in messages)
+    assert "Stuck NOX hours set to NaN: 12" in messages
+
+
+def test_run_qc_keeps_stuck_hours_when_masking_is_off(simat_dir, tmp_path):
+    write_stuck_mer(simat_dir)
+
+    simat.run_qc(simat_dir, tmp_path, [2024], mask=False)
+
+    nox = pd.read_parquet(tmp_path / "simat_nox.parquet")
+    assert nox.loc[nox["id_station"] == "MER", "NOX"].notna().all()
