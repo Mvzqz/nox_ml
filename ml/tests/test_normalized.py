@@ -7,7 +7,6 @@ from nox_ml.inversion.normalized import (
     day_type,
     difference_in_differences,
     interval,
-    local_day,
     ratio,
 )
 
@@ -104,10 +103,3 @@ def test_day_type_marks_sundays_and_holidays_apart_from_weekdays_and_saturdays()
     holidays = ["2024-03-18"]  # a Monday
 
     assert day_type(days, holidays).tolist() == [0, 0, 1, 2, 2, 0, 0]
-
-
-def test_local_day_shifts_utc_to_mexico_city_time():
-    utc = pd.Series(pd.to_datetime(["2024-03-15 05:59", "2024-03-15 06:00"]))
-
-    assert local_day(utc).tolist() == pd.to_datetime(["2024-03-14", "2024-03-15"]).tolist()
-    assert local_day(pd.DatetimeIndex(utc)).tolist() == pd.to_datetime(["2024-03-14", "2024-03-15"]).tolist()

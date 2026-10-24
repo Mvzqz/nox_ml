@@ -21,8 +21,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from nox_ml.data.domain import AFTERNOON_HOURS, LOCAL_UTC_OFFSET
+from nox_ml.data.domain import AFTERNOON_HOURS
 from nox_ml.data.qc import Check
+from nox_ml.time import local_hour
 
 COLLECTION = "C1276812838-GES_DISC"
 # MERRA-2 grid indices (lat -90:0.5:90, lon -180:0.625:179.375): lat 19.0-20.0, lon -100.0 to -98.75.
@@ -73,10 +74,6 @@ def merra_to_hourly(m2: pd.Series) -> pd.Series:
     on_hour = (m2 + m2.shift(1)) / 2
     on_hour.index = on_hour.index.floor("h") + pd.Timedelta(hours=1)
     return on_hour[~on_hour.index.duplicated()]
-
-
-def local_hour(index: pd.DatetimeIndex) -> pd.Index:
-    return pd.Index((index - LOCAL_UTC_OFFSET).hour)
 
 
 def paired(era: pd.Series, merra: pd.Series) -> pd.DataFrame:

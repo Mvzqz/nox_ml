@@ -17,13 +17,6 @@ import numpy as np
 import pandas as pd
 
 WEEKDAY, SATURDAY, SUNDAY_HOLIDAY = 0, 1, 2
-CDMX_UTC_OFFSET_H = 6  # Mexico City local time is UTC-6 (no daylight saving since 2022)
-
-
-def local_day(utc: pd.Series | pd.DatetimeIndex, utc_offset_h: int = CDMX_UTC_OFFSET_H):
-    """Local calendar day (midnight) of naive UTC timestamps."""
-    shifted = utc - pd.Timedelta(hours=utc_offset_h)
-    return shifted.dt.normalize() if isinstance(shifted, pd.Series) else shifted.normalize()
 
 
 def day_type(days: pd.DatetimeIndex, holidays: Collection[str] = ()) -> np.ndarray:

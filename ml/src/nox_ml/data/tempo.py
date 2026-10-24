@@ -15,8 +15,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from nox_ml.data.domain import CORE_LAT, CORE_LON, LAT, LON, utc_to_local
+from nox_ml.data.domain import CORE_LAT, CORE_LON, LAT, LON
 from nox_ml.data.qc import Check
+from nox_ml.time import utc_to_local
 
 MAX_CLOUD_FRACTION = 0.2
 MATCH_KM = 3.0  # max distance between a station and the pixel paired with it
