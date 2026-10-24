@@ -19,6 +19,15 @@ def test_qc_simat_command_prints_checks_and_writes_tables(simat_dir, tmp_path):
     assert (out / "simat_wind.parquet").exists()
 
 
+def test_qc_simat_command_accepts_no_mask_to_keep_stuck_hours(simat_dir, tmp_path):
+    result = runner.invoke(
+        app, ["qc-simat", "2024", "--raw-dir", str(simat_dir), "--out-dir", str(tmp_path), "--no-mask"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Stuck NOX hours set to NaN" not in result.stdout
+
+
 def test_qc_tempo_command_uses_the_simat_catalog_and_output_folder(simat_dir, tmp_path, write_tempo_granule):
     out, raw = tmp_path / "interim", tmp_path / "tempo"
     raw.mkdir()
