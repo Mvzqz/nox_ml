@@ -1,0 +1,73 @@
+[project]
+name = "nox-workspace"
+version = "0.1.0"
+description = "Measurement-based estimation of NOx emission changes (workspace root)"
+requires-python = ">=3.12"
+readme = "README.md"
+
+[tool.uv.workspace]
+members = ["ml", "app"]
+
+[tool.uv.sources]
+nox-ml = { workspace = true }
+nox-app = { workspace = true }
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "pytest-xdist>=3",
+    "hypothesis>=6",
+    "ruff>=0.6",
+    "pyright>=1.1.380",
+    "pre-commit>=3.8",
+    "nbstripout>=0.7",
+    "dvc>=3.50",
+]
+notebooks = [
+    "jupyterlab>=4",
+    "ipykernel>=6",
+    "nbmake>=1.5",
+]
+
+# --- Code quality -------------------------------------------------------------
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+force-exclude = true
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "N", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]  # non-ASCII characters (ₓ, ±, °) are intentional (Spanish notebooks, units)
+
+[tool.ruff.lint.isort]
+known-first-party = ["nox_ml", "nox_app"]
+
+[tool.pyright]
+include = ["ml/src", "app/src", "ml/tests", "app/tests", "tests"]
+exclude = ["**/__pycache__"]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+
+# --- Tests -------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["ml/tests", "app/tests", "tests"]
+addopts = "-ra --strict-markers -m 'not slow'"
+markers = [
+    "slow: real-data or long-running tests (scheduled CI or `-m slow`)",
+    "regression: reproduce key scientific figures on a fixed sample",
+]
+
+[tool.coverage.run]
+source = ["nox_ml", "nox_app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

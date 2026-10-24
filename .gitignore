@@ -1,0 +1,25 @@
+# Ambientes y cachés
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.ipynb_checkpoints/
+.hypothesis/
+
+# Datos: versionados con DVC, nunca con git
+/data/raw
+/data/interim
+/data/processed
+
+# Credenciales: nunca en el repositorio
+.netrc
+*.netrc
+.env
+.dvc/config.local
+
+# Sistema
+.DS_Store

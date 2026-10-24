@@ -1,0 +1,9 @@
+#!/bin/sh
+# The same fast checks CI runs on every push. Usage: bin/check
+set -eu
+cd "$(dirname "$0")/.."
+
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run pytest -n auto --cov --cov-report=term

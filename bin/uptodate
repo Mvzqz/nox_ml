@@ -1,0 +1,50 @@
+#!/bin/sh
+# Prepares this machine to run the current version of the repository.
+# Works on Linux (Ubuntu, other distributions, cloud) and macOS. Safe to run repeatedly.
+set -eu
+
+cd "$(dirname "$0")/.."
+
+step() { printf '\n==> %s\n' "$1"; }
+warn() { printf '    warning: %s\n' "$1"; }
+
+step "System: $(uname -s) $(uname -m)"
+
+step "uv (libraries and environments)"
+if ! command -v uv >/dev/null 2>&1; then
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    # The installer puts uv in ~/.local/bin or $XDG_BIN_HOME; add it to this session.
+    PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$HOME/.cargo/bin:$PATH"
+    export PATH
+fi
+uv --version
+
+step "Libraries (from uv.lock)"
+uv sync --all-packages --group dev --group notebooks
+
+step "Pre-commit hooks"
+if [ -d .git ]; then
+    uv run pre-commit install
+else
+    warn "not a git repository; skipping hooks"
+fi
+
+step "Data (DVC)"
+if [ -f .dvc/config.local ]; then
+    uv run dvc pull || warn "dvc pull failed; check your credentials (docs/installation.md)"
+else
+    warn "no DagsHub credentials: data not downloaded (docs/installation.md)"
+fi
+
+step "NASA Earthdata credentials (only needed to re-download TEMPO from the source)"
+if [ -f "$HOME/.netrc" ] && grep -q urs.earthdata.nasa.gov "$HOME/.netrc"; then
+    echo "    ok"
+else
+    warn "no urs.earthdata.nasa.gov entry in ~/.netrc (not needed if you use dvc pull)"
+fi
+
+step "Quick check"
+uv run nox-ml version
+uv run pytest -q
+
+printf '\nDone.\n'
