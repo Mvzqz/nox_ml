@@ -30,6 +30,12 @@ else
 fi
 
 step "Data (DVC)"
+# In cloud sessions the DagsHub token comes from the environment (DAGSHUB_USER, DAGSHUB_TOKEN).
+if [ ! -f .dvc/config.local ] && [ -n "${DAGSHUB_TOKEN:-}" ]; then
+    uv run dvc remote modify origin --local auth basic
+    uv run dvc remote modify origin --local user "${DAGSHUB_USER:-Mvzqz}"
+    uv run dvc remote modify origin --local password "$DAGSHUB_TOKEN"
+fi
 if [ -f .dvc/config.local ]; then
     uv run dvc pull || warn "dvc pull failed; check your credentials (docs/installation.md)"
 else
