@@ -11,7 +11,7 @@ The research phase is over (see `reports/PENDIENTES.md` in the research folder).
 
 - One repository (public GitHub `Mvzqz/nox_ml`, connected to DagsHub) with a **uv** workspace of two packages: `nox_ml` (ML and physics) and `nox_app` (interface). The app depends only on exported results.
 - **DVC** on DagsHub (private) for data from the start; the DVC pipeline is added once modules are migrated.
-- **ruff** (lint and format), **pyright** (types), **pytest + hypothesis** (tests), **pre-commit**, and **GitHub Actions** on Ubuntu and macOS.
+- **ruff** (lint and format), **pyright** (types), **pytest + hypothesis** (tests), **pre-commit**, and **GitHub Actions** on Ubuntu only (cheapest runner; amended 2026-10-24: macOS is checked locally by teammates who use it).
 - **Streamlit** for the interface for now; hosting (possibly GCP) is decided later.
 - **Jupyter** notebooks in `deliverables/` that only reuse package functions.
 - Risk-based test coverage (`docs/testing.md`).
