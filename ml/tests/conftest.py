@@ -6,6 +6,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from nox_ml.data.inputs import Inputs
+from nox_ml.inversion.jacobian import Receptors
+from nox_ml.inversion.linear import HourData
+
 HOURS = 6  # afternoon hours per day
 
 
@@ -39,3 +43,46 @@ def hourly_series(
 @pytest.fixture
 def make_hourly() -> Callable[..., pd.DataFrame]:
     return hourly_series
+
+
+STATIONS = {"AAA": (0.0, 0.0), "BBB": (6000.0, 1000.0), "CCC": (2000.0, 7000.0)}
+
+
+def small_inputs(sunday_scale: float = 1.0, seed: int = 0) -> Inputs:
+    """Two weeks (2023-11-06 to 11-19, local 12-17 h) at three stations, one point source and six road
+    cells in two regions. NOx is noise around 30 ppb, times ``sunday_scale`` on Sundays."""
+    rng = np.random.default_rng(seed)
+    zones = pd.DataFrame(
+        {
+            "x": [-3000.0, 0.0, 3000.0, 6000.0, 1000.0, 4000.0],
+            "y": [-1000.0, 2000.0, 5000.0, 1000.0, 8000.0, -2000.0],
+            "weight": [400.0, 300.0, 200.0, 300.0, 100.0, 200.0],
+            "region": [0, 0, 0, 1, 1, 1],
+        }
+    )
+    points = pd.DataFrame({"name": ["P0"], "x": [8000.0], "y": [4000.0], "prior": [100.0], "sd": [100.0]})
+    xy = pd.DataFrame(STATIONS, index=["x", "y"]).T
+    hours, ids = [], []
+    for day in pd.date_range("2023-11-06", periods=14):
+        for utc_hour in range(18, 24):  # 12-17 h local
+            wind = (float(rng.uniform(-3, 3)), float(rng.uniform(-3, 3)))
+            scale = sunday_scale if day.day_of_week == 6 else 1.0
+            n = len(STATIONS)
+            hours.append(
+                HourData(
+                    hour=day + pd.Timedelta(hours=utc_hour),
+                    wind=wind,
+                    pbl=800.0,
+                    stations=Receptors(xy["x"].to_numpy(), xy["y"].to_numpy()),
+                    nox=scale * (30 + 5 * rng.normal(size=n)),
+                    pixels=Receptors(np.array([1000.0, 5000.0]), np.array([2000.0, 3000.0])),
+                    no2=scale * (8e15 + 1e15 * rng.normal(size=2)),
+                )
+            )
+            ids.append(np.array(list(STATIONS)))
+    return Inputs(hours, ids, xy, zones, points, 0.7, n_regions=2)
+
+
+@pytest.fixture
+def make_inputs() -> Callable[..., Inputs]:
+    return small_inputs
