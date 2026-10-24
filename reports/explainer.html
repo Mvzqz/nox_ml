@@ -1,0 +1,642 @@
+<title>Rastreando el NOₓ de la CDMX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: una columna de lectura (~68ch); las figuras se ensanchan un poco; franja de secciones fija arriba. */
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --fg: #18212a; --muted: #56636f; --line: #d6dde3; --grid: #e6ebef;
+  --accent: #1d5f8f; --accent-soft: rgba(29,95,143,.12); --no2: #9c4a24; --no2-soft: rgba(156,74,36,.14);
+  --good: #2c7a4b; --bad: #b0393b; --warn: #a8741a;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #10151a; --surface: #172029; --fg: #e4e9ee; --muted: #9aa7b3; --line: #2a3642; --grid: #1f2a34;
+  --accent: #72b2e0; --accent-soft: rgba(114,178,224,.16); --no2: #db8a5c; --no2-soft: rgba(219,138,92,.16);
+  --good: #6cc191; --bad: #e57d7e; --warn: #d9a64a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #10151a; --surface: #172029; --fg: #e4e9ee; --muted: #9aa7b3; --line: #2a3642; --grid: #1f2a34;
+  --accent: #72b2e0; --accent-soft: rgba(114,178,224,.16); --no2: #db8a5c; --no2-soft: rgba(219,138,92,.16);
+  --good: #6cc191; --bad: #e57d7e; --warn: #d9a64a; color-scheme: dark }
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 17px; line-height: 1.6; }
+.wrap { max-width: 880px; margin: 0 auto; padding-inline: 20px; padding-block: 0 64px; }
+.col { max-width: 68ch; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 700; letter-spacing: -.01em; }
+h2 { font-size: 1.75rem; font-weight: 700; margin-top: 8px; }
+h3 { font-size: 1.15rem; font-weight: 700; margin-top: 28px; }
+p { margin: 12px 0 0; }
+a { color: var(--accent); }
+.eyebrow { font-family: var(--font-mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.lead { font-size: 1.2rem; color: var(--fg); margin-top: 16px; }
+.muted { color: var(--muted); }
+.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+sub { font-size: .7em; }
+
+nav.strip { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+nav.strip .in { max-width: 880px; margin: 0 auto; padding-inline: 20px; padding-block: 10px; display: flex; gap: 6px 16px; flex-wrap: wrap; font-size: .85rem; }
+nav.strip a { color: var(--muted); text-decoration: none; }
+nav.strip a:hover, nav.strip a:focus-visible { color: var(--fg); }
+
+header.hero { padding-block: 48px 8px; }
+.verdict { margin-top: 28px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.verdict > div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+.verdict .k { font-family: var(--font-mono); font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; }
+.verdict .yes .k { color: var(--good); } .verdict .no .k { color: var(--bad); } .verdict .key .k { color: var(--no2); }
+.verdict p { margin-top: 6px; font-size: .98rem; }
+
+section { padding-top: 56px; scroll-margin-top: 56px; }
+section > .eyebrow { display: block; margin-bottom: 4px; }
+
+figure { margin: 24px 0 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; min-width: 0; }
+figure .title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; }
+figure .sub { color: var(--muted); font-size: .88rem; margin-top: 2px; }
+figcaption { color: var(--muted); font-size: .8rem; margin-top: 10px; }
+.chart { width: 100%; overflow-x: auto; margin-top: 10px; }
+.chart svg { display: block; width: 100%; height: auto; min-width: 560px; }
+svg text { font-family: var(--font-body); }
+.t-ink { fill: var(--fg); } .t-mut { fill: var(--muted); } .t-mono { font-family: var(--font-mono); }
+
+.formula { font-family: var(--font-mono); font-size: 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-top: 16px; overflow-x: auto; white-space: nowrap; }
+.terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin-top: 12px; }
+.terms div { border-left: 3px solid var(--line); padding: 2px 0 2px 12px; font-size: .92rem; min-width: 0; }
+.terms b { display: block; font-family: var(--font-mono); font-size: .85rem; color: var(--no2); }
+
+.tbl { overflow-x: auto; margin-top: 16px; }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; min-width: 560px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+td.num { white-space: nowrap; }
+.pill { display: inline-block; font-family: var(--font-mono); font-size: .72rem; padding: 1px 8px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.ok { color: var(--good); } .pill.fix { color: var(--warn); } .pill.no { color: var(--bad); } .pill.na { color: var(--muted); }
+
+ol.steps { list-style: none; padding: 0; margin: 20px 0 0; counter-reset: s; display: grid; gap: 14px; }
+ol.steps > li { counter-increment: s; display: grid; grid-template-columns: 34px 1fr; gap: 12px; }
+ol.steps > li::before { content: counter(s); font-family: var(--font-mono); font-weight: 600; color: var(--accent); border: 1px solid var(--line); border-radius: 99px; width: 30px; height: 30px; display: grid; place-items: center; font-size: .85rem; background: var(--surface); }
+ol.steps h3 { margin-top: 3px; font-size: 1.05rem; }
+ol.steps p { margin-top: 4px; }
+ol.steps > li > div { min-width: 0; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 14px 28px; margin-top: 14px; }
+.controls label { display: grid; gap: 4px; font-size: .88rem; min-width: 220px; flex: 1; }
+.controls input[type=range] { width: 100%; accent-color: var(--accent); }
+.readout { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 14px; }
+.readout div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.readout .v { font-family: var(--font-mono); font-size: 1.4rem; font-weight: 600; }
+.readout .l { font-size: .8rem; color: var(--muted); }
+.readout .note { grid-column: 1 / -1; border: 0; padding: 0; font-size: .92rem; }
+
+.seg { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.seg button { font: inherit; font-size: .82rem; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.seg button:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.scen-desc { margin-top: 10px; font-size: .92rem; min-height: 2.6em; }
+
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 18px; }
+.two > div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; min-width: 0; }
+.two h3 { margin-top: 0; }
+.two ul { margin: 10px 0 0; padding-left: 18px; font-size: .95rem; }
+.two li + li { margin-top: 6px; }
+.tag { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; }
+
+.uses { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 18px; }
+.uses div { border-top: 2px solid var(--no2); padding-top: 10px; min-width: 0; }
+.uses b { font-family: var(--font-display); font-size: 1.02rem; }
+.uses p { margin-top: 4px; font-size: .93rem; }
+.uses .who { font-size: .8rem; color: var(--muted); margin-top: 6px; }
+
+dl.gloss { display: grid; grid-template-columns: minmax(120px, 190px) 1fr; gap: 8px 16px; margin-top: 16px; font-size: .93rem; }
+dl.gloss dt { font-weight: 600; } dl.gloss dd { margin: 0; color: var(--muted); min-width: 0; }
+@media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; } dl.gloss dd { margin-bottom: 8px; } body { font-size: 16px; } }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; }
+</style>
+
+<nav class="strip" aria-label="Secciones"><div class="in">
+  <a href="#problem">El problema</a><a href="#science">La ciencia</a><a href="#ml">El aprendizaje automático</a>
+  <a href="#data">Los datos</a><a href="#tried">Lo que probamos</a><a href="#datamatters">Cómo cambian los resultados con los datos</a>
+  <a href="#objective">Objetivo</a><a href="#benefits">Beneficios</a><a href="#next">Siguientes pasos</a>
+</div></nav>
+
+<div class="wrap">
+<header class="hero">
+  <span class="eyebrow">Prueba de concepto · Valle de México · estado a octubre de 2026</span>
+  <h1>¿Pueden las mediciones decirnos de dónde viene el NO<sub>x</sub> de la Ciudad de México?</h1>
+  <p class="lead col">Sí para el panorama general; todavía no para fábricas individuales. Antes de construir el modelo completo reunimos los datos públicos, revisamos su calidad e hicimos pruebas rápidas de la idea. Esta página explica el proyecto, la ciencia y el aprendizaje automático detrás de él, lo que probamos y lo que aprendimos.</p>
+  <div class="verdict">
+    <div class="yes"><span class="k">Ya funciona</span><p>Las emisiones del tráfico por zona (unos 18 km) y los <b>cambios relativos</b>: el domingo emite 0.65 de un día hábil, igual que dicen los conteos de tráfico. Ya hay una red neuronal informada por la física (PINN) y una app con el mapa. Las fuentes grandes (Acolman y los dos aeropuertos), solo con un viento mejor que el actual.</p></div>
+    <div class="no"><span class="k">Todavía no</span><p>Las emisiones de zonas industriales individuales, encontrar fuentes desconocidas y superar a la interpolación simple donde hay muchas estaciones.</p></div>
+    <div class="key"><span class="k">El límite principal</span><p>Qué tan bien conocemos el viento, más que cuántos sensores hay. Con un viento casi perfecto, 10 de 12 zonas industriales se vuelven medibles.</p></div>
+  </div>
+</header>
+
+<section id="problem">
+  <span class="eyebrow">1 · El problema</span>
+  <h2>Un gas café que se contabiliza cada pocos años</h2>
+  <div class="col">
+    <p>NO<sub>x</sub> son los óxidos de nitrógeno: el óxido nítrico (NO) y el dióxido de nitrógeno (NO<sub>2</sub>). Salen de todo lo que quema combustible: motores, calderas, centrales eléctricas, cocinas. El NO<sub>2</sub> es un gas café rojizo que irrita los pulmones, y el NO<sub>x</sub> es uno de los dos ingredientes del ozono que provoca las contingencias ambientales de la Ciudad de México.</p>
+    <p>Hoy las emisiones se conocen por el <b>inventario de emisiones</b> oficial. Se construye de abajo hacia arriba: se cuentan los autos, las fábricas y el combustible que usan, y se multiplica por factores de emisión. La edición pública más reciente es la de 2018. Reporta <span class="num">144,598</span> toneladas de NO<sub>x</sub> al año en la zona metropolitana: <span class="num">85.8 %</span> de vehículos, <span class="num">7.4 %</span> de fuentes pequeñas "de área", <span class="num">6.6 %</span> de industria y centrales eléctricas y <span class="num">0.2 %</span> natural.</p>
+    <p>El proyecto plantea la pregunta al revés. En lugar de contar fuentes, ¿podemos <b>medir el aire y trabajar hacia atrás</b> hasta dónde y cuánto se emite, de forma continua, para revisar el inventario y evaluar políticas?</p>
+  </div>
+  <h3>El objetivo original</h3>
+  <div class="col">
+    <p>Una prueba de concepto de 8 semanas que estima dónde y cuánto NO<sub>x</sub> se emite en el Valle de México a partir de mediciones de estaciones, datos satelitales y viento, con una red neuronal informada por la física. Los resultados se muestran en una aplicación con mapa. El inventario 2018 queda fuera del entrenamiento y solo se usa para revisar los resultados.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Prueba de éxito del plan original</th><th>Meta</th><th>Qué demuestra</th></tr></thead>
+    <tbody>
+      <tr><td>Prueba sintética: recuperar fuentes que plantamos</td><td class="num">ubicación &lt; 2 km, cantidad &lt; 25 %</td><td>Que el problema se puede resolver con estas estaciones</td></tr>
+      <tr><td>Predecir estaciones que el modelo nunca vio</td><td>mejor que la interpolación simple</td><td>Que el mapa de concentración es útil</td></tr>
+      <tr><td>Coincidir con el patrón espacial del satélite</td><td class="num">correlación &gt; 0.6</td><td>Que el patrón es correcto</td></tr>
+      <tr><td>Comparar con el inventario 2018</td><td class="num">vialidades 75–95 %, mismos 5 municipios principales</td><td>Que las fuentes son plausibles</td></tr>
+      <tr><td>Días de contingencia y domingos</td><td>emisiones visiblemente menores</td><td>Que el modelo responde a cambios reales</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="science">
+  <span class="eyebrow">2 · La ciencia</span>
+  <h2>Cómo se mueve la contaminación y por qué trabajar hacia atrás es difícil</h2>
+  <div class="col">
+    <p>Una vez emitida, una bocanada de NO<sub>x</sub> es <b>arrastrada por el viento</b>, <b>dispersada por la turbulencia</b>, <b>diluida</b> en la capa de aire bien mezclado cerca del suelo (de 1 a 1.5 km de espesor en una tarde de temporada seca) y <b>eliminada poco a poco por la química</b> (dura unas cuantas horas). Una sola ecuación, la de advección–difusión, describe todo esto. Solo modelamos las tardes (12:00–17:00), cuando la capa de mezcla es profunda y esta descripción sencilla funciona mejor.</p>
+  </div>
+  <div class="formula" aria-label="Ecuación de advección-difusión">∂C/∂t &nbsp;+&nbsp; <b>u</b>·∇C &nbsp;=&nbsp; ∇·(K ∇C) &nbsp;+&nbsp; S &nbsp;−&nbsp; C/τ</div>
+  <div class="terms">
+    <div><b>C</b>Cuánto NO<sub>x</sub> hay en el aire en cada lugar y momento</div>
+    <div><b>u·∇C</b>El viento lo arrastra (advección)</div>
+    <div><b>∇·(K∇C)</b>La turbulencia lo dispersa (difusión)</div>
+    <div><b>S</b>Las emisiones: la incógnita que buscamos</div>
+    <div><b>C/τ</b>La química lo elimina en unas horas</div>
+  </div>
+  <div class="col">
+    <p>El problema <b>directo</b> es fácil: se le dan a la ecuación las emisiones y el viento, y predice las concentraciones en todas partes. El <b>inverso</b> es el que necesitamos, y es difícil. Tenemos lecturas en unas 20 estaciones y píxeles satelitales borrosos, y muchos mapas de emisiones distintos pueden explicar las mismas lecturas. Errores pequeños en los datos de entrada, sobre todo en el viento, se vuelven errores grandes en la respuesta.</p>
+  </div>
+
+  <figure id="plume">
+    <div class="title">Por qué unos cuantos grados de error en el viento importan tanto</div>
+    <div class="sub">La pluma de una fábrica y una estación de monitoreo a 8 km. Mueve el viento y luego agrega el error que medimos en nuestros datos de viento (unos 30°).</div>
+    <div class="chart"><svg id="plume-svg" viewBox="0 0 760 330" role="img" aria-label="Demostración interactiva de una pluma"></svg></div>
+    <div class="controls">
+      <label for="wdir">Dirección real del viento <span class="mono" id="wdir-v">10°</span><input id="wdir" type="range" min="-40" max="40" step="1" value="10"></label>
+      <label for="werr">Error en el viento del modelo <span class="mono" id="werr-v">30°</span><input id="werr" type="range" min="-40" max="40" step="1" value="30"></label>
+    </div>
+    <div class="readout">
+      <div><div class="v" id="r-true">–</div><div class="l">Lo que la estación mide en realidad (fracción del máximo de la pluma)</div></div>
+      <div><div class="v" id="r-model">–</div><div class="l">Lo que el modelo espera que mida</div></div>
+      <div class="note" id="r-note"></div>
+    </div>
+    <figcaption>Pluma gaussiana a nivel de suelo con dispersión urbana diurna. La pluma rellena es la realidad; el contorno punteado es lo que cree el modelo.</figcaption>
+  </figure>
+  <div class="col">
+    <p>Esta es toda la dificultad en una imagen. Si el modelo cree que la pluma pasó de largo cuando en realidad le pegó a la estación, concluye que la fábrica emite mucho menos (o mucho más) de lo que emite. Las fuentes grandes y las zonas completas se promedian a lo largo de muchas horas. Las fuentes pequeñas junto a una estación no.</p>
+  </div>
+</section>
+
+<section id="ml">
+  <span class="eyebrow">3 · El aprendizaje automático</span>
+  <h2>Una red neuronal que tiene que obedecer a la física</h2>
+  <div class="col">
+    <p>El modelo planeado es una <b>red neuronal informada por la física (PINN)</b>. Una red neuronal representa el campo de NO<sub>x</sub> sobre la ciudad a lo largo del tiempo. Las emisiones son incógnitas adicionales que se aprenden al mismo tiempo. El entrenamiento equilibra tres metas:</p>
+  </div>
+  <figure>
+    <div class="title">Tres metas llevan a la red hacia una respuesta creíble</div>
+    <div class="chart"><svg viewBox="0 0 760 250" role="img" aria-label="Diagrama del entrenamiento de la PINN">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--muted)"/></marker></defs>
+      <g style="fill:none;stroke:var(--line);stroke-width:1.25">
+        <rect x="24" y="86" width="150" height="72" rx="10"/><rect x="232" y="70" width="190" height="104" rx="10" style="stroke:var(--accent);stroke-width:2;fill:var(--accent-soft)"/>
+        <rect x="500" y="16" width="236" height="62" rx="10"/><rect x="500" y="94" width="236" height="62" rx="10"/><rect x="500" y="172" width="236" height="62" rx="10"/>
+      </g>
+      <g style="fill:none;stroke:var(--muted);stroke-width:1.25">
+        <path d="M174 122H228" marker-end="url(#ar)"/><path d="M422 110C460 110 460 47 496 47" marker-end="url(#ar)"/><path d="M422 122H496" marker-end="url(#ar)"/><path d="M422 134C460 134 460 203 496 203" marker-end="url(#ar)"/>
+      </g>
+      <text x="99" y="116" text-anchor="middle" class="t-ink" font-weight="600" font-size="14">Lugar y tiempo</text>
+      <text x="99" y="136" text-anchor="middle" class="t-mut" font-size="12">x, y, t</text>
+      <text x="327" y="104" text-anchor="middle" class="t-ink" font-weight="600" font-size="14">Red neuronal</text>
+      <text x="327" y="126" text-anchor="middle" class="t-mut" font-size="12">predice NOₓ, C(x, y, t)</text>
+      <text x="327" y="146" text-anchor="middle" class="t-mut" font-size="12">+ emisiones desconocidas S</text>
+      <text x="514" y="42" class="t-ink" font-weight="600" font-size="13.5">1 · Ajustarse a las mediciones</text>
+      <text x="514" y="62" class="t-mut" font-size="12">estaciones y píxeles del satélite</text>
+      <text x="514" y="120" class="t-ink" font-weight="600" font-size="13.5">2 · Obedecer la ecuación</text>
+      <text x="514" y="140" class="t-mut" font-size="12">viento, mezcla y química en todo punto</text>
+      <text x="514" y="198" class="t-ink" font-weight="600" font-size="13.5">3 · Emisiones plausibles</text>
+      <text x="514" y="218" class="t-mut" font-size="12">ligadas a vialidades y fuentes conocidas</text>
+    </svg></div>
+    <figcaption>La física llena los huecos entre estaciones; los datos mantienen honesta a la física.</figcaption>
+  </figure>
+  <h3>Por qué probamos primero con un modelo más sencillo</h3>
+  <div class="col">
+    <p>Construir y ajustar una PINN toma semanas. Pero la concentración es <b>lineal</b> en las emisiones: si una fuente emite el doble, su contribución se duplica. Así que construimos un sustituto rápido. Para cada hora de la tarde, un modelo clásico de pluma calcula cuánto agrega 1 tonelada al año de cada fuente candidata en cada estación y píxel satelital. Encontrar las emisiones se vuelve entonces un problema de mínimos cuadrados regularizado que se resuelve en segundos.</p>
+    <p>El sustituto usa la misma física y los mismos datos que la PINN. <b>Si no puede distinguir dos fuentes, la PINN tampoco</b>, porque la información no está en los datos. Si sí puede, se convierte en la referencia que la PINN debe superar.</p>
+    <p>Lo probamos de dos maneras. En las <b>pruebas sintéticas ("gemelos")</b> inventamos emisiones verdaderas, simulamos lo que verían las estaciones y el satélite (con ruido y errores de viento realistas) y revisamos qué tan bien recupera el modelo la verdad. En las <b>pruebas con datos reales</b> ajustamos las mediciones reales y revisamos resultados que sabemos que deben cumplirse, como menos tráfico en domingo.</p>
+  </div>
+</section>
+
+<section id="data">
+  <span class="eyebrow">4 · Los datos</span>
+  <h2>Datos públicos, revisados antes de usarse</h2>
+  <div class="col">
+    <p>Todo lo que usamos es público. La zona de estudio es un recuadro de <span class="num">3,260 km²</span> sobre el Valle de México (19.25–19.77° N, 99.35–98.81° O). El periodo principal es noviembre–diciembre de 2023, con febrero–mayo de 2024 como segundo periodo de prueba.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Datos</th><th>Qué aportan</th><th>Para qué se usan</th><th>Revisión</th></tr></thead>
+    <tbody>
+      <tr><td>Estaciones de superficie, SIMAT (red RAMA)</td><td>NO, NO<sub>2</sub>, NO<sub>x</sub>, CO y SO<sub>2</sub> por hora; 19–20 estaciones de NO<sub>x</sub> utilizables</td><td>Las mediciones principales</td><td><span class="pill ok">aprobado</span> 59 horas con sensor pegado; dos estaciones del noreste fuera de servicio en 2024</td></tr>
+      <tr><td>Estaciones de viento, SIMAT (REDMET)</td><td>Velocidad y dirección del viento por hora, unas 18 estaciones</td><td>Transporte</td><td><span class="pill fix">corregido</span> en 2024 las velocidades eran mph etiquetadas como m/s</td></tr>
+      <tr><td>Satélite TEMPO de la NASA</td><td>NO<sub>2</sub> en toda la columna de aire cada hora, píxeles de unos 2 × 4.5 km</td><td>Cobertura entre estaciones</td><td><span class="pill ok">aprobado</span> coincide con las estaciones (r = 0.70 por barrido); las nubes eliminan cerca del 40 % de los píxeles</td></tr>
+      <tr><td>Reanálisis ERA5</td><td>Espesor de la capa de mezcla, viento regional</td><td>Dilución, revisión del viento</td><td><span class="pill fix">hueco</span> nuestra fuente no tiene la capa de mezcla de ene–jun 2024</td></tr>
+      <tr><td>Vialidades de OpenStreetMap</td><td>Todas las vías principales, ponderadas por tipo</td><td>Dónde emite el tráfico</td><td><span class="pill ok">aprobado</span></td></tr>
+      <tr><td>Directorio de empresas del INEGI, base de centrales eléctricas, aeropuertos</td><td>Fábricas, centrales y aeropuertos con coordenadas</td><td>Fuentes puntuales candidatas</td><td><span class="pill ok">construido</span> 2 centrales, 2 aeropuertos, 12 zonas industriales</td></tr>
+      <tr><td>Inventario de emisiones 2018 (SEDEMA)</td><td>Totales por tipo de fuente y entidad</td><td>Solo como revisión independiente</td><td><span class="pill no">limitado</span> no trae NO<sub>x</sub> por municipio</td></tr>
+      <tr><td>Reportes meteorológicos de aeropuertos (AICM, AIFA)</td><td>Viento horario independiente</td><td>Revisión del viento, puntos de viento adicionales</td><td><span class="pill ok">aprobado</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <figure>
+    <div class="title">El 1 de enero de 2024 la velocidad del viento de la ciudad se multiplicó por 2.2 de un día para otro</div>
+    <div class="sub">Velocidad del viento en estaciones céntricas del SIMAT dividida entre la del aeropuerto, por las tardes, por trimestre</div>
+    <div class="chart" id="c-wind"></div>
+    <figcaption>SIMAT REDMET y reportes METAR del aeropuerto (MMMX). Todas las estaciones mostraron el mismo salto; dividir las velocidades de 2024 entre 2.237 (de mph a m/s) restablece la concordancia con ERA5.</figcaption>
+  </figure>
+  <div class="col"><p>Revisar los datos primero valió la pena. El clima no cambia en Año Nuevo, así que era un error de etiqueta en el archivo de 2024. Sin corregirlo, el modelo habría empujado cada fuente casi el doble de lejos viento arriba.</p></div>
+</section>
+
+<section id="tried">
+  <span class="eyebrow">5 · Lo que probamos</span>
+  <h2>Ocho pasos, en el orden en que los dimos</h2>
+  <ol class="steps">
+    <li><div><h3>Revisar cada conjunto de datos contra los criterios del plan</h3><p>Encontramos el error de unidades del viento 2024, estaciones fuera de servicio y la falta de datos municipales en el inventario. Ampliamos la zona de estudio unos 10 km al norte y al este, para que la central de Acolman ya no quede en el borde y entren tres estaciones más.</p></div></li>
+    <li><div><h3>Preguntar qué lugares pueden "ver" los instrumentos</h3><p>Un lugar cuenta como visto en una hora cuando una estación en funcionamiento está viento abajo de él, o un píxel satelital despejado lo cubre.</p></div></li>
+  </ol>
+  <figure>
+    <div class="title">El satélite ve todas las fuentes candidatas; las estaciones no ven el noreste</div>
+    <div class="sub">Fracción de las horas de la tarde en que se ve cada fuente candidata, noviembre–diciembre de 2023</div>
+    <div class="chart" id="c-cover"></div>
+    <figcaption>Estaciones: una estación en funcionamiento a menos de 10 km viento abajo. Satélite: un píxel despejado de TEMPO a menos de 3 km.</figcaption>
+  </figure>
+  <ol class="steps" start="3" style="counter-reset: s 2">
+    <li><div><h3>Hacer la lista de fuentes candidatas</h3><p>Dos centrales eléctricas, dos aeropuertos y 12 zonas industriales. Las zonas salen del directorio de empresas del INEGI, ponderadas por cuánto NO<sub>x</sub> emite cada tipo de industria según el inventario. Las vialidades se agrupan en 9 zonas de unos 18 km.</p></div></li>
+    <li><div><h3>Prueba sintética del modelo lineal</h3><p>Con errores de viento realistas, las emisiones viales por zona se recuperan con un error de alrededor de 9 %, y las fuentes grandes con 20–34 %. Las zonas industriales fallan por una mediana de 51 %: su señal es unas 100 veces más débil que la del tráfico a su alrededor. Después medimos el error real del viento (unos 30°, no 20°): con él, las fuentes grandes quedan en 32–37 % y las zonas viales en 15 %.</p></div></li>
+    <li><div><h3>Datos reales: ¿el modelo ve los patrones del tráfico?</h3><p>Los días hábiles, sábados y domingos recibieron la misma estimación inicial, así que cualquier diferencia tiene que venir de los datos. Los sábados salieron en 0.76 de un día hábil y los domingos en cerca de 0.4–0.5, en todas las variantes que corrimos. Después descubrimos que ese número no lo decidían los datos: si se fija el domingo en cualquier valor entre 0.42 y 1.0, el ajuste casi no cambia, porque el "fondo" de cada hora absorbe la diferencia. Un método más simple, el <b>estimador normalizado por meteorología</b> (lo medido dividido entre lo que el modelo esperaría con emisiones fijas), sí da una respuesta firme: 0.65.</p></div></li>
+  </ol>
+  <figure>
+    <div class="title">La inversión completa exagera la baja del domingo; el estimador normalizado coincide con los conteos de tráfico</div>
+    <div class="sub">Emisiones viales de domingos y festivos divididas entre las de días hábiles, con el rango de 90 % al remuestrear días completos</div>
+    <div class="chart" id="c-sunday"></div>
+    <figcaption>Noviembre–diciembre de 2023, 61 días, 200 remuestreos. Los conteos vehiculares abiertos de Infovial (26 vialidades), tomando el día completo y ponderando por cuánto emite cada tipo de vehículo, indican 0.65–0.73 (franja sombreada); el NO<sub>x</sub> de la mañana se sigue midiendo por la tarde, por eso cuenta el día completo. En la inversión completa el cociente lo fija la estimación inicial, no los datos; el estimador normalizado (última fila) sí lo determina y cae dentro de la franja.</figcaption>
+  </figure>
+  <ol class="steps" style="counter-reset: s 5">
+    <li><div><h3>¿Puede el mapa superar a la interpolación simple?</h3><p>Ocultamos cada estación por turnos y la predijimos con las demás. Comparamos el modelo, la interpolación simple ponderada por distancia (IDW) y un híbrido: el modelo más la interpolación de sus errores restantes.</p></div></li>
+  </ol>
+  <figure>
+    <div class="title">El modelo más interpolación empata con la interpolación simple; el modelo solo no</div>
+    <div class="sub">Error al predecir una estación oculta (RMSE, ppb; menos es mejor). Línea = interpolación simple.</div>
+    <div class="chart" id="c-rmse"></div>
+    <figcaption>24 estaciones, 7,537 valores horarios. El NO<sub>x</sub> de la tarde promedia 31 ppb.</figcaption>
+  </figure>
+  <ol class="steps" style="counter-reset: s 6">
+    <li><div><h3>Averiguar por qué pierde el modelo</h3><p>Dividimos el error en dos partes. El modelo atina al nivel promedio de cada estación (se desvía 6.2 ppb, contra 6.6 de la interpolación). Pierde en las subidas y bajadas de hora en hora (12.7 contra 9.5 ppb). Luego probamos cuatro explicaciones:</p></div></li>
+  </ol>
+  <div class="tbl"><table>
+    <thead><tr><th>Idea</th><th>Prueba</th><th>Resultado</th></tr></thead>
+    <tbody>
+      <tr><td>El viento cambia dentro de la ciudad</td><td>Viento interpolado desde las estaciones, seguido a lo largo de cada trayectoria</td><td><span class="pill no">sin mejora</span> 14.1 → 14.0 ppb</td></tr>
+      <tr><td>La contaminación de horas anteriores se queda</td><td>Modelo dependiente del tiempo: bocanadas de las 6 horas previas, tráfico de hora pico, química</td><td><span class="pill fix">mixto</span> ajuste al satélite 0.74 → 0.83 y totales de emisión mucho más cercanos al inventario; las estaciones no mejoran</td></tr>
+      <tr><td>La ventilación cambia de hora en hora</td><td>Un factor de dilución desconocido por hora</td><td><span class="pill no">sin mejora</span> 12.7 → 12.8 ppb</td></tr>
+      <tr><td>Plumas angostas de fuentes cercanas le pegan o no a las estaciones</td><td>Quitar las 12 fuentes puntuales industriales</td><td><span class="pill ok">mejora</span> híbrido 12.2 → 11.7 ppb; peor estación 26.7 → 14.3</td></tr>
+    </tbody>
+  </table></div>
+  <ol class="steps" style="counter-reset: s 7">
+    <li><div><h3>Preguntar qué datos existentes ayudarían más</h3><p>Repetimos la prueba sintética agregando, uno a la vez, estaciones adicionales, huellas químicas (el CO marca el tráfico, el SO<sub>2</sub> marca la industria), un viento más preciso y un periodo más largo. La siguiente sección muestra el resultado.</p></div></li>
+  </ol>
+</section>
+
+<section id="datamatters">
+  <span class="eyebrow">6 · Cómo cambian los resultados con los datos</span>
+  <h2>Un mejor viento le gana a más sensores</h2>
+  <div class="col"><p>Elige un escenario para ver qué tan bien se recuperan las emisiones de cada fuente en la prueba sintética. La línea punteada es la meta del plan de 25 %. Todos los escenarios mantienen un ruido de medición realista.</p></div>
+  <figure>
+    <div class="title" id="scen-title">Zonas industriales medibles con error menor a 25 %</div>
+    <div class="sub">De 12, por escenario (elige uno para ver cada fuente)</div>
+    <div class="chart" id="c-scen-sum"></div>
+    <div class="seg" id="scen-buttons" role="group" aria-label="Escenario"></div>
+    <div class="scen-desc" id="scen-desc"></div>
+    <div class="chart" id="c-scen"></div>
+    <figcaption>Error mediano en 50 gemelos sintéticos; el viento real se perturba con el error indicado y el modelo no lo sabe. Los errores mayores a 150 % se cortan en el borde.</figcaption>
+  </figure>
+  <div class="col">
+    <p><b>El viento es la palanca.</b> Con un error de viento de ±20° (el real medido es aún mayor, unos 30°), agregar estaciones, huellas químicas o más meses casi no ayuda: el mismo error de transporte emborrona los datos adicionales. Reducir el error a la mitad, a ±10°, deja las fuentes grandes y todas las zonas viales muy por debajo de la meta. Con ±5°, 10 de las 12 zonas industriales quedan por debajo de 25 %.</p>
+    <p>Con datos reales, las tres estaciones adicionales que solo miden NO<sub>2</sub> y el viento de los aeropuertos llevaron al mapa híbrido apenas por delante de la interpolación (11.4 contra 11.5 ppb, mejor en 16 de 24 estaciones). Una mejora pequeña, congruente con la prueba sintética.</p>
+  </div>
+</section>
+
+<section id="objective">
+  <span class="eyebrow">7 · Objetivo</span>
+  <h2>Del objetivo original a lo que los datos permiten</h2>
+  <div class="two">
+    <div>
+      <span class="tag muted">Objetivo original</span>
+      <h3>Dónde y cuánto, con mucho detalle</h3>
+      <ul>
+        <li>Fuentes ubicadas a menos de 2 km, cantidades con error menor a 25 %</li>
+        <li>Fuentes industriales individuales</li>
+        <li>Mapa de concentración mejor que la interpolación en todas partes</li>
+        <li>Mismos 5 municipios principales que el inventario</li>
+      </ul>
+    </div>
+    <div style="border-color: var(--accent)">
+      <span class="tag" style="color: var(--accent)">Objetivo modificado para la prueba de concepto</span>
+      <h3>Dónde y cuánto, por zona</h3>
+      <ul>
+        <li>Emisiones viales para zonas de ~18 km, con ciclos semanales y horarios</li>
+        <li>Las fuentes conocidas grandes (Acolman, AICM, AIFA), en cuanto se tenga un viento mejor que el actual</li>
+        <li>La industria como un término por zona, no por fábrica</li>
+        <li>Un mapa que empata con la interpolación donde hay muchas estaciones y aporta información donde no hay ninguna</li>
+        <li>Comparación con el inventario por patrón y proporciones, no por totales</li>
+      </ul>
+    </div>
+  </div>
+  <h3>Qué necesitaría el objetivo original</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Necesidad</th><th>Cómo</th><th>Esfuerzo</th></tr></thead>
+    <tbody>
+      <tr><td><b>Un viento más preciso</b> (la palanca principal)</td><td>Un modelo meteorológico de alta resolución (~1 km) alimentado con el viento de las estaciones y corrido como ensamble, para que el modelo conozca su propia incertidumbre. Es posible con los datos existentes más tiempo de cómputo.</td><td>Semanas a meses; un modelador atmosférico o un socio como la UNAM o el SIMAT</td></tr>
+      <tr><td>Más detalle en el terreno</td><td>Tubos pasivos de NO<sub>2</sub> en 100–200 sitios (un mapa promedio barato a ~1 km), sensores de bajo costo en las zonas ciegas, mediciones móviles en corredores industriales</td><td>Una campaña de campo de 1–3 meses</td></tr>
+      <tr><td>Mejor conocimiento de las fuentes</td><td>Aforos de tráfico reales, reportes de emisiones por establecimiento con altura de chimenea, un inventario por municipio</td><td>Convenios para compartir datos</td></tr>
+      <tr><td>Una respuesta conocida para validar</td><td>Mediciones continuas en chimenea de una instalación grande</td><td>Un convenio con su operador</td></tr>
+    </tbody>
+  </table></div>
+  <div class="col"><p>En total, unos 6–12 meses con socios. Las pruebas sintéticas concretan el argumento: la brecha es sobre todo la precisión del viento, que se puede medir y corregir.</p></div>
+</section>
+
+<section id="benefits">
+  <span class="eyebrow">8 · Beneficios</span>
+  <h2>Para qué sirve la versión modificada</h2>
+  <div class="uses">
+    <div><b>Revisar el inventario oficial</b><p>Una estimación independiente, basada en mediciones, por zona y entre ediciones del inventario. Las primeras corridas ya sugieren que las emisiones viales podrían ser menores que las cifras de 2018.</p><p class="who">SEDEMA, CAMe</p></div>
+    <div><b>Evaluar políticas</b><p>Emisiones antes y después por zona para restricciones vehiculares, medidas de contingencia, nuevas líneas de transporte o el crecimiento del AIFA. El estimador normalizado ya mide el tamaño de los cambios con un margen de ~±10 %: domingo 0.65, confinamiento de 2020 −35 %, y en los 23 días de contingencia de 2024 no se ve una baja de emisión de NO<sub>x</sub> por la tarde (una baja de 10–15 % o más se habría detectado).</p><p class="who">SEDEMA, CAMe, investigadores</p></div>
+    <div><b>Seguir tendencias</b><p>Un indicador semanal o mensual de emisiones a partir del satélite y las estaciones, mucho más frecuente que un inventario.</p><p class="who">Autoridades ambientales, el público</p></div>
+    <div><b>Llenar el mapa donde no hay estaciones</b><p>Estimaciones de NO<sub>x</sub> en el norte, el oriente y la periferia, donde el modelo supera a la interpolación. Útil para estudios de salud y exposición.</p><p class="who">Investigadores en salud, ONG, municipios</p></div>
+    <div><b>Planear la red de monitoreo</b><p>El análisis de cobertura muestra dónde aporta más una estación nueva, empezando por Ecatepec y el noreste.</p><p class="who">SIMAT</p></div>
+    <div><b>Orientar la siguiente fase</b><p>Muestra dónde las emisiones son altas pero están mal medidas, para que una campaña de sensores gaste su presupuesto donde importa.</p><p class="who">Este proyecto</p></div>
+  </div>
+  <div class="col"><p class="muted">No puede atribuir emisiones a una instalación específica, así que no sirve para fines de vigilancia o sanción, y sus totales absolutos todavía dependen del modelo de transporte (35–67 % del inventario según la variante).</p></div>
+</section>
+
+<section id="next">
+  <span class="eyebrow">9 · Siguientes pasos</span>
+  <h2>Qué sigue</h2>
+  <ol class="steps">
+    <li><div><h3>Hecho: PINN y app</h3><p>La PINN aprende la pluma de advección–difusión (18 min de entrenamiento en CPU, error de 4–7 % frente a la solución exacta) y reproduce los cocientes de la inversión lineal; los totales difieren 26–42 % entre modelos, así que <b>solo los cambios relativos son robustos</b>. Una app local en Streamlit muestra el mapa, la incertidumbre y la comparación clima contra emisión.</p></div></li>
+    <li><div><h3>Usar el estimador normalizado como salida principal</h3><p>Reportar cambios (tipo de día, antes y después, contingencias) con el estimador normalizado y usar el cociente de tráfico como restricción en la inversión. Probar la química de la pluma fresca de las centrales y confirmar las fechas de contingencia con la CAMe.</p></div></li>
+    <li><div><h3>Preparar la fase 2</h3><p>Correr una simulación de viento de alta resolución para el periodo de estudio, repetir con ella la prueba sintética y luego dimensionar una campaña de medición en el noreste.</p></div></li>
+  </ol>
+  <h3>Glosario</h3>
+  <dl class="gloss">
+    <dt>NO<sub>x</sub></dt><dd>Óxidos de nitrógeno (NO + NO<sub>2</sub>), emitidos al quemar combustible.</dd>
+    <dt>ppb</dt><dd>Partes por mil millones: moléculas de contaminante por cada mil millones de moléculas de aire.</dd>
+    <dt>Inventario de emisiones</dt><dd>Estimación oficial de las emisiones que se construye contando actividades y multiplicándolas por factores de emisión.</dd>
+    <dt>Problema inverso</dt><dd>Trabajar hacia atrás, de los efectos medidos (concentraciones) a sus causas (emisiones).</dd>
+    <dt>PINN</dt><dd>Red neuronal informada por la física (por sus siglas en inglés): una red neuronal entrenada para ajustarse a los datos y obedecer una ecuación física al mismo tiempo.</dd>
+    <dt>Experimento gemelo</dt><dd>Una prueba sintética: se inventa una verdad, se simulan las mediciones y se revisa si el método la recupera.</dd>
+    <dt>IDW</dt><dd>Ponderación por inverso de la distancia (por sus siglas en inglés): estimar un valor a partir de las estaciones cercanas, dando más peso a las más próximas.</dd>
+    <dt>TEMPO</dt><dd>Instrumento de la NASA en un satélite geoestacionario que mide NO<sub>2</sub> sobre Norteamérica cada hora con luz de día.</dd>
+    <dt>Capa de mezcla</dt><dd>La capa de aire cercana al suelo que la turbulencia mantiene bien mezclada; mientras más profunda, más diluye la contaminación.</dd>
+    <dt>RMSE</dt><dd>Raíz del error cuadrático medio (por sus siglas en inglés): el tamaño típico del error de predicción.</dd>
+  </dl>
+</section>
+
+<footer>
+  Datos: SIMAT (RAMA, REDMET), NASA TEMPO NO<sub>2</sub> L2 V04, ERA5 vía Open-Meteo, OpenStreetMap, INEGI (Marco Geoestadístico 2022, DENUE), WRI Global Power Plant Database, SEDEMA Inventario de Emisiones ZMVM 2018, Iowa Environmental Mesonet (reportes de aeropuertos). Las cifras provienen de los reportes de análisis del proyecto, octubre de 2026.
+</footer>
+</div>
+
+<script>
+(() => {
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) { const val = String(attrs[k]); if ((k === 'fill' || k === 'stroke') && val.startsWith('var(')) e.style[k] = val; else e.setAttribute(k, val); } if (parent) parent.appendChild(e); return e; };
+  const txt = (parent, x, y, s, attrs = {}) => { const t = el('text', { x, y, ...attrs }, parent); t.textContent = s; return t; };
+  const svgIn = (id, w, h, label) => { const s = el('svg', { viewBox: `0 0 ${w} ${h}`, role: 'img', 'aria-label': label }); document.getElementById(id).appendChild(s); return s; };
+  const v = name => `var(--${name})`;
+
+  /* ---------- Demostración de la pluma ---------- */
+  const ps = document.getElementById('plume-svg');
+  const W = 760, H = 330, X0 = 40, Y0 = 20, PW = 680, PH = 280;   // caja de la gráfica
+  const xmin = -1500, xmax = 13500, ymin = -5000, ymax = 5000;
+  const sx = x => X0 + (x - xmin) / (xmax - xmin) * PW, sy = y => Y0 + (ymax - y) / (ymax - ymin) * PH;
+  const SRC = [0, 0], STN = [8000, 1400];
+  const sig = d => Math.sqrt((0.32 * d / Math.sqrt(1 + 0.0004 * d)) ** 2 + 150 ** 2);
+  const conc = (x, y, deg) => { const a = deg * Math.PI / 180, dx = x - SRC[0], dy = y - SRC[1];
+    const al = dx * Math.cos(a) + dy * Math.sin(a), cr = -dx * Math.sin(a) + dy * Math.cos(a);
+    if (al <= 50) return 0; const s = sig(al); return Math.exp(-cr * cr / (2 * s * s)) / s; };
+  const rel = (x, y, deg) => { const a = deg * Math.PI / 180, dx = x - SRC[0], dy = y - SRC[1];
+    const al = dx * Math.cos(a) + dy * Math.sin(a), cr = -dx * Math.sin(a) + dy * Math.cos(a);
+    if (al <= 50) return 0; const s = sig(al); return Math.exp(-cr * cr / (2 * s * s)); };
+  el('rect', { x: X0, y: Y0, width: PW, height: PH, rx: 8, fill: v('bg'), stroke: v('line') }, ps);
+  const NX = 68, NY = 28, cw = PW / NX, ch = PH / NY, cells = [];
+  const heat = el('g', {}, ps);
+  for (let i = 0; i < NX; i++) for (let j = 0; j < NY; j++) {
+    const r = el('rect', { x: X0 + i * cw, y: Y0 + j * ch, width: cw + .5, height: ch + .5, fill: v('no2'), 'fill-opacity': 0 }, heat);
+    cells.push([r, xmin + (i + .5) / NX * (xmax - xmin), ymax - (j + .5) / NY * (ymax - ymin)]);
+  }
+  const outline = el('g', { fill: 'none', stroke: v('accent'), 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }, ps);
+  const edgeA = el('path', {}, outline), edgeB = el('path', {}, outline), centre = el('path', { 'stroke-opacity': .5 }, outline);
+  // barra de escala + etiquetas
+  el('line', { x1: sx(0), x2: sx(2000), y1: sy(-4400), y2: sy(-4400), stroke: v('muted'), 'stroke-width': 2 }, ps);
+  txt(ps, sx(1000), sy(-4400) - 6, '2 km', { 'text-anchor': 'middle', 'font-size': 11.5, class: 't-mut' });
+  el('rect', { x: sx(SRC[0]) - 9, y: sy(SRC[1]) - 9, width: 18, height: 18, rx: 3, fill: v('surface'), stroke: v('fg'), 'stroke-width': 1.5 }, ps);
+  txt(ps, sx(SRC[0]), sy(SRC[1]) + 26, 'Fábrica', { 'text-anchor': 'middle', 'font-size': 12.5, 'font-weight': 600, class: 't-ink' });
+  const stn = el('circle', { cx: sx(STN[0]), cy: sy(STN[1]), r: 8, fill: v('surface'), stroke: v('fg'), 'stroke-width': 2 }, ps);
+  txt(ps, sx(STN[0]) + 14, sy(STN[1]) + 4, 'Estación', { 'font-size': 12.5, 'font-weight': 600, class: 't-ink' });
+  const arrowG = el('g', {}, ps);
+  const legend = el('g', {}, ps);
+  el('rect', { x: X0 + PW - 234, y: Y0 + 10, width: 14, height: 10, fill: v('no2'), 'fill-opacity': .55 }, legend);
+  txt(legend, X0 + PW - 214, Y0 + 19, 'Pluma real', { 'font-size': 11.5, class: 't-mut' });
+  el('line', { x1: X0 + PW - 140, x2: X0 + PW - 124, y1: Y0 + 15, y2: Y0 + 15, stroke: v('accent'), 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }, legend);
+  txt(legend, X0 + PW - 118, Y0 + 19, 'Pluma del modelo', { 'font-size': 11.5, class: 't-mut' });
+
+  const edgePath = (deg, side) => { const a = deg * Math.PI / 180; let d = '';
+    for (let al = 200; al <= 14500; al += 250) { const s = sig(al) * 2 * side;
+      const x = SRC[0] + al * Math.cos(a) - s * Math.sin(a), y = SRC[1] + al * Math.sin(a) + s * Math.cos(a);
+      d += (d ? 'L' : 'M') + sx(x).toFixed(1) + ' ' + sy(y).toFixed(1); } return d; };
+  const wdir = document.getElementById('wdir'), werr = document.getElementById('werr');
+  const pct = x => (x * 100).toFixed(0) + ' %';
+  function drawPlume() {
+    const d = +wdir.value, e = +werr.value, m = d + e;
+    document.getElementById('wdir-v').textContent = d + '°';
+    document.getElementById('werr-v').textContent = (e > 0 ? '+' : '') + e + '°';
+    let mx = 0; const vals = cells.map(([, x, y]) => { const c = conc(x, y, d); if (c > mx) mx = c; return c; });
+    cells.forEach(([r], i) => r.setAttribute('fill-opacity', (Math.min(1, vals[i] / mx * 6) * .75).toFixed(3)));
+    edgeA.setAttribute('d', edgePath(m, 1)); edgeB.setAttribute('d', edgePath(m, -1));
+    const a = m * Math.PI / 180; centre.setAttribute('d', `M${sx(0)} ${sy(0)}L${sx(14500 * Math.cos(a))} ${sy(14500 * Math.sin(a))}`);
+    arrowG.replaceChildren();
+    const ax = X0 + 60, ay = Y0 + PH - 36, ar = d * Math.PI / 180;
+    el('line', { x1: ax - 22 * Math.cos(ar), y1: ay + 22 * Math.sin(ar), x2: ax + 22 * Math.cos(ar), y2: ay - 22 * Math.sin(ar), stroke: v('fg'), 'stroke-width': 2, 'marker-end': 'url(#arw)' }, arrowG);
+    txt(arrowG, ax, ay + 32, 'viento', { 'text-anchor': 'middle', 'font-size': 11.5, class: 't-mut' });
+    const t = rel(STN[0], STN[1], d), mo = rel(STN[0], STN[1], m);
+    document.getElementById('r-true').textContent = pct(t);
+    document.getElementById('r-model').textContent = pct(mo);
+    const note = document.getElementById('r-note');
+    if (Math.abs(e) <= 2) note.textContent = 'Con un viento preciso, el modelo espera lo que mide la estación, así que la emisión de la fábrica se puede leer directamente.';
+    else if (t < 0.02 && mo < 0.02) note.textContent = 'Ninguna de las dos plumas llega a la estación, así que esta hora no dice nada sobre la fábrica.';
+    else { const f = mo > 0.005 ? t / mo : Infinity;
+      note.textContent = f === Infinity || f > 20 ? 'El modelo cree que la pluma no pasa por la estación, así que explica la contaminación medida con otras fuentes y pierde el rastro de la fábrica.'
+        : `Para explicar la medición, el modelo estimaría la emisión de la fábrica en ${f.toFixed(1)} veces la real.`; }
+  }
+  // marcador de flecha propio de la demostración
+  const defs = el('defs', {}, ps); const mk = el('marker', { id: 'arw', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' }, defs);
+  el('path', { d: 'M0 0L10 5L0 10z', fill: v('fg') }, mk);
+  wdir.addEventListener('input', drawPlume); werr.addEventListener('input', drawPlume); drawPlume();
+
+  /* ---------- Gráfica del error de unidades del viento ---------- */
+  (() => {
+    const rows = [['2023 T1', .62], ['2023 T2', .62], ['2023 T3', .59], ['2023 T4', .63], ['2024 T1', 1.39], ['2024 T2', 1.26], ['2024 T3', 1.31], ['2024 T4', 1.46]];
+    const s = svgIn('c-wind', 760, 260, 'Cociente de velocidad del viento por trimestre');
+    const L = 60, R = 730, T = 24, B = 210, ymax = 1.6, bw = (R - L) / rows.length;
+    const y = val => B - val / ymax * (B - T);
+    [0, .5, 1, 1.5].forEach(g => { el('line', { x1: L, x2: R, y1: y(g), y2: y(g), stroke: v('grid') }, s); txt(s, L - 8, y(g) + 4, g.toFixed(1), { 'text-anchor': 'end', 'font-size': 11.5, class: 't-mut t-mono' }); });
+    rows.forEach(([q, r], i) => {
+      const x = L + i * bw + bw * .2, w = bw * .6, late = i >= 4;
+      const b = el('rect', { x, y: y(r), width: w, height: B - y(r), rx: 3, fill: late ? v('bad') : v('muted'), 'fill-opacity': late ? .7 : .45 }, s);
+      el('title', {}, b).textContent = `${q}: ${r.toFixed(2)}`;
+      txt(s, x + w / 2, y(r) - 6, r.toFixed(2), { 'text-anchor': 'middle', 'font-size': 12, class: 't-ink t-mono' });
+      txt(s, x + w / 2, B + 18, q, { 'text-anchor': 'middle', 'font-size': 11.5, class: 't-mut' });
+    });
+    const avg = .615; el('line', { x1: L, x2: R, y1: y(avg), y2: y(avg), stroke: v('fg'), 'stroke-dasharray': '4 4' }, s);
+    txt(s, R, y(avg) - 6, 'nivel de 2023', { 'text-anchor': 'end', 'font-size': 11.5, class: 't-ink' });
+    txt(s, L + 4 * bw + 4, T + 4, 'Ene 2024: ×2.2', { 'font-size': 12, 'font-weight': 600, fill: v('bad') });
+    el('line', { x1: L + 4 * bw, x2: L + 4 * bw, y1: T + 10, y2: B, stroke: v('bad'), 'stroke-width': 1.25 }, s);
+  })();
+
+  /* ---------- Cobertura (pesas) ---------- */
+  (() => {
+    const rows = [['Central de Acolman', 0, 52], ['Aeropuerto AIFA', 0, 52], ['Industria, Ecatepec (química)', 13, 52], ['Industria, Ecatepec (minerales)', 17, 52], ['Industria, Ecatepec (minerales, norte)', 26, 53], ['Industria, Iztapalapa (papel)', 26, 52], ['Industria, Gustavo A. Madero', 31, 51], ['Industria, Iztapalapa (minerales)', 46, 52], ['Industria, Tlalnepantla', 61, 50], ['Industria, Cuautitlán Izcalli', 63, 52], ['Aeropuerto AICM', 67, 52], ['Industria, Iztacalco', 67, 51], ['Industria, Naucalpan', 74, 50], ['Industria, Tlalnepantla (norte)', 75, 49], ['Central de Nonoalco', 81, 51], ['Industria, Tlalnepantla (transporte)', 81, 50], ['Industria, Azcapotzalco', 87, 49]];
+    const s = svgIn('c-cover', 760, 40 + rows.length * 22 + 30, 'Cobertura de las fuentes candidatas');
+    const L = 270, R = 720, T = 30, x = p => L + p / 100 * (R - L), rowY = i => T + 14 + i * 22;
+    [0, 25, 50, 75, 100].forEach(g => { el('line', { x1: x(g), x2: x(g), y1: T, y2: rowY(rows.length - 1) + 10, stroke: v('grid') }, s); txt(s, x(g), T - 8, g + ' %', { 'text-anchor': 'middle', 'font-size': 11, class: 't-mut t-mono' }); });
+    rows.forEach(([n, a, b], i) => {
+      const yy = rowY(i);
+      txt(s, L - 12, yy + 4, n, { 'text-anchor': 'end', 'font-size': 12, class: a < 30 ? 't-ink' : 't-mut', 'font-weight': a < 30 ? 600 : 400 });
+      el('line', { x1: x(a), x2: x(b), y1: yy, y2: yy, stroke: v('line'), 'stroke-width': 3 }, s);
+      const c1 = el('circle', { cx: x(a), cy: yy, r: 5, fill: v('muted') }, s); el('title', {}, c1).textContent = `${n}: estaciones ${a} %`;
+      const c2 = el('circle', { cx: x(b), cy: yy, r: 5, fill: v('accent') }, s); el('title', {}, c2).textContent = `${n}: satélite ${b} %`;
+    });
+    const ly = rowY(rows.length - 1) + 30;
+    el('circle', { cx: L, cy: ly - 4, r: 5, fill: v('muted') }, s); txt(s, L + 10, ly, 'Estaciones de superficie', { 'font-size': 12, class: 't-mut' });
+    el('circle', { cx: L + 175, cy: ly - 4, r: 5, fill: v('accent') }, s); txt(s, L + 185, ly, 'Satélite TEMPO', { 'font-size': 12, class: 't-mut' });
+  })();
+
+  /* ---------- Cociente domingo / día hábil ---------- */
+  (() => {
+    const rows = [['Pluma estacionaria', .39, .31, .50], ['Viento interpolado en la ciudad', .31, .23, .43], ['Dependiente del tiempo (horas previas)', .47, .39, .56], ['Estacionaria, industria agrupada', .42, .35, .54], ['Estacionaria, industria agrupada, estaciones extra', .43, .36, .54], ['Estimador normalizado por meteorología', .65, .55, .75]];
+    const s = svgIn('c-sunday', 760, 60 + rows.length * 34 + 36, 'Cociente de emisiones domingo entre día hábil');
+    const L = 340, R = 720, T = 34, x = r => L + r * (R - L), rowY = i => T + 24 + i * 34;
+    [0, .25, .5, .75, 1].forEach(g => { el('line', { x1: x(g), x2: x(g), y1: T, y2: rowY(rows.length - 1) + 14, stroke: v('grid') }, s); txt(s, x(g), T - 8, g.toFixed(2), { 'text-anchor': 'middle', 'font-size': 11, class: 't-mut t-mono' }); });
+    el('line', { x1: x(1), x2: x(1), y1: T, y2: rowY(rows.length - 1) + 14, stroke: v('fg'), 'stroke-width': 1.25 }, s);
+    txt(s, x(1) - 4, rowY(rows.length - 1) + 46, 'sin cambio', { 'text-anchor': 'end', 'font-size': 11.5, class: 't-ink' });
+    const band = el('rect', { x: x(.65), y: T, width: x(.73) - x(.65), height: rowY(rows.length - 1) + 14 - T, fill: v('good'), 'fill-opacity': .12 }, s);
+    el('title', {}, band).textContent = 'Esperado según conteos de tráfico de Infovial (día completo): 0.65–0.73';
+    txt(s, x(.75), rowY(rows.length - 1) + 30, 'esperado por conteos de tráfico: 0.65–0.73', { 'text-anchor': 'middle', 'font-size': 11.5, class: 't-mut' });
+    rows.forEach(([n, m, lo, hi], i) => {
+      const yy = rowY(i);
+      txt(s, L - 12, yy + 4, n, { 'text-anchor': 'end', 'font-size': 12, class: 't-ink' });
+      el('line', { x1: x(lo), x2: x(hi), y1: yy, y2: yy, stroke: v('accent'), 'stroke-width': 2 }, s);
+      [lo, hi].forEach(e => el('line', { x1: x(e), x2: x(e), y1: yy - 5, y2: yy + 5, stroke: v('accent'), 'stroke-width': 2 }, s));
+      const c = el('circle', { cx: x(m), cy: yy, r: 5.5, fill: v('accent') }, s);
+      el('title', {}, c).textContent = `${n}: ${m.toFixed(2)} (rango de 90 %: ${lo.toFixed(2)}–${hi.toFixed(2)})`;
+      txt(s, x(hi) + 8, yy + 4, m.toFixed(2), { 'font-size': 12, class: 't-ink t-mono' });
+    });
+  })();
+
+  /* ---------- Error en estación oculta ---------- */
+  (() => {
+    const rows = [['Pluma estacionaria', 14.1, 12.2, 11.6], ['Viento en la ciudad', 14.0, 12.0, 11.6], ['Dependiente del tiempo', 15.1, 14.6, 11.6], ['Industria agrupada', 13.6, 11.7, 11.6], ['+ estaciones extra', 13.6, 11.4, 11.5]];
+    const s = svgIn('c-rmse', 760, 270, 'Error en estación oculta por variante del modelo');
+    const L = 50, R = 730, T = 30, B = 220, ymax = 16, gw = (R - L) / rows.length, y = val => B - val / ymax * (B - T);
+    [0, 4, 8, 12, 16].forEach(g => { el('line', { x1: L, x2: R, y1: y(g), y2: y(g), stroke: v('grid') }, s); txt(s, L - 8, y(g) + 4, g, { 'text-anchor': 'end', 'font-size': 11.5, class: 't-mut t-mono' }); });
+    rows.forEach(([n, m, h, idw], i) => {
+      const gx = L + i * gw, bw = gw * .26;
+      [[m, v('muted'), .45, 'modelo solo'], [h, v('accent'), .85, 'modelo + interpolación']].forEach(([val, col, op, lab], k) => {
+        const bx = gx + gw * .18 + k * (bw + 6);
+        const b = el('rect', { x: bx, y: y(val), width: bw, height: B - y(val), rx: 3, fill: col, 'fill-opacity': op }, s);
+        el('title', {}, b).textContent = `${n}, ${lab}: ${val} ppb`;
+        txt(s, bx + bw / 2, y(val) - 6, val.toFixed(1), { 'text-anchor': 'middle', 'font-size': 11.5, class: 't-ink t-mono' });
+      });
+      el('line', { x1: gx + gw * .1, x2: gx + gw * .9, y1: y(idw), y2: y(idw), stroke: v('fg'), 'stroke-width': 1.5, 'stroke-dasharray': '5 3' }, s);
+      txt(s, gx + gw / 2, B + 18, n, { 'text-anchor': 'middle', 'font-size': 11.5, class: 't-mut' });
+    });
+    const ly = 14;
+    el('rect', { x: L, y: ly - 9, width: 12, height: 10, fill: v('muted'), 'fill-opacity': .45 }, s); txt(s, L + 18, ly, 'Modelo solo', { 'font-size': 12, class: 't-mut' });
+    el('rect', { x: L + 110, y: ly - 9, width: 12, height: 10, fill: v('accent'), 'fill-opacity': .85 }, s); txt(s, L + 128, ly, 'Modelo + interpolación de sus errores', { 'font-size': 12, class: 't-mut' });
+    el('line', { x1: L + 380, x2: L + 404, y1: ly - 4, y2: ly - 4, stroke: v('fg'), 'stroke-width': 1.5, 'stroke-dasharray': '5 3' }, s); txt(s, L + 410, ly, 'Interpolación simple (IDW)', { 'font-size': 12, class: 't-mut' });
+  })();
+
+  /* ---------- Explorador de escenarios ---------- */
+  (() => {
+    const scen = [
+      ['A', 'Hoy', 'Error de viento de ±20°, noviembre–diciembre de 2023. El punto de partida.'],
+      ['B', '+ estaciones', 'Agrega las tres estaciones que solo miden NO₂ (BJU, FAR, GAM).'],
+      ['C', '+ huellas químicas', 'Agrega CO y SO₂ de 29 y 28 estaciones: el CO marca el tráfico, el SO₂ marca el combustible industrial.'],
+      ['D', 'Viento ±10°', 'Reduce a la mitad el error del viento, como podría hacerlo un modelo meteorológico de alta resolución.'],
+      ['E', 'Viento ±10° + huellas', 'Mejor viento junto con CO y SO₂.'],
+      ['F', '+ 4 meses más', 'Agrega febrero–mayo de 2024, todavía con error de viento de ±20°.'],
+      ['G', 'Todo, viento ±10°', 'Estaciones extra, huellas químicas, ambos periodos y el mejor viento.'],
+      ['H', 'Todo, viento ±5°', 'Todo, con un viento casi perfecto. El techo de los datos actuales.'],
+    ];
+    const under = [3, 2, 2, 5, 5, 1, 4, 10];
+    const big = [['Central de Acolman', [20, 20, 20, 8, 9, 21, 9, 3]], ['Aeropuerto AIFA', [34, 31, 34, 15, 15, 21, 9, 4]], ['Aeropuerto AICM', [22, 18, 17, 14, 14, 33, 13, 5]]];
+    const ind = [['Tlalnepantla (norte)', [10, 7, 11, 9, 6, 11, 8, 5]], ['Iztapalapa (minerales)', [19, 22, 22, 16, 15, 34, 23, 15]], ['Ecatepec (minerales)', [22, 35, 28, 26, 23, 31, 24, 18]], ['Ecatepec (química)', [39, 37, 41, 25, 18, 31, 15, 14]], ['Azcapotzalco', [46, 58, 68, 44, 36, 58, 38, 25]], ['Cuautitlán Izcalli', [50, 65, 62, 47, 41, 65, 31, 24]], ['Tlalnepantla', [51, 57, 50, 21, 24, 93, 33, 16]], ['Ecatepec (minerales, norte)', [57, 64, 51, 24, 39, 54, 33, 26]], ['Tlalnepantla (transporte)', [108, 108, 106, 49, 35, 155, 38, 18]], ['Naucalpan', [138, 139, 144, 42, 38, 114, 36, 12]], ['Iztacalco', [145, 161, 137, 44, 40, 228, 68, 21]], ['Gustavo A. Madero', [197, 195, 210, 61, 53, 179, 82, 23]]];
+    const roads = [9, 9, 9, 3, 3, 9, 3, 1];
+    let cur = 0;
+    // resumen: zonas industriales con error menor a 25 %
+    const sum = svgIn('c-scen-sum', 760, 120, 'Zonas industriales con error menor a 25 % por escenario');
+    const sL = 40, sR = 730, sw = (sR - sL) / scen.length, sy0 = 92, sh = 70;
+    const sumMarks = [];
+    scen.forEach(([k, short], i) => {
+      const cx = sL + i * sw + sw / 2, hgt = under[i] / 12 * sh;
+      const r = el('rect', { x: cx - sw * .3, y: sy0 - hgt, width: sw * .6, height: hgt, rx: 3 }, sum);
+      el('title', {}, r).textContent = `${k}. ${short}: ${under[i]} de 12`;
+      txt(sum, cx, sy0 - hgt - 6, under[i], { 'text-anchor': 'middle', 'font-size': 12, class: 't-ink t-mono' });
+      txt(sum, cx, sy0 + 18, k, { 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 600, class: 't-mut' });
+      r.style.cursor = 'pointer'; r.addEventListener('click', () => select(i));
+      sumMarks.push(r);
+    });
+    el('line', { x1: sL, x2: sR, y1: sy0, y2: sy0, stroke: v('line') }, sum);
+    // botones
+    const bWrap = document.getElementById('scen-buttons');
+    const btns = scen.map(([k, short], i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = `${k} · ${short}`; b.addEventListener('click', () => select(i)); bWrap.appendChild(b); return b; });
+    // gráfica de detalle
+    const rows = [...big.map(r => [...r, 'big']), ...ind.map(r => [...r, 'ind'])];
+    const det = svgIn('c-scen', 760, 70 + rows.length * 22 + 40, 'Error de recuperación por fuente');
+    const L = 230, R = 700, T = 34, cap = 150, x = p => L + Math.min(p, cap) / cap * (R - L), rowY = i => T + 16 + i * 22 + (i >= big.length ? 14 : 0);
+    [0, 25, 50, 100, 150].forEach(g => { el('line', { x1: x(g), x2: x(g), y1: T, y2: rowY(rows.length - 1) + 12, stroke: g === 25 ? v('fg') : v('grid'), 'stroke-dasharray': g === 25 ? '5 4' : '' }, det); txt(det, x(g), T - 8, g + ' %', { 'text-anchor': 'middle', 'font-size': 11, class: g === 25 ? 't-ink t-mono' : 't-mut t-mono' }); });
+    txt(det, 12, rowY(0) - 18, 'Fuentes grandes', { 'font-size': 11.5, 'font-weight': 600, class: 't-mut' });
+    txt(det, 12, rowY(big.length) - 18, 'Zonas industriales', { 'font-size': 11.5, 'font-weight': 600, class: 't-mut' });
+    const bars = rows.map(([n, , kind], i) => {
+      const yy = rowY(i);
+      txt(det, L - 10, yy + 4, n, { 'text-anchor': 'end', 'font-size': 12, class: 't-ink' });
+      const b = el('rect', { x: L, y: yy - 7, height: 14, rx: 3 }, det); const tt = el('title', {}, b);
+      const lab = txt(det, 0, yy + 4, '', { 'font-size': 11.5, class: 't-ink t-mono' });
+      return [b, tt, lab, n];
+    });
+    const roadNote = txt(det, 12, rowY(rows.length - 1) + 34, '', { 'font-size': 12, class: 't-mut' });
+    function select(i) {
+      cur = i;
+      btns.forEach((b, k) => b.setAttribute('aria-pressed', k === i ? 'true' : 'false'));
+      sumMarks.forEach((m, k) => { m.style.fill = k === i ? v('accent') : v('muted'); m.setAttribute('fill-opacity', k === i ? .9 : .35); });
+      document.getElementById('scen-desc').textContent = `${scen[i][0]}. ${scen[i][2]} Zonas industriales con error menor a 25 %: ${under[i]} de 12. Zonas viales: error mediano de ${roads[i]} %.`;
+      rows.forEach(([, vals], k) => {
+        const [b, tt, lab, n] = bars[k], val = vals[i], ok = val < 25;
+        b.setAttribute('width', Math.max(2, x(val) - L)); b.style.fill = ok ? v('good') : v('muted'); b.setAttribute('fill-opacity', ok ? .75 : .45);
+        tt.textContent = `${n}: ${val} %`;
+        lab.setAttribute('x', x(val) + 6); lab.textContent = val + ' %' + (val > cap ? ' →' : '');
+      });
+      roadNote.textContent = `Zonas viales (9): error mediano de ${roads[i]} % en este escenario. Verde = dentro de la meta de 25 %.`;
+    }
+    select(0);
+  })();
+})();
+</script>

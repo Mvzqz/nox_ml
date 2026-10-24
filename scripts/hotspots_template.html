@@ -1,0 +1,239 @@
+<title>Puntos calientes de NO₂ en la CDMX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Misma serie visual que explainer.html: una columna de lectura, figuras un poco más anchas. */
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --fg: #18212a; --muted: #56636f; --line: #d6dde3; --grid: #e6ebef;
+  --accent: #1d5f8f; --accent-soft: rgba(29,95,143,.12); --no2: #9c4a24; --no2-soft: rgba(156,74,36,.14);
+  --good: #2c7a4b; --bad: #b0393b; --warn: #a8741a;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #10151a; --surface: #172029; --fg: #e4e9ee; --muted: #9aa7b3; --line: #2a3642; --grid: #1f2a34;
+  --accent: #72b2e0; --accent-soft: rgba(114,178,224,.16); --no2: #db8a5c; --no2-soft: rgba(219,138,92,.16);
+  --good: #6cc191; --bad: #e57d7e; --warn: #d9a64a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #10151a; --surface: #172029; --fg: #e4e9ee; --muted: #9aa7b3; --line: #2a3642; --grid: #1f2a34;
+  --accent: #72b2e0; --accent-soft: rgba(114,178,224,.16); --no2: #db8a5c; --no2-soft: rgba(219,138,92,.16);
+  --good: #6cc191; --bad: #e57d7e; --warn: #d9a64a; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 17px; line-height: 1.6; }
+.wrap { max-width: 880px; margin: 0 auto; padding-inline: 20px; padding-block: 0 64px; }
+.col { max-width: 68ch; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(1.9rem, 4.6vw, 2.8rem); font-weight: 700; letter-spacing: -.01em; }
+h2 { font-size: 1.6rem; font-weight: 700; margin-top: 8px; }
+h3 { font-size: 1.12rem; font-weight: 700; margin-top: 24px; }
+p { margin: 12px 0 0; }
+.eyebrow { font-family: var(--font-mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.lead { font-size: 1.15rem; margin-top: 16px; }
+.muted { color: var(--muted); }
+.num, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+header { padding-block: 44px 4px; }
+.verdict { margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.verdict > div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.verdict .k { font-family: var(--font-mono); font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; }
+.verdict .yes .k { color: var(--good); } .verdict .no .k { color: var(--bad); } .verdict .key .k { color: var(--no2); }
+.verdict p { margin-top: 6px; font-size: .96rem; }
+section { padding-top: 48px; }
+figure { margin: 22px 0 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; min-width: 0; }
+figure .title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; }
+figure .sub { color: var(--muted); font-size: .88rem; margin-top: 2px; }
+figcaption { color: var(--muted); font-size: .8rem; margin-top: 10px; }
+.chart { width: 100%; overflow-x: auto; margin-top: 10px; }
+.chart svg { display: block; width: 100%; height: auto; min-width: 520px; }
+svg text { font-family: var(--font-body); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.seg button { font: inherit; font-size: .82rem; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tbl { overflow-x: auto; margin-top: 16px; }
+table { border-collapse: collapse; width: 100%; font-size: .86rem; min-width: 680px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 9px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--font-mono); font-size: .68rem; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+td.num { white-space: nowrap; }
+.pill { display: inline-block; font-family: var(--font-mono); font-size: .7rem; padding: 1px 8px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.ok { color: var(--good); } .pill.fix { color: var(--warn); } .pill.na { color: var(--muted); }
+ul.plain { margin: 12px 0 0; padding-left: 20px; } ul.plain li + li { margin-top: 6px; }
+footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: .84rem; }
+@media (max-width: 520px) { body { font-size: 16px; } }
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">Puntos calientes · TEMPO sobremuestreado · nov 2023 – may 2024</span>
+  <h1>¿Se ven las fábricas y los aeropuertos en el NO₂ promedio del satélite?</h1>
+  <p class="lead col">Casi todo el mapa sigue a la red vial: la densidad de vías explica el 71 % de la variación del NO₂ promedio. Por encima de ese patrón sobresalen tres lugares: Vallejo–Azcapotzalco, el aeropuerto AICM y Gustavo A. Madero. La central de Acolman, el AIFA y la mayoría de las zonas industriales no se distinguen del tráfico a la resolución de TEMPO.</p>
+  <div class="verdict">
+    <div class="yes"><span class="k">Sobresale</span><p>Vallejo–Azcapotzalco (el NO₂ más alto del dominio), AICM y Gustavo A. Madero: más NO₂ del que explica su vialidad y más viento abajo que viento arriba.</p></div>
+    <div class="no"><span class="k">No sobresale</span><p>La central de Acolman, el AIFA y 7 de las 12 zonas industriales candidatas; otras 3 dan solo un indicio. Su señal, si existe, queda bajo el tráfico y el tamaño del píxel.</p></div>
+    <div class="key"><span class="k">Qué significa</span><p>El satélite confirma el patrón vial y señala 2 o 3 zonas para estudiar de cerca. No prueba ninguna fuente individual: son indicios, no mediciones de emisión.</p></div>
+  </div>
+</header>
+
+<section>
+  <span class="eyebrow">El mapa</span>
+  <h2>Medio año de escaneos, promediados</h2>
+  <figure>
+    <div class="title" id="map-title">NO₂ promedio de la tarde</div>
+    <div class="sub">Elige una capa. Los números marcan las fuentes candidatas (lista abajo).</div>
+    <div class="seg" id="layer-buttons" role="group" aria-label="Capa del mapa"></div>
+    <div class="chart"><svg id="map" viewBox="0 0 __W__ __HB__" role="img" aria-label="Mapa de NO₂ promedio de TEMPO sobre la CDMX">
+      <image id="map-img" x="0" y="0" width="__W__" height="__H__" preserveAspectRatio="none" href=""/>
+      <path d="__MUN__" fill="none" style="stroke:var(--fg)" stroke-opacity=".28" stroke-width=".7"/>
+      <g id="markers"></g>
+      <g id="cbar"></g>
+    </svg></div>
+    <figcaption>TEMPO NO₂ L2 V04, 12–17 h locales, píxeles con bandera de calidad 0 y nubes &lt; 0.2. Celdas de 0.005° (~0.5 km); mediana de __NMED__ observaciones por celda. Líneas: límites municipales (INEGI 2022).</figcaption>
+  </figure>
+</section>
+
+<section>
+  <span class="eyebrow">Cómo se hizo</span>
+  <h2>Del píxel de 2 × 4.5 km al mapa de medio kilómetro</h2>
+  <div class="col">
+    <p>Un píxel de TEMPO cubre unos 2 × 4.5 km, demasiado para ver una fábrica. Pero cada escaneo cae en una posición un poco distinta. Al repartir cada píxel sobre su polígono real y promediar 953 escaneos con datos válidos, el detalle que se repite (una fuente fija) se acumula y el ruido se cancela. Es el "sobremuestreo" que se usa con satélites para ver fuentes persistentes.</p>
+  </div>
+  <ul class="plain col">
+    <li><b>Reparto por área:</b> cada píxel se divide en 8 × 8 sub-puntos dentro de su polígono; cada uno suma a la celda de ~0.5 km donde cae.</li>
+    <li><b>Tráfico esperado:</b> la longitud de vías ponderada por clase (autopista 3, primaria 2, secundaria 1.5, terciaria 1), suavizada a la escala de un píxel. Un ajuste lineal de NO₂ contra esa vialidad, más un gradiente regional, da el "residuo": lo que el tráfico no explica.</li>
+    <li><b>Contraste por fuente:</b> NO₂ a ≤ 2 km de cada candidata frente al anillo de 4 a 8 km, y su residuo comparado con el de las celdas urbanas (percentil).</li>
+    <li><b>Prueba con el viento:</b> en cada escaneo se compara el NO₂ a 2–8 km viento abajo con el de viento arriba. Una fuente real deja más NO₂ viento abajo. Como la ciudad misma produce ese efecto, cada candidata se compara con 60 puntos de control urbanos (z = cuántas desviaciones se aleja del control).</li>
+  </ul>
+</section>
+
+<section>
+  <span class="eyebrow">Resultados</span>
+  <h2>Tres lugares pasan las dos pruebas a medias; ninguno de forma contundente</h2>
+  <figure>
+    <div class="title">AICM, Vallejo–Azcapotzalco y Gustavo A. Madero quedan arriba en ambas pruebas</div>
+    <div class="sub">Residuo sobre la vialidad (percentil entre celdas urbanas) contra la señal viento abajo − viento arriba (z frente al control)</div>
+    <div class="chart" id="scatter"></div>
+    <figcaption>Zona sombreada: percentil ≥ 85 y z ≥ 1.5. Ningún z llega a 2, así que son indicios, no pruebas.</figcaption>
+  </figure>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Fuente candidata</th><th>NO₂ ≤ 2 km (10¹⁵)</th><th>Cociente NO₂ vs anillo</th><th>Cociente vialidad vs anillo</th><th>Residuo (10¹⁵)</th><th>Percentil urbano</th><th>z viento</th><th>Lectura</th></tr></thead>
+    <tbody>
+__ROWS__
+    </tbody>
+  </table></div>
+  <div class="col">
+    <p class="muted">Cómo leer la tabla: si el cociente de NO₂ es parecido al de la vialidad, el tráfico basta para explicar el valor. Un residuo positivo alto y un z alto, juntos, sugieren una fuente adicional.</p>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Interpretación</span>
+  <h2>Qué dice cada lugar</h2>
+  <ul class="plain col">
+    <li><b>Vallejo–Azcapotzalco.</b> Tiene el NO₂ promedio más alto del dominio (1.9 × 10¹⁶ en 19.49° N, 99.18° O) y un residuo en el 1 % superior. Coincide con la zona industrial de Vallejo, pero también con mucho tráfico pesado. El mapa no separa industria de camiones a diésel: la vialidad se pondera por tipo de vía, no por tipo de vehículo.</li>
+    <li><b>AICM.</b> Residuo en el percentil 88 y la mayor diferencia viento abajo − viento arriba (z = 2.0). Es consistente con el aeropuerto más su tráfico vecino (Circuito Interior, Viaducto, Zaragoza).</li>
+    <li><b>Gustavo A. Madero.</b> La zona candidata (19.52° N, 99.12° O) tiene residuo en el percentil 94 y z = 2.0. El pico de residuo más alto del mapa (5.4 × 10¹⁵) está 4 km al norte, en 19.55° N, 99.14° O, al pie de la Sierra de Guadalupe: puede ser industria, el tráfico de Indios Verdes o aire que se acumula contra el cerro; sin un modelo de relieve no se distingue.</li>
+    <li><b>Iztapalapa.</b> Residuo alto (percentil 96) pero sin señal de viento (z = 0.7): más compatible con acumulación o con muchas fuentes pequeñas que con una fuente puntual.</li>
+    <li><b>Central de Acolman.</b> No se distingue (percentil 65, z = 0.2). Concuerda con la inversión con datos reales, que le asignó unas 300 t/año frente a 2,615 a priori. Puede emitir menos de lo supuesto, o su chimenea alta dispersa el NO₂ por encima de lo que llega al promedio; esta prueba no separa ambas explicaciones.</li>
+    <li><b>AIFA.</b> Sin señal (z = −1.6). Con su tráfico actual, su NO₂ no supera el ruido.</li>
+  </ul>
+  <h3>Qué patrón sigue el mapa</h3>
+  <ul class="plain col">
+    <li><b>Vialidades, sobre todo:</b> la densidad vial explica el 71 % de la variación espacial; con un gradiente regional, el 78 %.</li>
+    <li><b>Un patrón que se repite:</b> los mapas de nov–dic 2023 y de feb–may 2024 se parecen mucho (correlación __CORRP__), aunque en primavera el nivel medio baja de 12.1 a 8.3 × 10¹⁵, por la mezcla más profunda y la química más rápida. Lo que se repite son estructuras fijas: vías, industria, relieve.</li>
+    <li><b>La industria, solo en dos zonas:</b> Vallejo–Azcapotzalco y, con dudas, Gustavo A. Madero. La mayoría de las zonas industriales candidatas no se separan del tráfico.</li>
+  </ul>
+</section>
+
+<section>
+  <span class="eyebrow">Límites</span>
+  <h2>Qué no puede decir este mapa</h2>
+  <ul class="plain col">
+    <li>Mide columnas de NO₂, no emisiones: una zona puede verse alta porque el aire se estanca ahí.</li>
+    <li>Aun sobremuestreado, el píxel de 2 × 4.5 km difumina fuentes separadas por menos de ~2 km.</li>
+    <li>La vialidad usa longitud por clase de vía, no volumen ni proporción de camiones; los conteos de Infovial lo mejorarían.</li>
+    <li>La prueba viento arriba/abajo usa el viento medio del dominio, con un error de dirección medido de ~30°.</li>
+    <li>No se usó un modelo de relieve, así que la acumulación contra los cerros no se separa de las fuentes.</li>
+    <li>TROPOMI no se incluyó: cada órbita pesa unos 450 MB y dos meses requieren más de 60 órbitas (~27 GB). Haría falta un servicio de recorte en el servidor para que valga la pena.</li>
+  </ul>
+  <h3>Siguientes pasos</h3>
+  <ul class="plain col">
+    <li>Ponderar la vialidad con los conteos y la proporción de pesados de Infovial, y repetir el residuo.</li>
+    <li>Añadir un modelo de elevación para separar la acumulación junto a la Sierra de Guadalupe.</li>
+    <li>Usar Vallejo–Azcapotzalco, AICM y Gustavo A. Madero como fuentes candidatas en la inversión, en lugar de los 12 clústeres de DENUE.</li>
+  </ul>
+</section>
+
+<footer>Datos: NASA TEMPO NO₂ L2 V04 (953 escaneos con píxeles válidos), OpenStreetMap, INEGI, SIMAT REDMET (viento). Scripts: <span class="mono">scripts/hotspots_oversample.py</span>, <span class="mono">scripts/hotspots_report.py</span>. Octubre de 2026.</footer>
+</div>
+
+<script>
+(() => {
+  const LAYERS = __LAYERS__;
+  const CANDS = __CANDS__;
+  const W = __W__, H = __H__;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) { const v = String(attrs[k]); if ((k === 'fill' || k === 'stroke') && v.startsWith('var(')) e.style[k] = v; else e.setAttribute(k, v); } if (parent) parent.appendChild(e); return e; };
+  const txt = (parent, x, y, s, attrs = {}) => { const t = el('text', { x, y, ...attrs }, parent); t.textContent = s; return t; };
+
+  // marcadores
+  const mk = document.getElementById('markers');
+  const strong = c => c.lect === 'señal probable';
+  CANDS.forEach(c => {
+    const g = el('g', {}, mk);
+    el('circle', { cx: c.x, cy: c.y, r: 9, fill: 'var(--surface)', stroke: strong(c) ? 'var(--accent)' : 'var(--fg)', 'stroke-width': strong(c) ? 2.5 : 1.2, 'fill-opacity': .85 }, g);
+    txt(g, c.x, c.y + 3.8, c.n, { 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 600, fill: 'var(--fg)' });
+    el('title', {}, g).textContent = `${c.n}. ${c.name}: percentil ${c.pct}, z ${c.z} (${c.lect})`;
+  });
+
+  // barra de color
+  const cb = document.getElementById('cbar');
+  const defs = el('defs', {}, document.getElementById('map'));
+  const grad = el('linearGradient', { id: 'cb-grad', x1: 0, x2: 1, y1: 0, y2: 0 }, defs);
+  const cbX = 40, cbW = W - 80, cbY = H + 16;
+  el('rect', { x: cbX, y: cbY, width: cbW, height: 10, fill: 'url(#cb-grad)', rx: 2 }, cb);
+  const cbLo = txt(cb, cbX, cbY + 26, '', { 'font-size': 11.5, fill: 'var(--muted)' });
+  const cbHi = txt(cb, cbX + cbW, cbY + 26, '', { 'font-size': 11.5, fill: 'var(--muted)', 'text-anchor': 'end' });
+  const cbU = txt(cb, cbX + cbW / 2, cbY + 26, '', { 'font-size': 11.5, fill: 'var(--fg)', 'text-anchor': 'middle' });
+
+  const img = document.getElementById('map-img');
+  const title = document.getElementById('map-title');
+  const order = ['media', 'residuo', 'vial', 'p1', 'p2'];
+  const titles = { media: 'NO₂ promedio de la tarde, nov 2023 – may 2024', residuo: 'Dónde hay más NO₂ del que explica el tráfico', vial: 'Densidad vial esperada a escala de píxel', p1: 'NO₂ promedio, nov–dic 2023', p2: 'NO₂ promedio, feb–may 2024' };
+  const box = document.getElementById('layer-buttons');
+  const btns = order.map(k => { const b = document.createElement('button'); b.type = 'button'; b.textContent = LAYERS[k].label; b.addEventListener('click', () => show(k)); box.appendChild(b); return [k, b]; });
+  const fmt = v => Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(1);
+  function show(k) {
+    const L = LAYERS[k];
+    img.setAttribute('href', L.img);
+    title.textContent = titles[k];
+    btns.forEach(([kk, b]) => b.setAttribute('aria-pressed', kk === k ? 'true' : 'false'));
+    grad.replaceChildren();
+    L.cmap.forEach((c, i) => el('stop', { offset: (i / (L.cmap.length - 1)).toFixed(3), 'stop-color': c }, grad));
+    cbLo.textContent = fmt(L.lo); cbHi.textContent = fmt(L.hi); cbU.textContent = L.unit;
+  }
+  show('media');
+
+  // dispersión: percentil del residuo vs z del viento
+  (() => {
+    const host = document.getElementById('scatter');
+    const s = el('svg', { viewBox: '0 0 760 420', role: 'img', 'aria-label': 'Residuo frente a señal de viento por fuente candidata' }, host);
+    const L = 64, R = 730, T = 24, B = 360;
+    const x = p => L + p / 100 * (R - L), y = z => B - (z + 2.5) / 5 * (B - T);
+    el('rect', { x: x(85), y: y(2.5), width: x(100) - x(85), height: y(1.5) - y(2.5), fill: 'var(--good)', 'fill-opacity': .1 }, s);
+    [0, 25, 50, 75, 100].forEach(g => { el('line', { x1: x(g), x2: x(g), y1: T, y2: B, stroke: 'var(--grid)' }, s); txt(s, x(g), B + 18, g, { 'text-anchor': 'middle', 'font-size': 11.5, fill: 'var(--muted)', class: 'num' }); });
+    [-2, -1, 0, 1, 2].forEach(g => { el('line', { x1: L, x2: R, y1: y(g), y2: y(g), stroke: g === 0 ? 'var(--muted)' : 'var(--grid)' }, s); txt(s, L - 8, y(g) + 4, g, { 'text-anchor': 'end', 'font-size': 11.5, fill: 'var(--muted)', class: 'num' }); });
+    txt(s, (L + R) / 2, B + 40, 'Percentil del residuo entre celdas urbanas →', { 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--muted)' });
+    const yl = txt(s, 18, (T + B) / 2, 'z viento abajo − viento arriba →', { 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--muted)' });
+    yl.setAttribute('transform', `rotate(-90 18 ${(T + B) / 2})`);
+    txt(s, x(0) + 6, y(0) - 6, 'promedio de los puntos de control', { 'font-size': 11, fill: 'var(--muted)' });
+    CANDS.forEach(c => {
+      const st = strong(c);
+      const dot = el('circle', { cx: x(c.pct), cy: y(c.z), r: st ? 7 : 5.5, fill: st ? 'var(--accent)' : 'var(--muted)', 'fill-opacity': st ? .95 : .55 }, s);
+      el('title', {}, dot).textContent = `${c.n}. ${c.name}: percentil ${c.pct}, z ${c.z}`;
+      const tag = { 4: ['AICM', -9, -8, 'end'], 10: ['Azcapotzalco', -10, 4, 'end'], 12: ['GAM', 10, 4, 'start'] }[c.n];
+      if (st && tag) txt(s, x(c.pct) + tag[1], y(c.z) + tag[2], `${c.n} ${tag[0]}`, { 'font-size': 12, 'font-weight': 600, fill: 'var(--fg)', 'text-anchor': tag[3] });
+      else txt(s, x(c.pct) + 8, y(c.z) + 4, c.n, { 'font-size': 11, fill: 'var(--muted)' });
+    });
+  })();
+})();
+</script>

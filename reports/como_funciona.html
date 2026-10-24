@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cómo funciona el localizador de NOₓ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Misma serie visual que explainer.html: una columna de lectura, figuras algo más anchas, franja de secciones fija. */
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --fg: #18212a; --muted: #56636f; --line: #d6dde3; --grid: #e6ebef;
+  --accent: #1d5f8f; --accent-soft: rgba(29,95,143,.12); --no2: #9c4a24; --no2-soft: rgba(156,74,36,.14);
+  --good: #2c7a4b; --bad: #b0393b; --warn: #a8741a;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #10151a; --surface: #172029; --fg: #e4e9ee; --muted: #9aa7b3; --line: #2a3642; --grid: #1f2a34;
+  --accent: #72b2e0; --accent-soft: rgba(114,178,224,.16); --no2: #db8a5c; --no2-soft: rgba(219,138,92,.16);
+  --good: #6cc191; --bad: #e57d7e; --warn: #d9a64a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #10151a; --surface: #172029; --fg: #e4e9ee; --muted: #9aa7b3; --line: #2a3642; --grid: #1f2a34;
+  --accent: #72b2e0; --accent-soft: rgba(114,178,224,.16); --no2: #db8a5c; --no2-soft: rgba(219,138,92,.16);
+  --good: #6cc191; --bad: #e57d7e; --warn: #d9a64a; color-scheme: dark }
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 17px; line-height: 1.6; }
+.wrap { max-width: 900px; margin: 0 auto; padding-inline: 20px; padding-block: 0 64px; }
+.col { max-width: 70ch; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 700; letter-spacing: -.01em; }
+h2 { font-size: 1.7rem; font-weight: 700; margin-top: 8px; }
+h3 { font-size: 1.12rem; font-weight: 700; margin-top: 26px; }
+p { margin: 12px 0 0; }
+a { color: var(--accent); }
+code, .mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+code { font-size: .86em; background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; }
+sub { font-size: .7em; }
+.eyebrow { font-family: var(--font-mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.lead { font-size: 1.15rem; margin-top: 16px; }
+.muted { color: var(--muted); }
+
+nav.strip { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+nav.strip .in { max-width: 900px; margin: 0 auto; padding-inline: 20px; padding-block: 10px; display: flex; gap: 6px 16px; flex-wrap: wrap; font-size: .85rem; }
+nav.strip a { color: var(--muted); text-decoration: none; }
+nav.strip a:hover, nav.strip a:focus-visible { color: var(--fg); }
+
+header.hero { padding-block: 44px 4px; }
+.verdict { margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.verdict > div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.verdict .k { font-family: var(--font-mono); font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; }
+.verdict .hi .k { color: var(--good); } .verdict .me .k { color: var(--warn); } .verdict .lo .k { color: var(--bad); }
+.verdict p { margin-top: 6px; font-size: .95rem; }
+
+section { padding-top: 52px; scroll-margin-top: 56px; }
+section > .eyebrow { display: block; margin-bottom: 4px; }
+
+figure { margin: 22px 0 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; min-width: 0; }
+figure .title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; }
+figure .sub { color: var(--muted); font-size: .88rem; margin-top: 2px; }
+figcaption { color: var(--muted); font-size: .8rem; margin-top: 10px; }
+.chart { width: 100%; overflow-x: auto; margin-top: 10px; }
+.chart svg { display: block; width: 100%; height: auto; min-width: 600px; }
+svg text { font-family: var(--font-body); }
+.t-ink { fill: var(--fg); } .t-mut { fill: var(--muted); } .t-mono { font-family: var(--font-mono); }
+
+.tbl { overflow-x: auto; margin-top: 16px; }
+table { border-collapse: collapse; width: 100%; font-size: .88rem; min-width: 640px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--font-mono); font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+td.num { white-space: nowrap; }
+.pill { display: inline-block; font-family: var(--font-mono); font-size: .7rem; padding: 1px 8px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.hi { color: var(--good); } .pill.me { color: var(--warn); } .pill.lo { color: var(--bad); } .pill.na { color: var(--muted); }
+
+.step { display: grid; grid-template-columns: 34px 1fr; gap: 12px; margin-top: 26px; }
+.step .n { font-family: var(--font-mono); font-weight: 600; color: var(--accent); border: 1px solid var(--line); border-radius: 99px; width: 30px; height: 30px; display: grid; place-items: center; font-size: .85rem; background: var(--surface); }
+.step > div { min-width: 0; }
+.step h3 { margin-top: 3px; }
+.files { margin-top: 8px; font-size: .84rem; color: var(--muted); }
+.files code { color: var(--fg); }
+ul.tight { margin: 8px 0 0; padding-left: 20px; }
+ul.tight li + li { margin-top: 4px; }
+
+.formula { font-family: var(--font-mono); font-size: .95rem; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-top: 14px; overflow-x: auto; white-space: nowrap; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 14px 28px; margin-top: 14px; }
+.controls label { display: grid; gap: 4px; font-size: .88rem; min-width: 220px; flex: 1; }
+.controls input[type=range] { width: 100%; accent-color: var(--accent); }
+.readout { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-top: 14px; }
+.readout div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.readout .v { font-family: var(--font-mono); font-size: 1.3rem; font-weight: 600; }
+.readout .l { font-size: .8rem; color: var(--muted); }
+.readout .note { grid-column: 1 / -1; border: 0; padding: 0; font-size: .92rem; }
+input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; margin-top: 18px; }
+.two > div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; min-width: 0; }
+.two h3 { margin-top: 0; }
+.two ul { margin: 8px 0 0; padding-left: 18px; font-size: .93rem; }
+.two li + li { margin-top: 6px; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; }
+@media (max-width: 520px) { body { font-size: 16px; } }
+</style>
+</head>
+<body>
+<nav class="strip" aria-label="Secciones"><div class="in">
+  <a href="#cadena">La cadena</a><a href="#pasos">Paso a paso</a><a href="#inversion">La inversión</a>
+  <a href="#evidencia">Evidencia</a><a href="#negativas">Pruebas negativas</a><a href="#noprobado">Lo no probado</a><a href="#supuestos">Supuestos</a>
+</div></nav>
+
+<div class="wrap">
+<header class="hero">
+  <span class="eyebrow">Prueba de concepto · Valle de México · octubre 2026</span>
+  <h1>Cómo funciona el localizador de fuentes de NO<sub>x</sub>, y cuánto confiar en él</h1>
+  <p class="lead col">Este documento describe la cadena completa que hoy está construida, de los datos crudos a las emisiones estimadas, y la evidencia de cada afirmación que hacemos. Cada paso nombra el script de <code>scripts/</code> que lo ejecuta y el reporte de <code>reports/</code> donde están los números.</p>
+  <div class="verdict">
+    <div class="hi"><span class="k">Confianza alta</span><p>Los datos de entrada están verificados; los cambios relativos con el estimador normalizado por meteorología (domingo 0.65 del hábil, igual que los conteos de tráfico; pasa los placebos con ±10 %); el satélite y las estaciones ubican los mismos puntos calientes.</p></div>
+    <div class="me"><span class="k">Confianza media</span><p>Emisión vial por zona de ~18 km: se recupera en gemelos aun con el error de viento medido (~15 %), pero con datos reales la escala absoluta depende del modelo de transporte. Fuentes grandes: solo con un viento mejor que el actual.</p></div>
+    <div class="lo"><span class="k">Confianza baja o nula</span><p>Clústeres industriales individuales, centrales por separado, ubicación fina (&lt; 2 km), totales absolutos (PINN y lineal difieren 26–42 %), cambios medidos con el satélite normalizado, ranking por municipio.</p></div>
+  </div>
+</header>
+
+<section id="cadena">
+  <span class="eyebrow">1 · La cadena</span>
+  <h2>De la medición a la emisión, en seis etapas</h2>
+  <div class="col"><p>El sistema no "ve" emisiones: ve concentraciones y viento, y deduce qué emisiones las explican mejor. Hoy esa deducción la hace una inversión lineal rápida; la PINN del plan original usará la misma física y los mismos datos.</p></div>
+  <figure>
+    <div class="title">Cada etapa entrega un archivo que la siguiente consume</div>
+    <div class="chart"><svg id="flow" viewBox="0 0 760 330" role="img" aria-label="Diagrama de la cadena del proyecto"></svg></div>
+    <figcaption>Datos crudos en <code>data/raw/</code> (inmutables, con <code>MANIFEST.md</code>); intermedios en <code>data/interim/</code>; resultados en <code>reports/</code>.</figcaption>
+  </figure>
+</section>
+
+<section id="pasos">
+  <span class="eyebrow">2 · Paso a paso</span>
+  <h2>Qué hace cada etapa y qué encontró</h2>
+
+  <div class="step"><div class="n">1</div><div>
+    <h3>Datos crudos</h3>
+    <p>Todo es público. Estaciones SIMAT (RAMA: NO, NO<sub>2</sub>, NO<sub>x</sub>, CO, SO<sub>2</sub>; REDMET: viento) de 2023–2024; TEMPO NO<sub>2</sub> nivel 2 versión V04 de la NASA; capa límite y viento ERA5 vía Open-Meteo; carreteras de OpenStreetMap; límites INEGI 2022; directorio DENUE; base de centrales eléctricas de WRI; reportes METAR de AICM (MMMX) y AIFA (MMSM); inventario de emisiones ZMVM 2018.</p>
+    <p>De TEMPO se descarga cada archivo (~150 MB), se guarda solo el recorte del dominio (~120 KB) y se borra el original; la URL queda en el manifiesto para re-descargarlo.</p>
+    <div class="files">Scripts: <code>tempo_download.py</code> · Manifiestos: <code>data/raw/MANIFEST.md</code>, <code>data/raw/tempo/manifest.csv</code></div>
+  </div></div>
+
+  <div class="step"><div class="n">2</div><div>
+    <h3>Control de calidad</h3>
+    <p>Cada fuente se compara contra los criterios del plan antes de entrar al modelo. Lo que encontró:</p>
+    <ul class="tight">
+      <li><b>NO<sub>x</sub> de estaciones:</b> unidades en ppb, sin duplicados ni negativos, NO<sub>x</sub> = NO + NO<sub>2</sub> (diferencia mediana 0.0 %), pico matutino entre 07 y 09 h todos los meses (la hora local está bien), domingo (27.5 ppb) menor que hábil (38.5 ppb), estaciones de tráfico (MER 55.0, CAM 50.6) por encima de las periféricas (AJM 19.1, CUA 23.1). Se marcan 59 horas con sensor pegado.</li>
+      <li><b>Viento 2024:</b> velocidades ×2.2. Detalle en la sección de evidencia; se corrige dividiendo entre 2.237 y se guarda el valor original en <code>WSP_raw</code>.</li>
+      <li><b>Huecos:</b> XAL sin datos en abril–mayo de 2024 y ACO sin NO<sub>x</sub> desde diciembre de 2023.</li>
+      <li><b>TEMPO:</b> unidades molec/cm², centro urbano 2.15× los alrededores; las nubes eliminan 41 % de los píxeles en nov–dic 2023.</li>
+      <li><b>ERA5:</b> capa límite máxima a las 15 h y &lt; 100 m de noche. Open-Meteo no tiene capa límite para ene–jun 2024.</li>
+      <li><b>Inventario:</b> la Tabla 7 suma 144,597.8 t/año (85.8 % móviles); el PDF no trae NO<sub>x</sub> por municipio.</li>
+    </ul>
+    <div class="files">Scripts: <code>qc_simat.py</code>, <code>qc_geo.py</code>, <code>qc_era5.py</code>, <code>qc_tempo.py</code> · Reportes: <code>qc_simat.md</code>, <code>qc_geo.md</code>, <code>qc_era5.md</code>, <code>qc_tempo_*.md</code></div>
+  </div></div>
+
+  <div class="step"><div class="n">3</div><div>
+    <h3>Dominio, malla y periodo</h3>
+    <p>Caja de 19.25–19.77 °N y 99.35–98.81 °O (3,260 km²), malla de 1 km en UTM 14N. Se amplió ~10 km al norte y al este para que la central de Acolman no quedara en la frontera y entraran las estaciones CUT, CHO y MON. Solo tardes (12–17 h), cuando la capa de mezcla está desarrollada. Periodo principal: nov–dic 2023 (20 y 19 estaciones de NO<sub>x</sub> válidas); periodo de prueba: 15 feb–31 may 2024.</p>
+    <div class="files">Parámetros en un solo lugar: <code>config.py</code></div>
+  </div></div>
+
+  <div class="step"><div class="n">4</div><div>
+    <h3>Fuentes candidatas y proxy vial</h3>
+    <p><b>Tráfico:</b> cada tramo de OSM aporta su longitud por un peso según su clase (autopista y troncal 3, primaria 2, secundaria 1.5, terciaria 1). Se suma por celda de 1 km y se escala para que el dominio tenga ~80 % del NO<sub>x</sub> vehicular de la ZMVM (99,292 t/año a priori). Las celdas se agrupan en 9 regiones de ~18 km; cada región tiene un factor desconocido α (a priori 1 ± 0.5).</p>
+    <p><b>Fuentes puntuales:</b> 2 centrales (Valle de México en Acolman, 2,615 t/año a priori; Nonoalco, 277; revisados con Climate TRACE 2023 a 1,600 ± 650 y 100 ± 100, ver <code>centrales_generacion.md</code>), 2 aeropuertos (AICM y AIFA, 500 t/año a priori con incertidumbre de 200 %) y 12 clústeres industriales. Los clústeres salen del DENUE (establecimientos con ≥ 51 empleados), repartiendo el % de NO<sub>x</sub> de cada rama industrial del inventario por personal ocupado y agregando a celdas de 2 km.</p>
+    <div class="files">Scripts: <code>point_candidates.py</code>, proxy vial en <code>feasibility_linear.py</code> · Reporte: <code>point_candidates.md</code></div>
+  </div></div>
+
+  <div class="step"><div class="n">5</div><div>
+    <h3>Modelo de transporte</h3>
+    <p>Responde: si una fuente emite 1 t/año, ¿cuánto agrega en cada estación (ppb) y en cada píxel de TEMPO (molec/cm²) en esta hora? Hay dos versiones:</p>
+    <ul class="tight">
+      <li><b>Pluma estacionaria:</b> pluma gaussiana de fuente a nivel de suelo con dispersión urbana diurna (Briggs, clase B), más ±15° de incertidumbre de dirección; la mezcla vertical se limita a la capa límite de ERA5. Para TEMPO se integra la columna y se ensancha la pluma por el tamaño del píxel; el NO<sub>2</sub> se obtiene con el cociente NO<sub>2</sub>/NO<sub>x</sub> medido (0.77).</li>
+      <li><b>No estacionaria (puffs):</b> la pluma cubre solo la última hora; las emisiones de las 6 horas previas viajan como puffs cada 15 min con la secuencia real de vientos, siguen un perfil horario de tráfico y decaen con una vida química de 4 h. Con viento constante reproduce la pluma estacionaria dentro de ±15 % entre 2 y 30 km.</li>
+    </ul>
+    <div class="files">Scripts: <code>feasibility_linear.py</code> (<code>plume</code>, <code>jacobian_hour</code>), <code>puff.py</code></div>
+  </div></div>
+
+  <div class="step"><div class="n">6</div><div>
+    <h3>Inversión y validación</h3>
+    <p>Con esas contribuciones se arma una matriz y se resuelve qué emisiones explican mejor las mediciones (siguiente sección). Luego se valida con gemelos sintéticos, ciclo semanal, estaciones retenidas y escenarios de datos.</p>
+    <div class="files">Scripts: <code>feasibility_linear.py</code>, <code>real_check_linear.py</code>, <code>dilution_test.py</code>, <code>improvement_tests.py</code>, <code>observability*.py</code> · Reportes: <code>feasibility_linear_*.md</code>, <code>real_check_linear_*.md</code>, <code>dilution_test_*.md</code>, <code>improvement_tests.md</code>, resumen en <code>RESUMEN.md</code></div>
+  </div></div>
+</section>
+
+<section id="inversion">
+  <span class="eyebrow">3 · La inversión</span>
+  <h2>Cómo se combinan lo que sabíamos y lo que medimos</h2>
+  <div class="col">
+    <p>La concentración es lineal en las emisiones: si una fuente emite el doble, su aporte se duplica. Por eso cada observación se escribe como una suma de aportes más un fondo:</p>
+  </div>
+  <div class="formula">y = K · x + fondo<sub>hora</sub> + error</div>
+  <div class="col">
+    <ul class="tight">
+      <li><b>x (estado):</b> 16 fuentes puntuales en t/año, 9 factores viales α (con datos reales, uno por región y tipo de día: hábil, sábado, domingo/festivo, todos con el mismo a priori) y un fondo por hora para estaciones y otro para TEMPO.</li>
+      <li><b>K:</b> la matriz del modelo de transporte de la etapa 5, una fila por observación.</li>
+      <li><b>Errores supuestos:</b> estaciones 15 ppb y TEMPO 5×10<sup>15</sup> molec/cm² con datos reales (8 ppb y 3×10<sup>15</sup> en gemelos, duplicados en el escenario pesimista). El NO<sub>x</sub> estimado desde NO<sub>2</sub> (BJU, FAR, GAM) lleva 1.5× el error.</li>
+      <li><b>Fondo por hora:</b> absorbe lo que entra al dominio y lo común a toda la ciudad. En <code>improvement_tests.py</code> se elimina analíticamente del sistema (marginalización), lo que deja una matriz pequeña y un cálculo exacto.</li>
+    </ul>
+    <p>La solución bayesiana es un promedio ponderado: cada fuente de información pesa según su precisión. Donde los datos informan poco, el resultado se queda cerca del a priori; donde informan mucho, lo dominan. La reducción de incertidumbre dice cuánto aprendimos de cada fuente.</p>
+  </div>
+  <figure>
+    <div class="title">A priori + datos = a posteriori</div>
+    <div class="sub">Ejemplo ilustrativo de un factor vial α (no son resultados del proyecto). Mueve los controles.</div>
+    <div class="chart"><svg id="bayes" viewBox="0 0 760 250" role="img" aria-label="Demostración de combinación bayesiana"></svg></div>
+    <div class="controls">
+      <label for="sp">Incertidumbre del a priori (α = 1) <span class="mono" id="sp-v"></span><input id="sp" type="range" min="0.1" max="1" step="0.05" value="0.5"></label>
+      <label for="nh">Horas de datos que ven esta región <span class="mono" id="nh-v"></span><input id="nh" type="range" min="0" max="300" step="5" value="40"></label>
+    </div>
+    <div class="readout">
+      <div><div class="v" id="b-mean">–</div><div class="l">α a posteriori</div></div>
+      <div><div class="v" id="b-sd">–</div><div class="l">incertidumbre a posteriori</div></div>
+      <div><div class="v" id="b-red">–</div><div class="l">reducción de incertidumbre</div></div>
+      <div class="note" id="b-note"></div>
+    </div>
+    <figcaption>Ejemplo: los datos de una hora sugieren α = 0.4 con incertidumbre ±2; con n horas independientes la incertidumbre de los datos baja como 2/√n. En la práctica las horas no son independientes, por eso usamos bootstrap por días para los intervalos.</figcaption>
+  </figure>
+</section>
+
+<section id="evidencia">
+  <span class="eyebrow">4 · Evidencia</span>
+  <h2>Cada afirmación, cómo se probó y cuánto confiar</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Afirmación</th><th>Cómo se probó</th><th>Resultado</th><th>Confianza</th></tr></thead>
+    <tbody>
+      <tr><td>Los datos de NO<sub>x</sub> son correctos</td><td>Criterios del plan: unidades, duplicados, NO+NO<sub>2</sub>, hora local, coherencia física</td><td>Todos pasan; 59 h de sensor pegado marcadas</td><td><span class="pill hi">alta</span></td></tr>
+      <tr><td>El viento 2024 venía en mph, no en m/s</td><td>Tres pruebas independientes: contra ERA5, contra METAR del aeropuerto y la huella numérica de los valores</td><td>×2.2 frente a ERA5 (1.05× en 2023); ×2.2 frente a METAR (0.62 → 1.26–1.46); salto exacto el 1 ene 2024; faltan 0.3 y 0.6, y 1.0 aparece una vez. Corregido: 2.6–3.1 m/s frente a 2.1–3.0 de ERA5</td><td><span class="pill hi">alta</span> en el error; <span class="pill me">media</span> en que sea mph exacto</td></tr>
+      <tr><td>La dirección del viento es correcta</td><td>Componente norte-sur REDMET vs ERA5 por trimestre</td><td>r = 0.71–0.85 en ambos años</td><td><span class="pill hi">alta</span></td></tr>
+      <tr><td>TEMPO y las estaciones miden lo mismo</td><td>Pares hora-estación y correlación espacial por escaneo</td><td>Nov–dic 2023: r = 0.77 (pares), 0.70 por escaneo, 0.85 en promedios por estación. Feb–may 2024: 0.71, 0.53, 0.62</td><td><span class="pill hi">alta</span> en invierno; <span class="pill me">media</span> en primavera</td></tr>
+      <tr><td>Con estos datos se pueden recuperar las emisiones</td><td>Gemelos: se plantan emisiones, se simulan observaciones con ruido y, en el pesimista, con viento ±20° y errores ×2</td><td>Nominal: 24.5 de 25 grados de libertad. Pesimista: vial 4–14 %, Acolman 17 %, AIFA 13 %, AICM 28 %; clústeres 13–352 %</td><td><span class="pill me">media</span> vial; <span class="pill lo">baja</span> grandes y clústeres con el viento actual</td></tr>
+      <tr><td>El error de viento supuesto (±20°) es realista</td><td>Validación cruzada: predecir cada estación de viento con las demás (<code>wind_loo.py</code>, <code>wind_scenarios.py</code>; <code>viento.md</code>)</td><td>Error real de dirección: mediana 32° (vector del dominio), 28° (IDW). Con ±30°, el gemelo da vial 15 %, Acolman/AIFA/AICM 32–37 %, 1 de 12 clústeres</td><td><span class="pill lo">no</span>: el error real es mayor; las fuentes grandes quedan fuera de meta</td></tr>
+      <tr><td>El modelo detecta cambios reales de actividad</td><td>Hábil, sábado y domingo con el mismo a priori; IC 90 % por bootstrap de 61 días</td><td>Inversión completa: domingo/hábil 0.31–0.47, pero fijar el cociente entre 0.42 y 1.0 casi no cambia el ajuste: lo decide el a priori. Estimador normalizado: 0.65 (0.55–0.75); Infovial día completo ponderado por emisión: 0.65–0.73 (<code>sesgo_domingos.md</code>)</td><td><span class="pill hi">alta</span> con el estimador normalizado; <span class="pill lo">baja</span> la magnitud de la inversión completa</td></tr>
+      <tr><td>El estimador normalizado no inventa cambios</td><td>Placebos: 2019 sin confinamiento, días falsos de contingencia, pares de quincenas con TEMPO</td><td>Estaciones: 2019 da 1.00–1.03, días falsos 0.90–0.98. TEMPO: falla (6–10 de 18 pares significativos); el contraste crudo centro − periferia sí pasa (<code>validacion_2020.md</code>, <code>contingencias_2024.md</code>, <code>placebo_tempo.md</code>)</td><td><span class="pill hi">alta</span> con estaciones; <span class="pill lo">no</span> con TEMPO normalizado</td></tr>
+      <tr><td>La PINN reproduce la inversión lineal</td><td>Misma inversión con el operador PINN; gemelo cruzado entre modelos</td><td>Domingo 0.43 frente a 0.42; LOO 12.5 frente a 13.4 ppb; total vial 42 % mayor; en el gemelo cruzado los totales difieren 26–36 % y los cocientes ≤ 4 % (<code>pinn_prototipo.md</code>)</td><td><span class="pill hi">alta</span> en cocientes; <span class="pill lo">baja</span> en totales</td></tr>
+      <tr><td>El mapa predice estaciones que no vio</td><td>Dejar una estación fuera (LOO) frente a IDW y a un híbrido (modelo + IDW de residuos)</td><td>Híbrido 11.4 ppb frente a IDW 11.5; gana en 16 de 24 estaciones. El modelo solo: 13.6</td><td><span class="pill me">media</span></td></tr>
+      <tr><td>El error del modelo está en el ritmo hora a hora, no en el nivel</td><td>Descomposición del error LOO en sesgo por estación y parte horaria</td><td>Sesgo 6.2 (IDW 6.6); hora a hora 12.7 (IDW 9.5)</td><td><span class="pill hi">alta</span></td></tr>
+      <tr><td>Las plumas cercanas de la industria causan parte del error</td><td>Quitar los 12 clústeres como fuentes puntuales</td><td>Híbrido 12.2 → 11.7 ppb; TLA 26.7 → 14.3</td><td><span class="pill me">media</span></td></tr>
+      <tr><td>La precisión del viento es la palanca principal</td><td>Gemelos con 8 escenarios de datos</td><td>Clústeres &lt; 25 %: 3 de 12 con ±20°, 4–5 con ±10°, 10 con ±5°</td><td><span class="pill me">media</span> (depende del modelo de pluma)</td></tr>
+    </tbody>
+  </table></div>
+
+  <figure>
+    <div class="title">El modelo acierta el nivel de cada estación; pierde en el ritmo hora a hora</div>
+    <div class="sub">Error al predecir una estación oculta, descompuesto (ppb, menor es mejor). Pluma estacionaria con industria, nov–dic 2023.</div>
+    <div class="chart" id="c-dec"></div>
+    <figcaption>24 estaciones, 7,537 horas. Fuente: <code>real_check_linear_domain_2023-11-01_2023-12-31.md</code>.</figcaption>
+  </figure>
+</section>
+
+<section id="negativas">
+  <span class="eyebrow">5 · Pruebas negativas</span>
+  <h2>Lo que probamos y no funcionó también cuenta</h2>
+  <div class="col"><p>Cada prueba fallida descarta una explicación y evita invertir en ella al construir la PINN.</p></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Hipótesis</th><th>Prueba</th><th>Resultado</th><th>Qué descarta</th></tr></thead>
+    <tbody>
+      <tr><td>El viento varía dentro de la ciudad</td><td>Campo de viento interpolado (IDW) en malla de 1 km, promediado sobre la trayectoria</td><td>RMSE 14.1 → 14.0 ppb</td><td>Que el problema sea el viento interpolado de estaciones; las estaciones no tienen más información espacial</td></tr>
+      <tr><td>La contaminación de horas previas pesa</td><td>Puffs de 6 h con perfil de tráfico y química</td><td>TEMPO r 0.74 → 0.83 y escala 35 % → 67 % del inventario; estaciones 14.1 → 15.1</td><td>Nada: mejora lo regional y empeora lo local. Se conserva para la PINN</td></tr>
+      <tr><td>La ventilación común cambia cada hora</td><td>Un factor de dilución por hora</td><td>Error hora a hora 12.7 → 12.8; el factor no correlaciona con la capa límite (r = −0.01)</td><td>Una ventilación uniforme para toda la ciudad</td></tr>
+      <tr><td>Más estaciones, trazadores o meses ayudan</td><td>Gemelos B, C y F con viento ±20°</td><td>Clústeres &lt; 25 %: 2, 2 y 1 de 12 (base: 3)</td><td>Agregar datos sin mejorar el viento</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="noprobado">
+  <span class="eyebrow">6 · Lo no probado</span>
+  <h2>Lo que todavía no sabemos</h2>
+  <div class="two">
+    <div>
+      <h3>Sin probar</h3>
+      <ul>
+        <li><b>Ubicación &lt; 2 km.</b> Solo se probó la intensidad en ubicaciones conocidas.</li>
+        <li><b>Contingencias (ya probado, falta confirmar fechas).</b> En los 23 días de 2024 el estimador normalizado no ve baja de emisión por la tarde: 1.13 (1.05–1.22); queda un sesgo positivo en episodios largos y las fechas vienen de prensa.</li>
+        <li><b>Ranking por municipio.</b> El inventario público no trae NO<sub>x</sub> municipal.</li>
+        <li><b>Primavera 2024.</b> Ya hay capa límite (MERRA-2 corregido); la PINN reproduce los cocientes, pero la química de primavera baja la columna de TEMPO ~30 % sin cambio de emisión.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Simplificaciones conocidas</h3>
+      <ul>
+        <li><b>Centrales.</b> Valle de México sale en ~300 t/año con cualquier a priori (1,600 según Climate TRACE). La química de pluma fresca quedó descartada: la pluma llega a los píxeles del satélite casi en equilibrio (NO<sub>2</sub>/NO<sub>x</sub> 0.73–0.76 contra 0.77), y en el gemelo explicaría −18 a −28 %, no un factor de 5. El fondo del satélite tampoco lo explica (<code>fondo_tempo.md</code>): con estos datos Valle no es identificable.</li>
+        <li><b>Química.</b> Solo decaimiento con vida de 4 h en los puffs; sin ciclo NO–NO<sub>2</sub>–O<sub>3</sub>.</li>
+        <li><b>Fuentes de área</b> (7.4 % del NO<sub>x</sub>) no tienen término propio.</li>
+        <li><b>AIFA</b> sale negativo con datos reales (−11 ± 32 t/año): el modelo no lo distingue de su entorno.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="supuestos">
+  <span class="eyebrow">7 · Supuestos</span>
+  <h2>Qué decidimos nosotros y podría estar mal</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Supuesto</th><th>Valor usado</th><th>Dónde</th><th>Efecto si está mal</th></tr></thead>
+    <tbody>
+      <tr><td>Fracción del NO<sub>x</sub> vehicular de la ZMVM dentro del dominio</td><td class="num">80 %</td><td><code>feasibility_linear.py</code></td><td>Cambia la escala del a priori vial, no el patrón</td></tr>
+      <tr><td>Pesos por clase de vía</td><td class="num">3 / 2 / 1.5 / 1</td><td><code>feasibility_linear.py</code></td><td>Reparte mal el tráfico dentro de cada región</td></tr>
+      <tr><td>Perfil horario de tráfico</td><td>Típico urbano, pico 07–09 h</td><td><code>puff.py</code></td><td>Afecta cuánto pesa la mañana en la tarde</td></tr>
+      <tr><td>Emisión a priori de aeropuertos</td><td class="num">500 t/año ± 200 %</td><td><code>feasibility_linear.py</code></td><td>Poco: el a priori es muy ancho</td></tr>
+      <tr><td>Cocientes CO/NO<sub>x</sub> y SO<sub>2</sub>/NO<sub>x</sub></td><td>Inventario 2018 por tipo; central de gas y aeropuertos supuestos</td><td><code>improvement_tests.py</code></td><td>Solo en el escenario de trazadores</td></tr>
+      <tr><td>Capa límite ene–jun 2024</td><td>Climatología mes-hora de los demás meses</td><td><code>feasibility_linear.py</code></td><td>Aceptable en gemelos; no sirve para datos reales</td></tr>
+      <tr><td>Errores de observación</td><td>15 ppb y 5×10<sup>15</sup> (reales)</td><td><code>real_check_linear.py</code></td><td>Cambia el peso relativo estaciones/TEMPO; los IC de bootstrap no dependen de ellos</td></tr>
+      <tr><td>Error de dirección del viento</td><td>±15° en el modelo; ±20° en el gemelo pesimista. El error medido es mayor: ~28–32° de mediana (<code>viento.md</code>)</td><td><code>feasibility_linear.py</code>, <code>improvement_tests.py</code></td><td>El factor que más pesa en los resultados</td></tr>
+    </tbody>
+  </table></div>
+  <div class="col"><p>Resumen: los datos son sólidos y los resultados regionales son consistentes entre variantes. Lo que limita la confianza es el modelo de transporte, sobre todo la precisión del viento, y eso es lo que la siguiente fase debe atacar.</p></div>
+</section>
+
+<footer>
+  Números tomados de <code>reports/RESUMEN.md</code> y de los reportes que enlaza. Datos: SIMAT (RAMA, REDMET), NASA TEMPO NO<sub>2</sub> L2 V04, ERA5 vía Open-Meteo, OpenStreetMap, INEGI (Marco Geoestadístico 2022, DENUE), WRI Global Power Plant Database, SEDEMA Inventario de Emisiones ZMVM 2018, Iowa Environmental Mesonet (METAR).
+</footer>
+</div>
+
+<script>
+(() => {
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) { const val = String(attrs[k]); if ((k === 'fill' || k === 'stroke') && val.startsWith('var(')) e.style[k] = val; else e.setAttribute(k, val); } if (parent) parent.appendChild(e); return e; };
+  const txt = (parent, x, y, s, attrs = {}) => { const t = el('text', { x, y, ...attrs }, parent); t.textContent = s; return t; };
+  const v = n => `var(--${n})`;
+
+  /* ---------- Diagrama de la cadena ---------- */
+  (() => {
+    const s = document.getElementById('flow');
+    const defs = el('defs', {}, s); const mk = el('marker', { id: 'fa', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' }, defs);
+    el('path', { d: 'M0 0L10 5L0 10z', fill: v('muted') }, mk);
+    const boxes = [
+      [24, 24, '1 · Datos crudos', ['SIMAT, TEMPO, ERA5,', 'OSM, DENUE, METAR']],
+      [276, 24, '2 · Control de calidad', ['criterios del plan,', 'corrección viento 2024']],
+      [528, 24, '3 · Dominio y malla', ['3,260 km², 1 km,', 'tardes 12–17 h']],
+      [528, 176, '4 · Fuentes candidatas', ['16 puntuales +', '9 regiones viales']],
+      [276, 176, '5 · Transporte', ['pluma o puffs:', 'aporte por t/año']],
+      [24, 176, '6 · Inversión y pruebas', ['emisiones + IC,', 'gemelos, LOO, bootstrap']],
+    ];
+    const W = 208, H = 92;
+    boxes.forEach(([x, y, t, lines], i) => {
+      const g = el('g', {}, s);
+      el('rect', { x, y, width: W, height: H, rx: 10, fill: i === 5 ? v('accent-soft') : v('surface'), stroke: i === 5 ? v('accent') : v('line'), 'stroke-width': i === 5 ? 2 : 1.25 }, g);
+      txt(g, x + 14, y + 28, t, { 'font-size': 14, 'font-weight': 600, class: 't-ink' });
+      lines.forEach((l, k) => txt(g, x + 14, y + 52 + k * 18, l, { 'font-size': 12, class: 't-mut' }));
+    });
+    const p = (d) => el('path', { d, fill: 'none', stroke: v('muted'), 'stroke-width': 1.25, 'marker-end': 'url(#fa)' }, s);
+    p(`M${24 + W} 70H272`); p(`M${276 + W} 70H524`); p(`M${528 + W / 2} ${24 + H}V172`); p(`M528 222H${276 + W + 4}`); p(`M276 222H${24 + W + 4}`);
+    txt(s, 380, 310, 'La etapa 6 vuelve a la 5 cuando una prueba falla (p. ej. puffs, campo de viento).', { 'text-anchor': 'middle', 'font-size': 12, class: 't-mut' });
+  })();
+
+  /* ---------- Demostración bayesiana ---------- */
+  (() => {
+    const s = document.getElementById('bayes');
+    const L = 40, R = 730, T = 20, B = 200, xmin = -0.5, xmax = 2.5;
+    const x = a => L + (a - xmin) / (xmax - xmin) * (R - L);
+    [-0.5, 0, 0.5, 1, 1.5, 2, 2.5].forEach(g => { el('line', { x1: x(g), x2: x(g), y1: T, y2: B, stroke: v('grid') }, s); txt(s, x(g), B + 18, g.toFixed(1), { 'text-anchor': 'middle', 'font-size': 11.5, class: 't-mut t-mono' }); });
+    txt(s, R, B + 36, 'factor α (1 = igual al a priori)', { 'text-anchor': 'end', 'font-size': 11.5, class: 't-mut' });
+    const prior = el('path', { fill: 'none', stroke: v('muted'), 'stroke-width': 2, 'stroke-dasharray': '5 4' }, s);
+    const data = el('path', { fill: 'none', stroke: v('no2'), 'stroke-width': 2 }, s);
+    const post = el('path', { fill: v('accent-soft'), stroke: v('accent'), 'stroke-width': 2.5 }, s);
+    const lg = el('g', {}, s);
+    [['A priori', 'muted', '5 4'], ['Datos', 'no2', ''], ['A posteriori', 'accent', '']].forEach(([n, c, d], i) => {
+      el('line', { x1: L + 10 + i * 130, x2: L + 34 + i * 130, y1: T + 6, y2: T + 6, stroke: v(c), 'stroke-width': 2.5, 'stroke-dasharray': d }, lg);
+      txt(lg, L + 40 + i * 130, T + 10, n, { 'font-size': 12, class: 't-ink' });
+    });
+    const gauss = (m, sd, peak) => { let d = ''; for (let a = xmin; a <= xmax + 1e-9; a += 0.01) { const yv = Math.exp(-((a - m) ** 2) / (2 * sd * sd)); d += (d ? 'L' : 'M') + x(a).toFixed(1) + ' ' + (B - yv * peak).toFixed(1); } return d; };
+    const sp = document.getElementById('sp'), nh = document.getElementById('nh');
+    const DM = 0.4, D1 = 2;
+    function draw() {
+      const sP = +sp.value, n = +nh.value;
+      document.getElementById('sp-v').textContent = '± ' + sP.toFixed(2);
+      document.getElementById('nh-v').textContent = n + ' h';
+      const maxH = B - T - 30;
+      prior.setAttribute('d', gauss(1, sP, maxH * 0.55));
+      let m = 1, sd = sP;
+      if (n > 0) {
+        const sD = D1 / Math.sqrt(n);
+        data.setAttribute('d', gauss(DM, sD, maxH * 0.55)); data.style.display = '';
+        const w1 = 1 / sP ** 2, w2 = 1 / sD ** 2; m = (w1 * 1 + w2 * DM) / (w1 + w2); sd = Math.sqrt(1 / (w1 + w2));
+      } else data.style.display = 'none';
+      post.setAttribute('d', gauss(m, sd, maxH) + `L${x(xmax)} ${B}L${x(xmin)} ${B}Z`);
+      document.getElementById('b-mean').textContent = m.toFixed(2);
+      document.getElementById('b-sd').textContent = '± ' + sd.toFixed(2);
+      const red = 1 - sd / sP; document.getElementById('b-red').textContent = (red * 100).toFixed(0) + ' %';
+      document.getElementById('b-note').textContent = n === 0 ? 'Sin datos, el resultado es el a priori: no aprendimos nada.'
+        : red < 0.3 ? 'Los datos informan poco: el resultado se queda cerca del a priori. Así se ven los clústeres industriales.'
+        : red > 0.8 ? 'Los datos dominan: el a priori casi no influye. Así se ven las regiones viales.'
+        : 'Ambos pesan: el resultado está entre el a priori y lo que dicen los datos.';
+    }
+    sp.addEventListener('input', draw); nh.addEventListener('input', draw); draw();
+  })();
+
+  /* ---------- Descomposición del error ---------- */
+  (() => {
+    const rows = [['Sesgo por estación', 6.2, 6.6], ['Error hora a hora', 12.7, 9.5], ['Total (RMSE)', 14.1, 11.6]];
+    const host = document.getElementById('c-dec');
+    const s = el('svg', { viewBox: '0 0 760 230', role: 'img', 'aria-label': 'Descomposición del error' }, host);
+    const L = 190, R = 700, T = 40, max = 16, x = val => L + val / max * (R - L);
+    [0, 4, 8, 12, 16].forEach(g => { el('line', { x1: x(g), x2: x(g), y1: T - 6, y2: 196, stroke: v('grid') }, s); txt(s, x(g), 214, g, { 'text-anchor': 'middle', 'font-size': 11.5, class: 't-mut t-mono' }); });
+    rows.forEach(([n, m, idw], i) => {
+      const yy = T + 10 + i * 56;
+      txt(s, L - 12, yy + 14, n, { 'text-anchor': 'end', 'font-size': 12.5, class: 't-ink' });
+      [[m, v('accent'), .85, 'Modelo'], [idw, v('muted'), .45, 'IDW']].forEach(([val, col, op, lab], k) => {
+        const b = el('rect', { x: L, y: yy + k * 18, width: x(val) - L, height: 14, rx: 3, fill: col, 'fill-opacity': op }, s);
+        el('title', {}, b).textContent = `${n}, ${lab}: ${val} ppb`;
+        txt(s, x(val) + 6, yy + k * 18 + 11, `${lab} ${val.toFixed(1)}`, { 'font-size': 11.5, class: 't-ink t-mono' });
+      });
+    });
+    txt(s, L, 20, 'Azul: modelo · Gris: interpolación IDW', { 'font-size': 12, class: 't-mut' });
+  })();
+})();
+</script>
+</body>
+</html>
