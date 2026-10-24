@@ -1,0 +1,200 @@
+"""Baseline inversion: Bayesian linear estimate of point sources and road factors with the stationary plume.
+
+Migrated from `scripts/real_check_linear.py` (`build` and `solve`) and `scripts/feasibility_linear.py`
+(research-archive), in the baseline configuration: one domain-mean wind per hour, wind-direction uncertainty
+of 15 degrees, transport-speed floor of 1 m/s, the 4 point sources outside the industry clusters with their
+research priors, TEMPO at its nominal weight (x1), no traffic-ratio constraint.
+
+Unknowns: the point sources (t/yr), then one factor alpha per road region and day type (weekday, Saturday,
+Sunday or holiday), that multiplies the prior emission of the region; the three day types share the same
+prior, so any difference between them comes from the data. The background of each hour (one for the
+stations, one for TEMPO) is a nuisance with a Gaussian prior; it is integrated out analytically, so the
+system keeps only the source unknowns: the errors of a block of observations of one hour have covariance
+``sigma^2 I + s_b^2 1 1^T`` and its inverse comes from Sherman-Morrison. The result equals solving with one
+extra unknown per hour and kind, which is what the research code did.
+"""
+
+from collections.abc import Collection, Sequence
+from dataclasses import dataclass
+
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+from numpy.typing import NDArray
+
+from nox_ml.data.roads import UTM
+from nox_ml.inversion.jacobian import Receptors, Sources, jacobian_hour_plume
+from nox_ml.inversion.normalized import day_type
+from nox_ml.time import local_day
+
+Array = NDArray[np.float64]
+
+SIGMA_THETA = np.deg2rad(15.0)  # wind-direction uncertainty
+U_MIN = 1.0  # floor of the transport speed (m/s)
+
+SIGMA_STATION = 15.0  # ppb, observation plus representation error of a station
+SIGMA_PIXEL = 5e15  # molecules/cm2 of a TEMPO pixel, weight x1
+BACKGROUND_STATION = (5.0, 10.0)  # ppb, prior mean and standard deviation of the hourly background
+BACKGROUND_PIXEL = (5e15, 5e15)  # molecules/cm2
+ROAD_FACTOR = (1.0, 0.5)  # prior mean and standard deviation of every alpha
+
+N_DAY_TYPES = 3
+DAY_TYPE_NAMES = ("weekday", "saturday", "sunday_holiday")
+HOLIDAYS = (
+    "2023-11-20",
+    "2023-12-25",
+    "2024-01-01",
+    "2024-02-05",
+    "2024-03-18",
+    "2024-03-28",
+    "2024-03-29",
+    "2024-05-01",
+)
+
+AIRPORT_PRIOR = 500.0  # t/yr, assumption (the inventory has no value per airport)
+
+# name, kind, latitude, longitude, prior (t/yr; None: the airport assumption). The standard deviation of the
+# prior is the prior itself, twice for airports. The prior of the power plants is the original one of
+# `scripts/point_candidates.py`, as in the research baseline.
+_POINT_SOURCES = (
+    ("Nonoalco", "power plant", 19.4503, -99.15, 277.0),
+    ("Valle de México (CC) + Valle de México (Vapor)", "power plant", 19.6183, -98.9764, 2615.0),
+    ("AIFA (NLU)", "airport", 19.74158756011259, -99.0106819753855, None),
+    ("AICM (MEX)", "airport", 19.43540722513049, -99.07122509381499, None),
+)
+
+
+def baseline_point_sources() -> pd.DataFrame:
+    """The 4 point sources: columns ``name``, ``x``, ``y`` (UTM 14N, m), ``prior`` and ``sd`` (t/yr)."""
+    rows = pd.DataFrame(_POINT_SOURCES, columns=["name", "kind", "lat", "lon", "prior"])
+    xy = gpd.GeoSeries.from_xy(rows["lon"], rows["lat"], crs=4326).to_crs(UTM)
+    airport = rows["kind"] == "airport"
+    prior = rows["prior"].fillna(AIRPORT_PRIOR).astype(float)
+    return pd.DataFrame(
+        {
+            "name": rows["name"],
+            "x": xy.x,
+            "y": xy.y,
+            "prior": prior,
+            "sd": prior * np.where(airport, 2.0, 1.0),
+        }
+    )
+
+
+@dataclass(frozen=True)
+class HourData:
+    """What one hour contributes: the wind (u, v) in m/s of the domain, the boundary layer height in m and the
+    observations at the stations (NOx, ppb) and TEMPO pixels (NO2 column, molecules/cm2). `hour` is the
+    start of the hour, UTC. Absent receptors are empty arrays."""
+
+    hour: pd.Timestamp
+    wind: tuple[float, float]
+    pbl: float
+    stations: Receptors
+    nox: Array
+    pixels: Receptors
+    no2: Array
+
+
+@dataclass(frozen=True)
+class Posterior:
+    """Gaussian posterior of the source unknowns, in the order points, weekday regions, Saturday regions,
+    Sunday or holiday regions."""
+
+    labels: list[str]
+    mean: Array
+    cov: Array
+    prior_mean: Array
+    prior_sd: Array
+    n_points: int
+    n_regions: int
+
+    @property
+    def sd(self) -> Array:
+        return np.sqrt(np.diag(self.cov))
+
+    def road_factors(self) -> Array:
+        """Posterior mean of alpha, shaped (day type, region)."""
+        return self.mean[self.n_points :].reshape(N_DAY_TYPES, self.n_regions)
+
+
+def road_sources(zones: pd.DataFrame, points: pd.DataFrame, n_regions: int) -> Sources:
+    """`Sources` from the road cells (columns ``x``, ``y``, ``weight`` in t/yr and ``region``, as
+    `nox_ml.data.roads.road_emission_cells`) and the point sources; the zones are the regions."""
+    return Sources(
+        point_x=points["x"].to_numpy(float),
+        point_y=points["y"].to_numpy(float),
+        cell_x=zones["x"].to_numpy(float),
+        cell_y=zones["y"].to_numpy(float),
+        cell_prior=zones["weight"].to_numpy(float),
+        cell_zone=zones["region"].to_numpy(int),
+        n_zones=n_regions,
+    )
+
+
+def marginalized_block(
+    k: Array, y: Array, sigma: float, background: tuple[float, float]
+) -> tuple[Array, Array]:
+    """Contribution ``(K^T R K, K^T R (y - m))`` of one block of observations that share a background with
+    prior mean ``m`` and standard deviation ``s``, where ``R = (sigma^2 I + s^2 1 1^T)^-1``. By
+    Sherman-Morrison ``R = D^-1 - c D^-1 1 1^T D^-1`` with ``D = sigma^2 I`` and
+    ``c = s^2 / (1 + s^2 1^T D^-1 1)``."""
+    mean, sd = background
+    d_inv = 1 / sigma**2
+    c = sd**2 / (1 + sd**2 * d_inv * len(y))
+    r = y - mean
+    col_sum = k.sum(axis=0)
+    info = d_inv * k.T @ k - c * d_inv**2 * np.outer(col_sum, col_sum)
+    gradient = d_inv * k.T @ r - c * d_inv**2 * col_sum * r.sum()
+    return info, gradient
+
+
+def prior_state(points: pd.DataFrame, n_regions: int) -> tuple[Array, Array, list[str]]:
+    """Prior mean, prior standard deviation and label of every unknown."""
+    n_roads = N_DAY_TYPES * n_regions
+    mean = np.r_[points["prior"].to_numpy(float), np.full(n_roads, ROAD_FACTOR[0])]
+    sd = np.r_[points["sd"].to_numpy(float), np.full(n_roads, ROAD_FACTOR[1])]
+    labels = [str(n) for n in points["name"]] + [
+        f"road {kind} region {r}" for kind in DAY_TYPE_NAMES for r in range(n_regions)
+    ]
+    return mean, sd, labels
+
+
+def invert(
+    hours: Sequence[HourData],
+    zones: pd.DataFrame,
+    points: pd.DataFrame,
+    no2_nox_ratio: float,
+    n_regions: int | None = None,
+    holidays: Collection[str] = HOLIDAYS,
+) -> Posterior:
+    """Posterior of the point sources and the road factors given the hours of data.
+
+    `zones` has one row per road cell (``x``, ``y``, ``weight``, ``region``); `points` is
+    `baseline_point_sources()`; `no2_nox_ratio` converts NOx to the NO2 that TEMPO sees. `n_regions`
+    defaults to one more than the largest region. With no hours the posterior is the prior.
+    """
+    n_regions = n_regions if n_regions is not None else int(zones["region"].to_numpy().max()) + 1
+    sources = road_sources(zones, points, n_regions)
+    n_points = len(points)
+    mean, sd, labels = prior_state(points, n_regions)
+    precision = np.diag(1 / sd**2)
+    rhs = mean / sd**2
+
+    kinds = day_type(pd.DatetimeIndex([local_day(h.hour) for h in hours]), holidays)
+    for data, kind in zip(hours, kinds, strict=True):
+        jac = jacobian_hour_plume(
+            data.wind, data.pbl, sources, data.stations, data.pixels, no2_nox_ratio, SIGMA_THETA, U_MIN
+        )
+        # the columns of the road regions go to the ones of this day type
+        columns = np.r_[np.arange(n_points), n_points + n_regions * kind + np.arange(n_regions)]
+        for k, y, sigma, background in (
+            (jac.stations, data.nox, SIGMA_STATION, BACKGROUND_STATION),
+            (jac.pixels, data.no2, SIGMA_PIXEL, BACKGROUND_PIXEL),
+        ):
+            if len(y):
+                info, gradient = marginalized_block(k, y, sigma, background)
+                precision[np.ix_(columns, columns)] += info
+                rhs[columns] += gradient
+    cov = np.linalg.inv(precision)
+    return Posterior(labels, cov @ rhs, cov, mean, sd, n_points, n_regions)
