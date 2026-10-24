@@ -4,10 +4,10 @@ Migrated from `scripts/puff.py` (research-archive). Sub-puffs every 15 min trave
 the domain, spread with the distance travelled, mix in the boundary layer of the target hour and decay
 chemically. Standard configuration: 24 h of history and NOx loss from OH (`chemistry.nox_loss_rate`).
 
-Not migrated yet: `jacobian_hour_puff`, which assembles inversion matrices (belongs with the estimator).
+The inversion matrices built from these puffs are in `nox_ml.inversion.jacobian`.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import cast
 
@@ -16,17 +16,18 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from nox_ml.physics.plume import SIGMA_THETA, U_MIN, speed
+from nox_ml.time import local_hour
 
 Array = NDArray[np.float64]
 Survival = Callable[[float, float, float], float]  # (t_rel, t_target, age_h) -> surviving fraction
 Weights = Callable[[float], float | Array]  # emission factor at release time t_rel (hours since t0)
+HourProfile = Callable[[pd.Timestamp], float]  # UTC start of an hour -> emission factor of roads
 
 MAX_AGE_H = 24
 SUB_PER_H = 4
 TAU_CHEM_H = 4.0  # constant lifetime, used when there is no OH-based loss series
 NS_PER_HOUR = 3_600_000_000_000
 SIGMA0 = 500.0  # initial puff size (m)
-LOCAL_OFFSET_H = -6
 # Typical urban traffic profile (local hour -> factor relative to the daily mean). Assumption.
 TRAFFIC_PROFILE = {
     6: 0.9,
@@ -114,17 +115,19 @@ def variable_lifetime(lam: Array) -> Survival:
     return survival
 
 
-def road_profile(
-    traj: Trajectories, local_offset_h: int = LOCAL_OFFSET_H, profile: dict[int, float] | None = None
-) -> Weights:
+def local_hour_profile(table: Mapping[int, float] = TRAFFIC_PROFILE) -> HourProfile:
+    """Emission factor of roads from a local-hour table (1.0 outside it)."""
+    return lambda h: table.get(int(local_hour(h)), 1.0)
+
+
+def road_weights(traj: Trajectories, profile: HourProfile) -> Weights:
+    """Emission factor at release time `t_rel` (hours since `traj.t0`) from a profile of UTC hours."""
+    return lambda t_rel: profile(cast(pd.Timestamp, traj.t0 + pd.Timedelta(hours=float(np.floor(t_rel)))))
+
+
+def road_profile(traj: Trajectories, profile: Mapping[int, float] | None = None) -> Weights:
     """Emission factor of roads at release time `t_rel`, from a local-hour profile (1.0 outside it)."""
-    profile = TRAFFIC_PROFILE if profile is None else profile
-
-    def weight(t_rel: float) -> float:
-        local = traj.t0 + pd.Timedelta(hours=float(np.floor(t_rel))) + pd.Timedelta(hours=local_offset_h)
-        return profile.get(int(local.hour), 1.0)
-
-    return weight
+    return road_weights(traj, local_hour_profile(TRAFFIC_PROFILE if profile is None else profile))
 
 
 def puffs(

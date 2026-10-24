@@ -14,10 +14,11 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike, NDArray
 
+from nox_ml.time import utc_to_local
+
 Array = NDArray[np.float64]
 
 LAT0, LON0 = 19.43, -99.13  # city centre
-LOCAL_OFFSET_H = -6  # local time minus UTC (Mexico City, no daylight saving)
 K_OH_NO2 = 9.3e-12  # cm3/s (JPL at ~780 hPa)
 F_NO2 = 0.85  # NO2/NOx in the afternoon
 OH_REF = 6e6  # cm-3 at noon of April (MCMA-2003, MILAGRO 2006)
@@ -74,10 +75,9 @@ def reference_production(
     year: int = REF_YEAR,
     month: int = REF_MONTH,
     hour: int = REF_HOUR,
-    utc_offset_h: int = LOCAL_OFFSET_H,
 ) -> float:
     """P_ref: mean of the hourly series `p` (UTC index) at local `hour` of `month`/`year`."""
-    local = pd.DatetimeIndex(p.index) + pd.Timedelta(hours=utc_offset_h)
+    local = utc_to_local(pd.DatetimeIndex(p.index))
     return float(p[(local.year == year) & (local.month == month) & (local.hour == hour)].mean())
 
 
