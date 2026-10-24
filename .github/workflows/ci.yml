@@ -13,12 +13,9 @@ concurrency:
 
 jobs:
   fast:
-    name: Fast (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    name: Fast
+    # Cheapest runner only. macOS portability is covered by teammates running bin/check locally.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
