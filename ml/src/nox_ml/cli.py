@@ -14,7 +14,7 @@ from pydantic import ValidationError
 from nox_ml import __version__
 from nox_ml.data import pbl, simat, tempo
 from nox_ml.data.qc import render
-from nox_ml.validation import experiment
+from nox_ml.validation import diagnostics, experiment
 
 RAW = Path("data/raw")
 INTERIM = Path("data/interim")
@@ -96,6 +96,30 @@ def run(
         raise typer.Exit(2) from error
     out = experiment.run_experiment(cfg, runs_dir)
     typer.echo(experiment.headline(json.loads((out / "metrics.json").read_text())))
+    typer.echo(f"Written to {out}/")
+
+
+@app.command()
+def diagnose(
+    config: Annotated[Path, typer.Argument(help="Experiment YAML, e.g. configs/experiments/baseline.yaml.")],
+    runs_dir: Annotated[Path, typer.Option(help="Where runs/<name>/diagnostics/ is written.")] = Path("runs"),
+    seeds: Annotated[int, typer.Option(min=1, help="Random subsets per case in the ablation and curves.")] = (
+        diagnostics.N_SEEDS
+    ),
+    only: Annotated[
+        list[diagnostics.Stage] | None, typer.Option(help="Run only these stages (repeat the option).")
+    ] = None,
+) -> None:
+    """Diagnostics of an experiment: information by observation, ablation and learning curves, as CSV files.
+
+    The ablation and the curves refit the inversion many times (about an hour on the baseline).
+    """
+    try:
+        cfg = experiment.read_config(config)
+    except ValidationError as error:
+        typer.echo(f"Invalid config {config}:\n{error}", err=True)
+        raise typer.Exit(2) from error
+    out = diagnostics.run_diagnostics(cfg, runs_dir, seeds, only or tuple(diagnostics.Stage), typer.echo)
     typer.echo(f"Written to {out}/")
 
 
