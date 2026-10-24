@@ -19,3 +19,9 @@ Tareas abiertas para las siguientes sesiones (nube o local). Al terminar una, se
 ## Descartadas
 
 - Exigir cobertura mínima por paquete (`fail_under`): no se aplica por ahora (decisión del usuario, 2026-10-24).
+
+## Preparación del avance 5
+
+- [ ] **Artefactos de corrida para ensambles.** `nox-ml run` guarda `oof.parquet` (predicciones fuera de muestra de la estación oculta) y `emissions.parquet` (`docs/models.md`, sección 4).
+- [ ] **Periodo de prueba reservado.** Feb–may 2024 solo se usa para evaluar el modelo final; `nox-ml tune` rechaza configuraciones que lo incluyan.
+- [ ] **Eventos con respuesta conocida.** Migrar desde `research-archive` los datos y el cálculo del confinamiento 2020 frente a 2019 (`val2020_data.py`, `val2020_ratio.py`) y de las contingencias 2024 con CO (`contingencias_2024.py`, `contingencias_co.py`).
