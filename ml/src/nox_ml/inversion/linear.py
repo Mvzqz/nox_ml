@@ -23,7 +23,7 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from nox_ml.data.roads import UTM
-from nox_ml.inversion.jacobian import Receptors, Sources, jacobian_hour_plume
+from nox_ml.inversion.jacobian import HourJacobian, Receptors, Sources, jacobian_hour_plume
 from nox_ml.inversion.normalized import day_type
 from nox_ml.time import local_day
 
@@ -117,6 +117,12 @@ class Posterior:
         """Posterior mean of alpha, shaped (day type, region)."""
         return self.mean[self.n_points :].reshape(N_DAY_TYPES, self.n_regions)
 
+    def state(self, kind: int) -> Array:
+        """Posterior mean of the unknowns that act on a day of type `kind`: the points, then its road factors;
+        the columns of a Jacobian row."""
+        start = self.n_points + self.n_regions * kind
+        return np.r_[self.mean[: self.n_points], self.mean[start : start + self.n_regions]]
+
 
 def road_sources(zones: pd.DataFrame, points: pd.DataFrame, n_regions: int) -> Sources:
     """`Sources` from the road cells (columns ``x``, ``y``, ``weight`` in t/yr and ``region``, as
@@ -160,6 +166,75 @@ def prior_state(points: pd.DataFrame, n_regions: int) -> tuple[Array, Array, lis
     return mean, sd, labels
 
 
+@dataclass(frozen=True)
+class HourSystem:
+    """What one hour adds to the normal equations: its local `day`, the day type `kind`, the `columns` of the
+    unknowns it touches (points, then the road regions of its day type), its Jacobian, and the information
+    matrix and gradient of its station and TEMPO blocks, with the background integrated out."""
+
+    day: pd.Timestamp
+    kind: int
+    columns: NDArray[np.int_]
+    jacobian: HourJacobian
+    info: Array
+    gradient: Array
+
+
+def hour_systems(
+    hours: Sequence[HourData],
+    zones: pd.DataFrame,
+    points: pd.DataFrame,
+    no2_nox_ratio: float,
+    n_regions: int,
+    holidays: Collection[str] = HOLIDAYS,
+) -> list[HourSystem]:
+    """The `HourSystem` of every hour. The Jacobians dominate the cost of an inversion; the systems can be
+    solved again with other weights by `solve`."""
+    sources = road_sources(zones, points, n_regions)
+    n_points = len(points)
+    days = pd.DatetimeIndex([local_day(h.hour) for h in hours])
+    kinds = day_type(days, holidays)
+    systems = []
+    for data, day, kind in zip(hours, days, kinds, strict=True):
+        jac = jacobian_hour_plume(
+            data.wind, data.pbl, sources, data.stations, data.pixels, no2_nox_ratio, SIGMA_THETA, U_MIN
+        )
+        # the columns of the road regions go to the ones of this day type
+        columns = np.r_[np.arange(n_points), n_points + n_regions * kind + np.arange(n_regions)]
+        info = np.zeros((len(columns), len(columns)))
+        gradient = np.zeros(len(columns))
+        for k, y, sigma, background in (
+            (jac.stations, data.nox, SIGMA_STATION, BACKGROUND_STATION),
+            (jac.pixels, data.no2, SIGMA_PIXEL, BACKGROUND_PIXEL),
+        ):
+            if len(y):
+                block_info, block_gradient = marginalized_block(k, y, sigma, background)
+                info += block_info
+                gradient += block_gradient
+        systems.append(HourSystem(day, int(kind), columns, jac, info, gradient))
+    return systems
+
+
+def solve(
+    systems: Sequence[HourSystem],
+    points: pd.DataFrame,
+    n_regions: int,
+    weights: Sequence[float] | None = None,
+) -> Posterior:
+    """Posterior from the hour systems. `weights` (one per hour, default 1) multiply the information of
+    each hour: an hour with weight 2 counts as if it were repeated, as a bootstrap over days needs."""
+    mean, sd, labels = prior_state(points, n_regions)
+    precision = np.diag(1 / sd**2)
+    rhs = mean / sd**2
+    for k, system in enumerate(systems):
+        w = 1.0 if weights is None else weights[k]
+        if w:
+            precision[np.ix_(system.columns, system.columns)] += w * system.info
+            rhs[system.columns] += w * system.gradient
+    cov = np.linalg.inv(precision)
+    return Posterior(labels, cov @ rhs, cov, mean, sd, len(points), n_regions)
+
+
 def invert(
     hours: Sequence[HourData],
     zones: pd.DataFrame,
@@ -175,26 +250,13 @@ def invert(
     defaults to one more than the largest region. With no hours the posterior is the prior.
     """
     n_regions = n_regions if n_regions is not None else int(zones["region"].to_numpy().max()) + 1
-    sources = road_sources(zones, points, n_regions)
-    n_points = len(points)
-    mean, sd, labels = prior_state(points, n_regions)
-    precision = np.diag(1 / sd**2)
-    rhs = mean / sd**2
+    systems = hour_systems(hours, zones, points, no2_nox_ratio, n_regions, holidays)
+    return solve(systems, points, n_regions)
 
-    kinds = day_type(pd.DatetimeIndex([local_day(h.hour) for h in hours]), holidays)
-    for data, kind in zip(hours, kinds, strict=True):
-        jac = jacobian_hour_plume(
-            data.wind, data.pbl, sources, data.stations, data.pixels, no2_nox_ratio, SIGMA_THETA, U_MIN
-        )
-        # the columns of the road regions go to the ones of this day type
-        columns = np.r_[np.arange(n_points), n_points + n_regions * kind + np.arange(n_regions)]
-        for k, y, sigma, background in (
-            (jac.stations, data.nox, SIGMA_STATION, BACKGROUND_STATION),
-            (jac.pixels, data.no2, SIGMA_PIXEL, BACKGROUND_PIXEL),
-        ):
-            if len(y):
-                info, gradient = marginalized_block(k, y, sigma, background)
-                precision[np.ix_(columns, columns)] += info
-                rhs[columns] += gradient
-    cov = np.linalg.inv(precision)
-    return Posterior(labels, cov @ rhs, cov, mean, sd, n_points, n_regions)
+
+def background_mean(residual: Array, sigma: float, background: tuple[float, float]) -> float:
+    """Posterior mean of the background of one hour and kind given the sources: `residual` is the
+    observations minus the modeled ones without background, for the rows of the block (possibly none, then
+    the prior mean). It is the mean the research code got from the background unknown it solved for."""
+    mean, sd = background
+    return float((mean / sd**2 + residual.sum() / sigma**2) / (1 / sd**2 + len(residual) / sigma**2))

@@ -121,6 +121,19 @@ def placebo(
     return np.array(samples)
 
 
+def split_placebo(d: pd.DataFrame, n_fake: int, n: int, rng: np.random.Generator) -> np.ndarray:
+    """Index ratios of ``n`` random splits of the days of ``d`` (columns ``obs``, ``model``): ``n_fake`` days
+    over the rest, where the index is observed over modeled NOx. Given days of one type, the splits have no
+    emission change, so their spread is the width of a null result (e.g. fake Sundays among weekdays)."""
+    out = np.empty(n)
+    for i in range(n):
+        fake = np.zeros(len(d), bool)
+        fake[rng.choice(len(d), n_fake, replace=False)] = True
+        a, b = d[~fake], d[fake]
+        out[i] = (b.obs.sum() / b.model.sum()) / (a.obs.sum() / a.model.sum())
+    return out
+
+
 def episodes(days: Sequence[pd.Timestamp]) -> list[list[pd.Timestamp]]:
     """Groups sorted days into runs of consecutive days."""
     runs, current = [], [days[0]]
