@@ -13,7 +13,7 @@ Llevar al proyecto los modelos de aprendizaje automático: la red neuronal infor
 | E5a | `pinn_plume` | La PINN aprende la pluma de advección–difusión y se usa como transporte de la inversión | **Hecho y registrado** (error en estación oculta 12.49, híbrido 10.66) |
 | E5b | `pinn_puff` | El núcleo de la PINN aplicado a cada tramo de cada puff (transporte hora por hora) | **Por hacer** |
 | E5c | `pinn_joint` | PINN entrenada con la física y con las estaciones a la vez | **Por hacer** (opcional si falta tiempo) |
-| E6 | `rf_deweather` | Normalización meteorológica con bosque aleatorio: aprende concentración ~ meteorología + calendario; la emisión es lo que queda al fijar la meteorología | **Por hacer** |
+| E6 | `rf_deweather` | Normalización meteorológica con bosque aleatorio: aprende concentración ~ meteorología + calendario; la emisión es lo que queda al fijar la meteorología | **Hecho y registrado** (PR #20): domingo/hábil 0.53 (0.42–0.57), placebo 0.97 ±0.09, error en estación oculta 14.61 |
 
 ## Código relevante
 
