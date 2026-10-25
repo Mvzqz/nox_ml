@@ -16,6 +16,12 @@ Tareas abiertas para las siguientes sesiones (nube o local). Al terminar una, se
 
 
 
+## Modelos alternativos (avance 4)
+
+- [x] **PINN como modelo (E5, `pinn_plume`).** `nox_ml.models.pinn`: la red aprende el núcleo de advección–difusión 2D con física solamente (Adam + L-BFGS, CPU, ~3 min) y es la matriz fuente–receptor de la misma inversión bayesiana; se registra como `pinn_plume` (subclase de `InversionPlume` que cambia solo `transport()`), con `PinnParams` como parámetros. La red de los parámetros por defecto viene incluida. Error de la red contra la solución exacta: mediana 1.7–4.7 % (la investigación: 3.5–6.6 %). Nov–dic 2023: domingo ÷ hábil 0.42 (0.33–0.54) frente a 0.43 de la investigación, error con estación retenida 12.5 ppb, r con TEMPO 0.78, placebo del modelo 1.09 ± 0.33 (elegible) (2026-10-25, PR #13). Ver ADR 0004.
+- [ ] **Ajustar `pinn_plume` con `nox-ml tune`.** Falta la búsqueda sobre `PinnParams` (capas, ancho, peso de la física, τ). La investigación ya mostró que el nivel absoluto depende de la física (+50 % de emisión vial frente a la pluma) y que los cocientes no.
+- [ ] **Estimar parámetros físicos con la PINN (κ, τ, factor de capa límite).** El entrenamiento conjunto de la investigación no mejoró el ajuste con la física fija; su caso de uso es estimar esos parámetros, no las emisiones. No se migró.
+
 ## Descartadas
 
 - Exigir cobertura mínima por paquete (`fail_under`): no se aplica por ahora (decisión del usuario, 2026-10-24).
