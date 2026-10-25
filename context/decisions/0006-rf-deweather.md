@@ -1,4 +1,4 @@
-# 0005. Random forest deweathering as a relative model
+# 0006. Random forest deweathering as a relative model
 
 - **Date:** 2026-10-25
 - **Status:** accepted
