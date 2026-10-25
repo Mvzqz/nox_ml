@@ -23,7 +23,7 @@ Cases that keep everything (all the stations, all the days) are deterministic an
 
 import json
 import warnings
-from collections.abc import Collection, Iterator, Sequence
+from collections.abc import Callable, Collection, Iterator, Sequence
 from dataclasses import replace
 from enum import StrEnum
 from pathlib import Path
@@ -34,7 +34,7 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from nox_ml.data.inputs import Inputs, load_inputs
-from nox_ml.inversion.jacobian import Receptors
+from nox_ml.inversion.jacobian import HourJacobian, Receptors
 from nox_ml.inversion.linear import (
     BACKGROUND_PIXEL,
     BACKGROUND_STATION,
@@ -46,11 +46,12 @@ from nox_ml.inversion.linear import (
     hour_systems,
     marginalized_block,
     prior_state,
-    solve,
 )
+from nox_ml.models import Model
+from nox_ml.models.inversion_plume import InversionPlume
 from nox_ml.time import local_day
 from nox_ml.validation import loo
-from nox_ml.validation.experiment import ExperimentConfig, code_version, compute_metrics
+from nox_ml.validation.experiment import ExperimentConfig, code_version, evaluate
 
 Array = NDArray[np.float64]
 
@@ -140,6 +141,10 @@ def information_by_observation(
 
 
 # --- Variants of the inputs -------------------------------------------------------------------------------
+#
+# Every variant that keeps the hours' winds (all but `rotate_wind`) gets the Jacobians already cached in the
+# inputs, sliced to its hours and receptors, so no Jacobian is built twice (rows of a Jacobian depend on their
+# own receptor alone).
 
 
 def station_ids(inputs: Inputs) -> list[str]:
@@ -147,48 +152,77 @@ def station_ids(inputs: Inputs) -> list[str]:
     return sorted(np.unique(np.concatenate(inputs.station_ids)).tolist())
 
 
+def derived(
+    inputs: Inputs,
+    index: Sequence[int],
+    slice_jacobian: Callable[[HourJacobian, int], HourJacobian] = lambda jac, k: jac,
+    **changes: Any,
+) -> Inputs:
+    """The inputs of the hours at position `index` of `inputs`; `changes` replaces the fields of the variant
+    (``hours``, ``station_ids``...), aligned with `index`. Each cached Jacobian goes through
+    ``slice_jacobian(jacobian, position in the variant)``."""
+    cache = {
+        key: [slice_jacobian(jacobians[i], k) for k, i in enumerate(index)]
+        for key, jacobians in inputs.jacobian_cache.items()
+    }
+    return replace(inputs, jacobian_cache=cache, **changes)
+
+
 def with_stations(inputs: Inputs, keep: Collection[str]) -> Inputs:
     """The inputs with only the rows of the stations `keep`. Hours left without station rows are dropped, as
-    the input assembly does. The wind and the boundary layer height of an hour are not recomputed."""
-    hours, ids = [], []
-    for hour, hour_ids in zip(inputs.hours, inputs.station_ids, strict=True):
+    the input assembly does. The wind and boundary layer height of an hour are not recomputed."""
+    index, hours, ids, masks = [], [], [], []
+    for i, (hour, hour_ids) in enumerate(zip(inputs.hours, inputs.station_ids, strict=True)):
         use = np.isin(hour_ids, list(keep))
         if use.any():
             stations = Receptors(hour.stations.x[use], hour.stations.y[use])
+            index.append(i)
             hours.append(replace(hour, stations=stations, nox=hour.nox[use]))
             ids.append(hour_ids[use])
-    return replace(inputs, hours=hours, station_ids=ids, station_xy=inputs.station_xy.loc[sorted(keep)])
+            masks.append(use)
+    return derived(
+        inputs,
+        index,
+        lambda jac, k: jac.without_stations(masks[k]),
+        hours=hours,
+        station_ids=ids,
+        station_xy=inputs.station_xy.loc[sorted(keep)],
+    )
 
 
 def with_days(inputs: Inputs, days: Collection[pd.Timestamp]) -> Inputs:
     """The inputs of the hours whose local day is in `days`."""
-    use = [local_day(h.hour) in days for h in inputs.hours]
-    return replace(
+    index = [i for i, h in enumerate(inputs.hours) if local_day(h.hour) in days]
+    return derived(
         inputs,
-        hours=[h for h, u in zip(inputs.hours, use, strict=True) if u],
-        station_ids=[i for i, u in zip(inputs.station_ids, use, strict=True) if u],
+        index,
+        hours=[inputs.hours[i] for i in index],
+        station_ids=[inputs.station_ids[i] for i in index],
     )
 
 
 def without_tempo(inputs: Inputs) -> Inputs:
     """The inputs without TEMPO pixels."""
     none = np.empty(0)
-    return replace(inputs, hours=[replace(h, pixels=Receptors(none, none), no2=none) for h in inputs.hours])
+    return derived(
+        inputs,
+        range(len(inputs.hours)),
+        lambda jac, k: HourJacobian(jac.stations, jac.pixels[:0]),
+        hours=[replace(h, pixels=Receptors(none, none), no2=none) for h in inputs.hours],
+    )
 
 
 def rotate_wind(inputs: Inputs, degrees: float) -> Inputs:
     """The inputs with the wind of every hour turned `degrees` clockwise (a wind from the south that blows
     towards the north now blows towards the north-east for +45): a systematic error of the wind direction.
-    The speed is the same."""
+    The speed is the same. The Jacobians depend on the wind, so this variant builds its own."""
     angle = np.deg2rad(degrees)
     cos, sin = np.cos(angle), np.sin(angle)
-    return replace(
-        inputs,
-        hours=[
-            replace(h, wind=(h.wind[0] * cos + h.wind[1] * sin, -h.wind[0] * sin + h.wind[1] * cos))
-            for h in inputs.hours
-        ],
-    )
+    turned = [
+        replace(h, wind=(h.wind[0] * cos + h.wind[1] * sin, -h.wind[0] * sin + h.wind[1] * cos))
+        for h in inputs.hours
+    ]
+    return replace(inputs, hours=turned, jacobian_cache={})
 
 
 def spatial_subset(xy: pd.DataFrame, k: int, rng: np.random.Generator) -> list[str]:
@@ -218,8 +252,8 @@ def local_days(inputs: Inputs) -> list[pd.Timestamp]:
 
 
 def flatten(metrics: dict[str, Any], prefix: str = "") -> Iterator[tuple[str, Any]]:
-    """The scalar leaves of `compute_metrics` as ``block.name`` (the per-station table and the holidays are
-    left out)."""
+    """The scalar leaves of the metrics of `evaluate` as ``block.name`` (the per-station table and the
+    holidays are left out)."""
     for key, value in metrics.items():
         if isinstance(value, dict) and key != "stations":
             yield from flatten(value, f"{prefix}{key}.")
@@ -234,11 +268,12 @@ def ablation(
     wind_biases: Sequence[float] = WIND_BIASES,
     seeds: Sequence[int] = range(N_SEEDS),
 ) -> pd.DataFrame:
-    """The harness metrics (`compute_metrics`, flattened as ``block.name``) of the baseline and of its
-    variants: ``baseline``; ``no_tempo``; ``stations`` with each count of `station_counts` and each seed
-    (a count of all the stations is the baseline); ``wind_bias`` with the wind turned by each of
-    `wind_biases` degrees clockwise. Columns ``case``, ``setting`` (stations kept, degrees) and ``seed``
-    come first."""
+    """The harness metrics (`evaluate` with the model of `config`, flattened as ``block.name``) of the
+    baseline and of its variants: ``baseline``; ``no_tempo``; ``stations`` with each count of
+    `station_counts` and each seed (a count of all the stations is the baseline); ``wind_bias`` with the wind
+    turned by each of `wind_biases` degrees clockwise. Columns ``case``, ``setting`` (stations kept,
+    degrees) and ``seed`` come first. The Jacobians of the baseline are reused by every variant but the wind
+    ones."""
 
     def row(case: str, setting: float | None, seed: int | None, variant: dict[str, Any]) -> dict[str, Any]:
         return {"case": case, "setting": setting, "seed": seed, **variant}
@@ -247,9 +282,9 @@ def ablation(
         with warnings.catch_warnings():
             if variant.n_pixels == 0:  # the correlation with TEMPO is empty (NaN) and numpy warns about it
                 warnings.simplefilter("ignore", RuntimeWarning)
-            return dict(flatten(compute_metrics(variant, config)))
+            return dict(flatten(evaluate(variant, config).metrics))
 
-    base = run(inputs)
+    base = run(inputs)  # also fills the Jacobian cache the variants slice
     rows = [row("baseline", None, None, base), row("no_tempo", None, None, run(without_tempo(inputs)))]
     ids = station_ids(inputs)
     for k in station_counts:
@@ -267,33 +302,35 @@ def ablation(
 # --- Learning curve ---------------------------------------------------------------------------------------
 
 
-def validation_errors(inputs: Inputs) -> dict[str, float]:
-    """In-sample RMSE (ppb) of the fit at the stations and leave-one-station-out RMSE of the model, IDW and
-    the hybrid, with the sizes of the inputs."""
-    systems = hour_systems(
-        inputs.hours, inputs.zones, inputs.points, inputs.no2_nox_ratio, inputs.n_regions, HOLIDAYS
-    )
-    fitted = loo.predict_stations(inputs, systems, solve(systems, inputs.points, inputs.n_regions))
-    observed = loo.station_rows(inputs)["obs"].to_numpy()
-    rmse = loo.summarize(loo.leave_one_out(inputs, systems))["rmse"]
+def validation_errors(inputs: Inputs, make_model: Callable[[], Model]) -> dict[str, float]:
+    """In-sample RMSE (ppb) of the model fitted on all the stations and its leave-one-station-out RMSE
+    (`loo.leave_one_out`) for the model, IDW and the hybrid, with the sizes of the inputs."""
+    rows = loo.station_rows(inputs)
+    fitted = make_model().fit(inputs).predict_stations(inputs, sorted(rows["station"].unique()))
+    fitted = rows.merge(fitted, left_on=["station", "h"], right_on=["station", "utc"], how="left")
+    table, _ = loo.leave_one_out(inputs, make_model)
+    rmse = loo.summarize(table)["rmse"]
     return {
         "n_days": len(local_days(inputs)),
         "n_hours": len(inputs.hours),
         "n_stations": len(station_ids(inputs)),
-        "rmse_in_sample": float(np.sqrt(np.mean((fitted - observed) ** 2))),
+        "rmse_in_sample": float(np.sqrt(np.mean((fitted["nox_ppb_pred"] - fitted["obs"]) ** 2))),
         **{f"rmse_loo_{name}": rmse[name] for name in loo.PREDICTORS},
     }
 
 
 def learning_curve(
     inputs: Inputs,
+    make_model: Callable[[], Model],
     day_counts: Sequence[int] = DAY_COUNTS,
     station_counts: Sequence[int] = CURVE_STATION_COUNTS,
     seeds: Sequence[int] = range(N_SEEDS),
 ) -> pd.DataFrame:
     """In-sample and leave-one-station-out RMSE (`validation_errors`) with fewer data: ``days`` keeps a block
     of consecutive days (all the stations), ``stations`` a spread-out subset (all the days). Counts beyond
-    what the inputs have are the full inputs; a case that uses everything runs once (seed 0)."""
+    what the inputs have are the full inputs; a case that uses everything runs once (seed 0). The Jacobians
+    of the full inputs are built once and sliced for every case."""
+    make_model().fit(inputs)  # fills the Jacobian cache the variants slice
     days, ids = local_days(inputs), station_ids(inputs)
     rows = []
     for axis, total, counts in (("days", len(days), day_counts), ("stations", len(ids), station_counts)):
@@ -306,11 +343,27 @@ def learning_curve(
                     variant = with_days(inputs, day_block(days, n, rng))
                 else:
                     variant = with_stations(inputs, spatial_subset(inputs.station_xy.loc[ids], n, rng))
-                rows.append({"axis": axis, "n": n, "seed": seed, **validation_errors(variant)})
+                rows.append({"axis": axis, "n": n, "seed": seed, **validation_errors(variant, make_model)})
     return pd.DataFrame(rows)
 
 
 # --- Run --------------------------------------------------------------------------------------------------
+
+
+def model_systems(inputs: Inputs, model: Model) -> list[HourSystem]:
+    """The hour systems of a plume inversion model on all the inputs, with the Jacobians of the cache."""
+    if not isinstance(model, InversionPlume):
+        raise ValueError(f"the information analysis needs a plume inversion model, got {model.name!r}")
+    return hour_systems(
+        inputs.hours,
+        inputs.zones,
+        inputs.points,
+        inputs.no2_nox_ratio,
+        inputs.n_regions,
+        HOLIDAYS,
+        day_kinds=inputs.day_kinds,
+        jacobians=inputs.jacobians(model.transport_key(), model.transport()),
+    )
 
 
 def run_diagnostics(
@@ -331,9 +384,7 @@ def run_diagnostics(
     seeds = range(n_seeds)
     if Stage.information in stages:
         echo("information by observation")
-        systems = hour_systems(
-            inputs.hours, inputs.zones, inputs.points, inputs.no2_nox_ratio, inputs.n_regions, HOLIDAYS
-        )
+        systems = model_systems(inputs, config.model.build())
         reduction, dofs = information_by_observation(systems, inputs.points, inputs.n_regions)
         reduction.to_csv(out / "variance_reduction.csv", index=False)
         dofs.to_csv(out / "degrees_of_freedom.csv", index=False)
@@ -342,6 +393,8 @@ def run_diagnostics(
         ablation(inputs, config, seeds=seeds).to_csv(out / "ablation.csv", index=False)
     if Stage.learning in stages:
         echo("learning curve")
-        learning_curve(inputs, seeds=seeds).to_csv(out / "learning_curve.csv", index=False)
+        learning_curve(inputs, config.model.build, seeds=seeds).to_csv(
+            out / "learning_curve.csv", index=False
+        )
     (out / "code_version.json").write_text(json.dumps(code_version(), indent=2) + "\n")
     return out

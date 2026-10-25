@@ -13,8 +13,11 @@ from pydantic import ValidationError
 
 from nox_ml import __version__
 from nox_ml.data import pbl, simat, tempo
+from nox_ml.data.inputs import load_inputs
 from nox_ml.data.qc import render
+from nox_ml.validation import compare as comparison
 from nox_ml.validation import diagnostics, experiment
+from nox_ml.validation import tune as tuning
 
 RAW = Path("data/raw")
 INTERIM = Path("data/interim")
@@ -99,6 +102,84 @@ def run(
     typer.echo(f"Written to {out}/")
 
 
+@app.command("compare")
+def compare(
+    runs: Annotated[list[Path], typer.Argument(help="Run folders, e.g. runs/*.")],
+    out_dir: Annotated[Path, typer.Option(help="Where comparison.csv and comparison.md are written.")] = Path(
+        "runs"
+    ),
+) -> None:
+    """Compare runs: a table sorted by loo_rmse_ppb with emission metrics, placebo gate and times."""
+    table, skipped = comparison.collect(runs)
+    for path in skipped:
+        typer.echo(f"Skipped {path}: no summary in metrics.json", err=True)
+    if table.empty:
+        typer.echo("No runs to compare.", err=True)
+        raise typer.Exit(1)
+    text = comparison.markdown(table)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    table.to_csv(out_dir / "comparison.csv", index=False)
+    (out_dir / "comparison.md").write_text(text + "\n")
+    typer.echo(text)
+
+
+@app.command("tune")
+def tune(
+    search: Annotated[Path, typer.Argument(help="Search YAML next to the experiment config.")],
+    runs_dir: Annotated[Path, typer.Option(help="Where runs/<name>/ is written.")] = Path("runs"),
+) -> None:
+    """Search the params of a model on the tuning period, write trials.csv and refit the best trial."""
+    try:
+        space, base = tuning.read_search(search)
+        tuning.trials(space, base)  # every trial is valid before the first one runs
+    except (ValidationError, ValueError, OSError) as error:
+        typer.echo(f"Invalid search {search}:\n{error}", err=True)
+        raise typer.Exit(2) from error
+    name = search.stem.removesuffix(".search")
+    inputs = load_inputs(
+        base.data_dir, base.period.start.isoformat(), base.period.end.isoformat(), base.simat_hours
+    )
+    table = tuning.tune(space, base, inputs)
+    out = runs_dir / name
+    out.mkdir(parents=True, exist_ok=True)
+    table.to_csv(out / "trials.csv", index=False)
+    best = table.loc[table["loo_rmse_ppb"].idxmin()]
+    params = base.model.params | {k: best[k].item() for k in space.space}
+    typer.echo(table.to_string(index=False))
+    typer.echo(f"Best trial {int(best['trial'])}: {best['loo_rmse_ppb']:.2f} ppb with {params}")
+    config = base.model_copy(update={"name": name, "model": base.model.model_copy(update={"params": params})})
+    experiment.run_experiment(config, runs_dir)
+    typer.echo(f"Trials and the refit of the best in {out}/")
+
+
+@app.command("train-pinn")
+def train_pinn(
+    config: Annotated[Path, typer.Argument(help="Experiment YAML with model: {name: pinn_plume}.")],
+) -> None:
+    """Train (or find in the cache) the PINN kernel of an experiment and print its validation against the
+    exact solution. Needs the ``pinn`` extra. Takes a few minutes the first time; the default network is
+    bundled and needs no training."""
+    from nox_ml.models.pinn.cache import obtain_kernel
+    from nox_ml.models.pinn.params import PinnParams
+
+    try:
+        cfg = experiment.read_config(config)
+    except ValidationError as error:
+        typer.echo(f"Invalid config {config}:\n{error}", err=True)
+        raise typer.Exit(2) from error
+    if cfg.model.name != "pinn_plume":
+        typer.echo(f"{config} runs model {cfg.model.name!r}, not 'pinn_plume'.", err=True)
+        raise typer.Exit(2)
+    params = PinnParams.model_validate(cfg.model.params)
+    directory = Path(params.kernel_dir) if params.kernel_dir else None
+    kernel = obtain_kernel(params, directory, progress=typer.echo)
+    typer.echo(f"Kernel {params.training_key()} (trained in {kernel.seconds:.0f} s)")
+    typer.echo("gamma  median_rel_error  p90_rel_error  mass_error")
+    for gamma, row in kernel.validation.items():
+        errors = (row["median_rel_error"], row["p90_rel_error"], row["mass_error"])
+        typer.echo(f"{gamma:>5}  {errors[0]:>16.1%}  {errors[1]:>13.1%}  {errors[2]:>+10.1%}")
+
+
 @app.command()
 def diagnose(
     config: Annotated[Path, typer.Argument(help="Experiment YAML, e.g. configs/experiments/baseline.yaml.")],
@@ -110,10 +191,7 @@ def diagnose(
         list[diagnostics.Stage] | None, typer.Option(help="Run only these stages (repeat the option).")
     ] = None,
 ) -> None:
-    """Diagnostics of an experiment: information by observation, ablation and learning curves, as CSV files.
-
-    The ablation and the curves refit the inversion many times (about 3 hours on the baseline).
-    """
+    """Diagnostics of an experiment (information by observation, ablation, learning curves), as CSV files."""
     try:
         cfg = experiment.read_config(config)
     except ValidationError as error:

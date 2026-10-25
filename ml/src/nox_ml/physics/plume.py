@@ -25,6 +25,14 @@ def speed(mag: ArrayLike, u_min: float = U_MIN) -> Array:
     return np.maximum(mag, u_min)
 
 
+def effective_height(along: ArrayLike, pbl: float) -> Array:
+    """Mixing height (m) of a ground-level source at `along` meters downwind (never below `MIN_ALONG`): the
+    vertical spread of urban Briggs class B, limited by the boundary layer height `pbl`."""
+    a = np.maximum(along, MIN_ALONG)
+    sz = 0.24 * a * np.sqrt(1 + 0.001 * a)
+    return np.minimum(np.sqrt(np.pi / 2) * sz, pbl)
+
+
 def plume(
     xs: Array,
     ys: Array,
@@ -54,8 +62,7 @@ def plume(
     ok = (along > 0) & (along < x_max)
     a = np.maximum(along, MIN_ALONG)
     sy = np.sqrt((0.32 * a / np.sqrt(1 + 0.0004 * a)) ** 2 + (a * sigma_theta) ** 2 + extra_sy**2)
-    sz = 0.24 * a * np.sqrt(1 + 0.001 * a)
-    zeff = np.minimum(np.sqrt(np.pi / 2) * sz, pbl)
+    zeff = effective_height(along, pbl)
     lateral = np.exp(-(cross**2) / (2 * sy**2)) / (np.sqrt(2 * np.pi) * sy * sp)
     col = np.where(ok, lateral, 0.0)
     return col / zeff, col

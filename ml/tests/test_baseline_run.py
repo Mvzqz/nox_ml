@@ -25,7 +25,13 @@ def metrics(tmp_path_factory) -> dict:
     out = run_experiment(
         config.model_copy(update={"data_dir": ROOT / "data"}), tmp_path_factory.mktemp("runs")
     )
-    assert {p.name for p in out.iterdir()} == {"config.yaml", "metrics.json", "code_version.json"}
+    assert {p.name for p in out.iterdir()} == {
+        "config.yaml",
+        "metrics.json",
+        "code_version.json",
+        "oof.parquet",
+        "emissions.parquet",
+    }
     return json.loads((out / "metrics.json").read_text())
 
 

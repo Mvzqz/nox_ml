@@ -12,9 +12,9 @@ prior). Stations respond in ppb of NOx, pixels in molecules/cm2 of NO2 (the NO2/
 afternoon).
 """
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from functools import cache
+from functools import cache, partial
 
 import numpy as np
 import pandas as pd
@@ -92,6 +92,11 @@ class HourJacobian:
 
     stations: Array  # ppb
     pixels: Array  # molecules/cm2
+
+    def without_stations(self, keep: NDArray[np.bool_]) -> "HourJacobian":
+        """Only the station rows where `keep` is true: each row depends on its own receptor alone, so this is
+        the matrix that would be built without the other stations."""
+        return HourJacobian(self.stations[keep], self.pixels)
 
 
 def standard_transport(wind: pd.DataFrame, loss_rate: pd.Series, road_profile: HourProfile) -> Transport:
@@ -185,6 +190,43 @@ def _block(
     return np.hstack([(points_steady + points_aged) * scale, zones * scale])
 
 
+# One unit of emission at (xs, ys) seen at (xr, yr): ground-level concentration and column, both shaped
+# (receptors, sources), per 1 g/s. `extra_sy` is the extra lateral spread (m) of the receptor.
+Response = Callable[[Array, Array, Array, Array, float], tuple[Array, Array]]
+
+# What `hour_systems` needs from a transport model: the matrix of one hour from the wind (u, v), the boundary
+# layer height, the sources, the receptors and the NO2/NOx ratio.
+HourJacobianFn = Callable[[tuple[float, float], float, Sources, Receptors, Receptors, float], HourJacobian]
+
+
+def jacobian_hour_steady(
+    response: Response, sources: Sources, stations: Receptors, pixels: Receptors, no2_nox_ratio: float
+) -> HourJacobian:
+    """Matrix of one hour for any stationary transport `response` (a plume with one domain wind for the
+    hour). The assembly is the one of `jacobian_hour_plume`: columns, units and the zone sums."""
+    to_ppb = T_PER_YR_TO_GS * PPB_PER_GM3
+    to_molec = T_PER_YR_TO_GS * MOLEC_CM2_PER_GM2 * no2_nox_ratio
+
+    def block(receptors: Receptors, extra_sy: float, ground: bool, scale: float) -> Array:
+        if not len(receptors.x):
+            return np.zeros((0, sources.n_columns))
+        pick = 0 if ground else 1
+
+        def at(xs: Array, ys: Array) -> Array:
+            return response(xs, ys, receptors.x, receptors.y, extra_sy)[pick]
+
+        cells = at(sources.cell_x, sources.cell_y) * sources.cell_prior
+        zones = np.stack(
+            [cells[:, sources.cell_zone == z].sum(axis=1) for z in range(sources.n_zones)], axis=1
+        )
+        return np.hstack([at(sources.point_x, sources.point_y) * scale, zones * scale])
+
+    return HourJacobian(
+        stations=block(stations, 0.0, ground=True, scale=to_ppb),
+        pixels=block(pixels, PIXEL_SIGMA_Y, ground=False, scale=to_molec),
+    )
+
+
 def jacobian_hour_plume(
     wind_h: tuple[float, float],
     pbl_h: float,
@@ -200,27 +242,14 @@ def jacobian_hour_plume(
     `jacobian_hour` (`scripts/feasibility_linear.py`, research-archive). `sigma_theta` (rad) and `u_min`
     (m/s) are the wind-direction uncertainty and the transport-speed floor. Same columns and units as
     `jacobian_hour_puff`."""
-    to_ppb = T_PER_YR_TO_GS * PPB_PER_GM3
-    to_molec = T_PER_YR_TO_GS * MOLEC_CM2_PER_GM2 * no2_nox_ratio
+    u, v = wind_h
 
-    def block(receptors: Receptors, extra_sy: float, ground: bool, scale: float) -> Array:
-        if not len(receptors.x):
-            return np.zeros((0, sources.n_columns))
-        pick = 0 if ground else 1
+    def response(xs: Array, ys: Array, xr: Array, yr: Array, extra_sy: float) -> tuple[Array, Array]:
+        return plume(xs, ys, xr, yr, u, v, pbl_h, extra_sy, sigma_theta=sigma_theta, u_min=u_min)
 
-        def response(xs: Array, ys: Array) -> Array:
-            u, v = wind_h
-            return plume(
-                xs, ys, receptors.x, receptors.y, u, v, pbl_h, extra_sy, sigma_theta=sigma_theta, u_min=u_min
-            )[pick]
+    return jacobian_hour_steady(response, sources, stations, pixels, no2_nox_ratio)
 
-        cells = response(sources.cell_x, sources.cell_y) * sources.cell_prior
-        zones = np.stack(
-            [cells[:, sources.cell_zone == z].sum(axis=1) for z in range(sources.n_zones)], axis=1
-        )
-        return np.hstack([response(sources.point_x, sources.point_y) * scale, zones * scale])
 
-    return HourJacobian(
-        stations=block(stations, 0.0, ground=True, scale=to_ppb),
-        pixels=block(pixels, PIXEL_SIGMA_Y, ground=False, scale=to_molec),
-    )
+def plume_transport(sigma_theta: float, u_min: float) -> tuple[tuple, HourJacobianFn]:
+    """The stationary plume as a transport: its Jacobian-cache key (kernel and params) and the function."""
+    return ("plume", sigma_theta, u_min), partial(jacobian_hour_plume, sigma_theta=sigma_theta, u_min=u_min)

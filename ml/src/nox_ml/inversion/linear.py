@@ -14,8 +14,9 @@ system keeps only the source unknowns: the errors of a block of observations of 
 extra unknown per hour and kind, which is what the research code did.
 """
 
-from collections.abc import Collection, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
+from functools import partial
 
 import geopandas as gpd
 import numpy as np
@@ -23,7 +24,13 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from nox_ml.data.roads import UTM
-from nox_ml.inversion.jacobian import HourJacobian, Receptors, Sources, jacobian_hour_plume
+from nox_ml.inversion.jacobian import (
+    HourJacobian,
+    HourJacobianFn,
+    Receptors,
+    Sources,
+    jacobian_hour_plume,
+)
 from nox_ml.inversion.normalized import day_type
 from nox_ml.time import local_day
 
@@ -180,6 +187,26 @@ class HourSystem:
     gradient: Array
 
 
+def hour_jacobians(
+    hours: Sequence[HourData],
+    zones: pd.DataFrame,
+    points: pd.DataFrame,
+    no2_nox_ratio: float,
+    n_regions: int,
+    sigma_theta: float = SIGMA_THETA,
+    u_min: float = U_MIN,
+    jacobian: HourJacobianFn | None = None,
+) -> list[HourJacobian]:
+    """The Jacobian of every hour, all its receptors, with the transport `jacobian` (default: the stationary
+    plume with `sigma_theta` and `u_min`). Rows do not depend on one another, so a subset of the rows is the
+    Jacobian of the subset of receptors (`HourJacobian.without_stations`)."""
+    jacobian = jacobian or partial(jacobian_hour_plume, sigma_theta=sigma_theta, u_min=u_min)
+    sources = road_sources(zones, points, n_regions)
+    return [
+        jacobian(data.wind, data.pbl, sources, data.stations, data.pixels, no2_nox_ratio) for data in hours
+    ]
+
+
 def hour_systems(
     hours: Sequence[HourData],
     zones: pd.DataFrame,
@@ -187,18 +214,29 @@ def hour_systems(
     no2_nox_ratio: float,
     n_regions: int,
     holidays: Collection[str] = HOLIDAYS,
+    sigma_theta: float = SIGMA_THETA,
+    u_min: float = U_MIN,
+    day_kinds: Mapping[pd.Timestamp, int] | None = None,
+    jacobians: Sequence[HourJacobian] | None = None,
+    jacobian: HourJacobianFn | None = None,
 ) -> list[HourSystem]:
     """The `HourSystem` of every hour. The Jacobians dominate the cost of an inversion; the systems can be
-    solved again with other weights by `solve`."""
-    sources = road_sources(zones, points, n_regions)
+    solved again with other weights by `solve`. `sigma_theta` (rad) and `u_min` (m/s) are the plume
+    parameters; `day_kinds` maps local days to a day type, overriding the calendar (placebos). `jacobians`
+    are the ones of `hours` already computed with the transport (row for row), to skip building them;
+    otherwise `jacobian` (the signature of `HourJacobianFn`, default: the stationary plume with
+    `sigma_theta` and `u_min`) builds them."""
     n_points = len(points)
     days = pd.DatetimeIndex([local_day(h.hour) for h in hours])
     kinds = day_type(days, holidays)
-    systems = []
-    for data, day, kind in zip(hours, days, kinds, strict=True):
-        jac = jacobian_hour_plume(
-            data.wind, data.pbl, sources, data.stations, data.pixels, no2_nox_ratio, SIGMA_THETA, U_MIN
+    if day_kinds:
+        kinds = np.array([day_kinds.get(d, k) for d, k in zip(days, kinds, strict=True)])
+    if jacobians is None:
+        jacobians = hour_jacobians(
+            hours, zones, points, no2_nox_ratio, n_regions, sigma_theta, u_min, jacobian
         )
+    systems = []
+    for data, jac, day, kind in zip(hours, jacobians, days, kinds, strict=True):
         # the columns of the road regions go to the ones of this day type
         columns = np.r_[np.arange(n_points), n_points + n_regions * kind + np.arange(n_regions)]
         info = np.zeros((len(columns), len(columns)))

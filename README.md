@@ -16,12 +16,12 @@ Details in [`docs/installation.md`](docs/installation.md).
 
 | Folder | Contents |
 |---|---|
-| `ml/` | `nox_ml` package: data, physics, inversion, validation and the `nox-ml` CLI |
+| `ml/` | `nox_ml` package: data, physics, inversion, models, validation and the `nox-ml` CLI |
 | `app/` | `nox_app` package: user interface (Streamlit). Reads exported results only |
 | `tests/` | End-to-end tests (ML → exported results → app). Unit tests live in each package |
 | `configs/` | Per-city and per-experiment configuration |
 | `context/` | Technical knowledge, decisions (ADRs) and project management (in Spanish, except ADRs) |
-| `docs/` | How to install, use, test and contribute |
+| `docs/` | How to install, use, test and contribute; model contracts in [`docs/models.md`](docs/models.md) |
 | `deliverables/` | Progress notebooks for the advisor and published documents (in Spanish) |
 | `data/` | Data, versioned with DVC (DagsHub), never with git |
 | `bin/` | `uptodate`, `check` and pipeline scripts |

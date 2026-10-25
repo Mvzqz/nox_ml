@@ -14,11 +14,19 @@ Metrics (`compute_metrics`), migrated from `real_check_linear.py` and `benchmark
 - ``day_types``: road emission by day type and Saturday/weekday and Sunday/weekday ratios, with a bootstrap
   over whole days (each replicate solves the inversion again on the resampled days);
 - ``normalized``: the meteorology-normalized estimator (observed over modeled NOx with the prior emission) and
-  the width of its placebo: fake Sundays drawn among weekdays.
+  the width of its placebo: fake Sundays drawn among weekdays;
+- ``summary``: the flat `RunMetrics` of the run, including the placebo of the model itself (refits with fake
+  Sundays) and its cost.
+
+The method under test is any `nox_ml.models` entry (``model: {name, params}`` in the config); the harness only
+fits, predicts and reads its emission estimate.
 """
 
 import json
 import subprocess
+import time
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Annotated, Any
@@ -26,13 +34,16 @@ from typing import Annotated, Any
 import numpy as np
 import pandas as pd
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 from nox_ml.data.inputs import Inputs, load_inputs
-from nox_ml.inversion.linear import HOLIDAYS, HourSystem, hour_systems, solve
-from nox_ml.inversion.normalized import SATURDAY, SUNDAY_HOLIDAY, WEEKDAY, day_type, interval
+from nox_ml.inversion.jacobian import plume_transport
+from nox_ml.inversion.linear import HOLIDAYS, SIGMA_THETA, U_MIN, HourSystem, hour_systems
+from nox_ml.inversion.normalized import SUNDAY_HOLIDAY, WEEKDAY, day_type, interval
+from nox_ml.models import REGISTRY, EmissionEstimate, Model
 from nox_ml.time import local_day
 from nox_ml.validation import loo
+from nox_ml.validation.metrics import PLACEBO_TOLERANCE, RunMetrics, gap_to_range
 from nox_ml.validation.placebo import daily_table, split_placebo
 
 
@@ -51,20 +62,40 @@ class Period(Strict):
         return self
 
 
-class Bootstrap(Strict):
-    """Bootstrap over whole days of the road totals by day type."""
-
-    n: Annotated[int, Field(ge=1)] = 200
-    seed: int = 7
-    level: Annotated[float, Field(gt=0, lt=1)] = 0.90
-
-
 class Placebo(Strict):
-    """Placebo of the normalized estimator: fake Sundays among weekdays."""
+    """Placebos with fake Sundays among weekdays: the normalized estimator draws `n` splits; the model is
+    fitted again on `refits` of them (each refit costs a fit)."""
 
     n: Annotated[int, Field(ge=1)] = 2000
     seed: int = 3
     level: Annotated[float, Field(gt=0, lt=1)] = 0.90
+    refits: Annotated[int, Field(ge=2)] = 8
+
+
+class ModelConfig(Strict):
+    """Which model and its hyperparameters; `params` is stored with every default filled in."""
+
+    name: str = "inversion_plume"
+    params: dict[str, Any] = Field(default_factory=dict, validate_default=True)
+
+    @field_validator("name")
+    @classmethod
+    def registered(cls, name: str) -> str:
+        if name not in REGISTRY:
+            raise ValueError(f"unknown model {name!r}; registered: {sorted(REGISTRY)}")
+        return name
+
+    @field_validator("params")
+    @classmethod
+    def resolved(cls, params: dict[str, Any], info: ValidationInfo) -> dict[str, Any]:
+        if "name" not in info.data:
+            return params
+        return REGISTRY[info.data["name"]].Params.model_validate(params).model_dump(mode="json")
+
+    def build(self) -> Model:
+        """A new, unfitted model."""
+        cls = REGISTRY[self.name]
+        return cls(cls.Params.model_validate(self.params))
 
 
 class ExperimentConfig(Strict):
@@ -74,7 +105,7 @@ class ExperimentConfig(Strict):
     period: Period
     simat_hours: tuple[Annotated[int, Field(ge=0, le=23)], Annotated[int, Field(ge=0, le=23)]] = (12, 17)
     data_dir: Path = Path("data")
-    bootstrap: Bootstrap = Bootstrap()
+    model: ModelConfig = Field(default_factory=ModelConfig, validate_default=True)
     placebo: Placebo = Placebo()
 
     @model_validator(mode="after")
@@ -93,33 +124,6 @@ def read_config(path: Path) -> ExperimentConfig:
 
 def _correlation(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.corrcoef(a, b)[0, 1])
-
-
-def road_totals(factors: np.ndarray, prior: np.ndarray) -> np.ndarray:
-    """Road emission (t/yr equivalent) of each day type: ``factors`` (day type, region) times the prior of
-    the regions."""
-    return factors @ prior
-
-
-def bootstrap_day_types(
-    systems: list[HourSystem], inputs: Inputs, n_regions: int, prior: np.ndarray, config: Bootstrap
-) -> np.ndarray:
-    """Road totals by day type, shaped (replicate, day type), solving again on days drawn with replacement."""
-    days, day_index = np.unique([s.day for s in systems], return_inverse=True)
-    rng = np.random.default_rng(config.seed)
-    out = []
-    for _ in range(config.n):
-        pick = rng.choice(len(days), len(days))
-        weights = np.bincount(pick, minlength=len(days))[day_index]
-        post = solve(systems, inputs.points, n_regions, weights)
-        out.append(road_totals(post.road_factors(), prior))
-    return np.array(out)
-
-
-def ratio_with_interval(total: np.ndarray, boot: np.ndarray, kind: int, level: float) -> dict[str, float]:
-    """Ratio of day type `kind` over weekday emission, with the percentile interval of the bootstrap."""
-    lo, hi = interval(boot[:, kind] / boot[:, WEEKDAY], level)
-    return {"value": float(total[kind] / total[WEEKDAY]), "lo": lo, "hi": hi}
 
 
 def normalized_estimator(
@@ -152,42 +156,78 @@ def normalized_estimator(
     }
 
 
-def compute_metrics(inputs: Inputs, config: ExperimentConfig) -> dict[str, Any]:
-    """All the metrics of a run, as a JSON-ready dict."""
-    n_regions = inputs.n_regions
-    systems = hour_systems(
-        inputs.hours, inputs.zones, inputs.points, inputs.no2_nox_ratio, n_regions, HOLIDAYS
-    )
-    post = solve(systems, inputs.points, n_regions)
+@dataclass(frozen=True)
+class Evaluation:
+    """What a run produces: the metrics, the out-of-fold predictions and the emission estimate (models)."""
 
+    metrics: dict[str, Any]
+    oof: pd.DataFrame
+    emissions: EmissionEstimate | None
+
+
+def model_placebo(inputs: Inputs, make_model: Callable[[], Model], config: Placebo) -> dict[str, float]:
+    """Sunday over weekday of the model fitted on weekdays only, a random subset of them relabeled as Sundays
+    (as many as the period has). There is no change to find: the center should be 1."""
+    days = pd.DatetimeIndex(sorted({local_day(h.hour) for h in inputs.hours}))
+    kinds = day_type(days, HOLIDAYS)
+    weekdays, n_fake = days[kinds == WEEKDAY], int((kinds == SUNDAY_HOLIDAY).sum())
+    if not 0 < n_fake < len(weekdays):
+        raise ValueError(
+            f"placebo needs Sundays and more weekdays than Sundays, got {n_fake}/{len(weekdays)}"
+        )
+    base = inputs.on_days(weekdays)
+    rng = np.random.default_rng(config.seed)
+    ratios = []
+    for _ in range(config.refits):
+        fake = rng.choice(len(weekdays), n_fake, replace=False)
+        relabeled = base.with_day_kinds(dict.fromkeys(weekdays[fake], SUNDAY_HOLIDAY))
+        ratios.append(make_model().fit(relabeled).estimate_emissions().day_type_ratio("sunday_holiday"))
+    lo, hi = interval(np.array(ratios), config.level)
+    return {"center": float(np.median(ratios)), "half_width": (hi - lo) / 2, "lo": lo, "hi": hi}
+
+
+def day_types_block(inputs: Inputs, estimate: EmissionEstimate) -> dict[str, Any]:
+    """Road emission by day type and the ratios to the weekday, as the baseline table reports them."""
+    out: dict[str, Any] = {"road_prior": float(inputs.zones["weight"].sum())}
+    if estimate.kind == "absolute":
+        out["road_total"] = estimate.table.groupby("day_type")["mean"].sum().astype(float).to_dict()
+    for key, kind in (("saturday_over_weekday", "saturday"), ("sunday_over_weekday", "sunday_holiday")):
+        bounds = estimate.day_type_interval(kind)
+        out[key] = {
+            "value": estimate.day_type_ratio(kind),
+            "lo": bounds[0] if bounds else None,
+            "hi": bounds[1] if bounds else None,
+        }
+    level = None if estimate.ratio_ci is None else float(estimate.ratio_ci["level"].iloc[0])
+    return out | {"bootstrap_level": level, "n_days": len({local_day(h.hour) for h in inputs.hours})}
+
+
+def evaluate(inputs: Inputs, config: ExperimentConfig) -> Evaluation:
+    """All the metrics of a run, as a JSON-ready dict, with the out-of-fold predictions and the emissions."""
+    make_model = config.model.build
+    model = make_model()
     rows = loo.station_rows(inputs)
-    fitted = loo.predict_stations(inputs, systems, post)
-    pixel_model, pixel_obs = loo.predict_pixels(inputs, systems, post)
+    stations = sorted(rows["station"].unique())
+
+    start = time.perf_counter()
+    model.fit(inputs)
+    fit_seconds = time.perf_counter() - start
+    start = time.perf_counter()
+    fitted = model.predict_stations(inputs, stations)
+    predict_seconds = time.perf_counter() - start
+    fitted = rows.merge(fitted, left_on=["station", "h"], right_on=["station", "utc"], how="left")
+    pred, obs = fitted["nox_ppb_pred"].to_numpy(float), rows["obs"].to_numpy()
+    tempo = getattr(model, "tempo_correlation", None)
     in_sample = {
-        "r_stations": _correlation(fitted, rows["obs"].to_numpy()),
-        "rmse_stations": float(np.sqrt(np.mean((fitted - rows["obs"].to_numpy()) ** 2))),
-        "r_tempo": _correlation(pixel_model, pixel_obs),
+        "r_stations": _correlation(pred, obs),
+        "rmse_stations": float(np.sqrt(np.mean((pred - obs) ** 2))),
+        "r_tempo": tempo(inputs) if tempo else None,
     }
 
-    prior = inputs.zones.groupby("region")["weight"].sum().reindex(range(n_regions), fill_value=0).to_numpy()
-    total = road_totals(post.road_factors(), prior)
-    boot = bootstrap_day_types(systems, inputs, n_regions, prior, config.bootstrap)
-    day_types = {
-        "road_total": {
-            "weekday": total[WEEKDAY],
-            "saturday": total[SATURDAY],
-            "sunday_holiday": total[SUNDAY_HOLIDAY],
-        },
-        "road_prior": float(prior.sum()),
-        "saturday_over_weekday": ratio_with_interval(total, boot, SATURDAY, config.bootstrap.level),
-        "sunday_over_weekday": ratio_with_interval(total, boot, SUNDAY_HOLIDAY, config.bootstrap.level),
-        "bootstrap_level": config.bootstrap.level,
-        "n_days": len({s.day for s in systems}),
-    }
-
-    table = loo.leave_one_out(inputs, systems)
+    table, oof = loo.leave_one_out(inputs, make_model)
+    pooled = loo.summarize(table)
     start, end = (d.isoformat() for d in (config.period.start, config.period.end))
-    return {
+    metrics: dict[str, Any] = {
         "inputs": {
             "n_hours": len(inputs.hours),
             "n_station_rows": inputs.n_station_rows,
@@ -196,10 +236,49 @@ def compute_metrics(inputs: Inputs, config: ExperimentConfig) -> dict[str, Any]:
             "holidays": sorted(d for d in HOLIDAYS if start <= d <= end),
         },
         "in_sample": in_sample,
-        "loo": loo.summarize(table) | {"stations": table.round(4).to_dict("index")},
-        "day_types": day_types,
-        "normalized": normalized_estimator(inputs, systems, config.placebo),
+        "loo": pooled | {"stations": table.round(4).to_dict("index")},
+        "day_types": None,
+        "normalized": None,
     }
+    summary: dict[str, Any] = {
+        "model": model.name,
+        "role": model.role,
+        "loo_rmse_ppb": pooled["rmse"]["model"],
+        "loo_bias_ppb": pooled["bias"]["model"],
+        "loo_hourly_rmse_ppb": pooled["hourly"]["model"],
+        "r_tempo": in_sample["r_tempo"],
+        "fit_seconds": fit_seconds,
+        "predict_seconds": predict_seconds,
+        "n_params": model.n_params,
+    }
+    estimate = None
+    if model.role == "model":
+        estimate = model.estimate_emissions().validate()
+        metrics["day_types"] = day_types_block(inputs, estimate)
+        systems = hour_systems(
+            inputs.hours,
+            inputs.zones,
+            inputs.points,
+            inputs.no2_nox_ratio,
+            inputs.n_regions,
+            HOLIDAYS,
+            jacobians=inputs.jacobians(*plume_transport(SIGMA_THETA, U_MIN)),
+        )
+        metrics["normalized"] = normalized_estimator(inputs, systems, config.placebo)
+        placebo = model_placebo(inputs, make_model, config.placebo)
+        sunday = metrics["day_types"]["sunday_over_weekday"]
+        summary |= {
+            "sunday_ratio": sunday["value"],
+            "sunday_ratio_lo": sunday["lo"],
+            "sunday_ratio_hi": sunday["hi"],
+            "sunday_ratio_gap": gap_to_range(sunday["value"]),
+            "placebo_center": placebo["center"],
+            "placebo_halfwidth": placebo["half_width"],
+            "eligible": abs(placebo["center"] - 1) <= PLACEBO_TOLERANCE,
+        }
+    summary = dict.fromkeys(RunMetrics.model_fields) | summary
+    metrics["summary"] = RunMetrics.model_validate(summary).model_dump()
+    return Evaluation(metrics, oof, estimate)
 
 
 # --- Run ---------------------------------------------------------------------------------------------------
@@ -222,33 +301,44 @@ def code_version() -> dict[str, Any]:
 
 def run_experiment(config: ExperimentConfig, runs_dir: Path = Path("runs")) -> Path:
     """Run the experiment and write ``runs_dir/<name>/``: ``config.yaml`` (as validated, defaults included),
-    ``metrics.json`` and ``code_version.json``. Returns the folder."""
+    ``metrics.json``, ``code_version.json``, ``oof.parquet`` (leave-one-station-out predictions) and, for
+    models, ``emissions.parquet``. Returns the folder."""
     inputs = load_inputs(
         config.data_dir, config.period.start.isoformat(), config.period.end.isoformat(), config.simat_hours
     )
-    metrics = compute_metrics(inputs, config)
+    result = evaluate(inputs, config)
     out = runs_dir / config.name
     out.mkdir(parents=True, exist_ok=True)
     (out / "config.yaml").write_text(yaml.safe_dump(config.model_dump(mode="json"), sort_keys=False))
-    (out / "metrics.json").write_text(json.dumps(metrics, indent=2) + "\n")
+    (out / "metrics.json").write_text(json.dumps(result.metrics, indent=2) + "\n")
+    result.oof.to_parquet(out / "oof.parquet", index=False)
+    if result.emissions is not None:
+        result.emissions.to_frame().to_parquet(out / "emissions.parquet", index=False)
     (out / "code_version.json").write_text(json.dumps(code_version(), indent=2) + "\n")
     return out
 
 
 def headline(metrics: dict[str, Any]) -> str:
     """The numbers of the baseline table in a few lines, for the terminal."""
-    s, loo_, day, norm = metrics["in_sample"], metrics["loo"], metrics["day_types"], metrics["normalized"]
-    sunday = day["sunday_over_weekday"]
-    return "\n".join(
-        [
-            f"in-sample r: stations {s['r_stations']:.2f}, TEMPO {s['r_tempo']:.2f}",
-            "LOO RMSE model / IDW / hybrid (ppb): "
-            + " / ".join(f"{loo_['rmse'][k]:.1f}" for k in loo.PREDICTORS)
-            + f" (hybrid beats IDW at {loo_['hybrid_beats_idw']} of {loo_['n_stations']} stations)",
-            "  bias / hour-to-hour of the hybrid: "
-            f"{loo_['bias']['hybrid']:.1f} / {loo_['hourly']['hybrid']:.1f}",
-            f"Sunday/weekday {sunday['value']:.2f} ({sunday['lo']:.2f}-{sunday['hi']:.2f}), "
+    s, loo_, run = metrics["in_sample"], metrics["loo"], metrics["summary"]
+    r_tempo = "n/a" if s["r_tempo"] is None else f"{s['r_tempo']:.2f}"
+    lines = [
+        f"model {run['model']} ({run['role']}); fit {run['fit_seconds']:.1f} s",
+        f"in-sample r: stations {s['r_stations']:.2f}, TEMPO {r_tempo}",
+        "LOO RMSE model / IDW / hybrid (ppb): "
+        + " / ".join(f"{loo_['rmse'][k]:.1f}" for k in loo.PREDICTORS)
+        + f" (hybrid beats IDW at {loo_['hybrid_beats_idw']} of {loo_['n_stations']} stations)",
+        f"  bias / hour-to-hour of the hybrid: {loo_['bias']['hybrid']:.1f} / {loo_['hourly']['hybrid']:.1f}",
+    ]
+    if run["role"] == "model":
+        day = metrics["day_types"]
+        sunday, lo, hi = run["sunday_ratio"], run["sunday_ratio_lo"], run["sunday_ratio_hi"]
+        interval_text = "" if lo is None else f" ({lo:.2f}-{hi:.2f})"
+        lines += [
+            f"Sunday/weekday {sunday:.2f}{interval_text}, "
             f"Saturday/weekday {day['saturday_over_weekday']['value']:.2f}",
-            f"normalized placebo: +-{norm['placebo_half_width']:.2f}",
+            f"placebo of the model: center {run['placebo_center']:.2f} +-{run['placebo_halfwidth']:.2f}"
+            f" ({'eligible' if run['eligible'] else 'NOT eligible'}); "
+            f"normalized placebo +-{metrics['normalized']['placebo_half_width']:.2f}",
         ]
-    )
+    return "\n".join(lines)

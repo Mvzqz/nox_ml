@@ -8,6 +8,8 @@ cd nox_ml
 bin/uptodate
 ```
 
+`bin/uptodate` also installs the `pinn` extra (torch, CPU build on Linux), needed by `nox_ml.models.pinn`. Without it everything else works, but `pinn_plume` is not registered and `bin/check` cannot type-check or test it.
+
 ## Data (DVC + DagsHub)
 
 Data lives in the (private) DVC storage on DagsHub. With access to the DagsHub repository:
