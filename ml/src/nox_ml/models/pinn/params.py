@@ -2,7 +2,7 @@
 
 import hashlib
 import json
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import Field
 
@@ -80,3 +80,10 @@ class PinnPuffParams(PinnParams):
     max_age_h: Annotated[
         int, Field(ge=0, description="Hours a puff is followed (0: only the plume of the last hour).")
     ] = MAX_AGE_H
+    lifetime: Annotated[
+        Literal["fixed", "oh"],
+        Field(
+            description="Survival of the puffs: 'fixed' decays them with `tau_h`; 'oh' with the NOx loss "
+            "rate of the inputs (OH from sunlight, O3, temperature and humidity). Does not retrain."
+        ),
+    ] = "fixed"

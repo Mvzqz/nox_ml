@@ -14,13 +14,16 @@ changes is the shape of each piece, which now comes from the network instead of 
   mass, the exact Gaussian when ``F`` is one. The speed ``d / a`` sets the kernel's ``gamma``. Beyond the
   50 km of the table the profile widens as ``sqrt(d)``, the diffusive law the kernel follows.
 - The mass of a puff decays with the lifetime ``tau_h`` (the kernel already includes it in the last hour; a
-  puff applies it as the survival fraction, so there is no double counting).
+  puff applies it as the survival fraction, so there is no double counting). With ``lifetime="oh"`` the
+  survival fraction of the puffs comes instead from the NOx loss rate of the inputs
+  (`nox_ml.physics.puff.variable_lifetime`); the kernel of the last hour keeps ``tau_h``.
 
 Like `jacobian_hour_pinn`, the kernel has its own horizontal resolution: the pixel's spread is not added.
 """
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -48,9 +51,11 @@ from nox_ml.physics.puff import (
     Survival,
     Trajectories,
     Weights,
+    cumulative_loss,
     fixed_lifetime,
     local_hour_profile,
     road_weights,
+    variable_lifetime,
 )
 
 Array = NDArray[np.float64]
@@ -175,12 +180,14 @@ def _block(
 class PinnPuffTransport:
     """The puff transport of E5b as a `HistoryTransport`: bound to the hours being fitted, it builds the
     trajectories from the hourly wind of the whole period (`History.wind`, or the winds of the hours
-    themselves) and the road profile from the Infovial counts (or the typical traffic profile)."""
+    themselves) and the road profile from the Infovial counts (or the typical traffic profile). With
+    ``lifetime="oh"`` the puffs survive by the NOx loss rate of `History.loss_rate` (required then)."""
 
     table: KernelTable
     tau_h: float
     u_min: float
     max_age_h: int
+    lifetime: Literal["fixed", "oh"] = "fixed"
 
     def for_hours(
         self, hours: Sequence[HourData], history: History
@@ -195,9 +202,14 @@ class PinnPuffTransport:
             if history.infovial is not None
             else local_hour_profile()
         )
-        transport = Transport(
-            Trajectories.from_wind(wind, self.u_min), fixed_lifetime(self.tau_h), profile, self.max_age_h
-        )
+        traj = Trajectories.from_wind(wind, self.u_min)
+        if self.lifetime == "oh":
+            if history.loss_rate is None:
+                raise ValueError("lifetime='oh' needs the NOx loss rate: the inputs have no `loss_rate`")
+            survival = variable_lifetime(cumulative_loss(history.loss_rate, traj))
+        else:
+            survival = fixed_lifetime(self.tau_h)
+        transport = Transport(traj, survival, profile, self.max_age_h)
 
         def at(data: HourData, sources: Sources, no2_nox_ratio: float) -> HourJacobian:
             return jacobian_hour_pinn_puff(

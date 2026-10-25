@@ -13,6 +13,7 @@ The module has two layers: pure functions that parse and clean in-memory data, a
 
 import io
 import zipfile
+from collections.abc import Collection
 from pathlib import Path
 from typing import IO
 
@@ -30,6 +31,9 @@ WIND_FIX_YEAR = 2024
 
 NOX_PARAMETERS = ("NO", "NO2", "NOX")
 WIND_PARAMETERS = ("WSP", "WDR")
+OZONE_PARAMETERS = ("O3",)
+CHEMISTRY_MET_PARAMETERS = ("TMP", "RH")
+HOUR_LABEL_SHIFT = pd.Timedelta(hours=1)  # SIMAT stamps the end of the hour
 HIGH_NOX_PPB = 250  # hours above this are flagged, not dropped
 STUCK_MAX_RUN_HOURS = 6
 STUCK_MIN_PPB = 1  # a flat series at ~0 is a real clean-air reading, not a stuck sensor
@@ -134,6 +138,22 @@ def fix_wind_speed(w: pd.DataFrame) -> pd.DataFrame:
     w.loc[w["wsp_fix_mph"], "WSP"] = w.loc[w["wsp_fix_mph"], "WSP"] / MPH_TO_MS_FACTOR
     w["calm"] = w["WSP"] < CALM_MS
     return w
+
+
+def domain_chemistry(pol: pd.DataFrame, met: pd.DataFrame, stations: Collection[str]) -> pd.DataFrame:
+    """Hourly mean over `stations` of ozone ``O3`` (ppb) from the pollutant table `pol`, and of temperature
+    ``TMP`` (C) and relative humidity ``RH`` (%) from the meteorology table `met` (raw long tables of
+    `parse_table`). Indexed by ``h``, the start of the hour in UTC (``utc - 1 h``), like the domain wind;
+    an hour without a valid value of a variable has NaN."""
+    o3 = pivot_hourly(pol, OZONE_PARAMETERS)
+    tmp_rh = pivot_hourly(met, CHEMISTRY_MET_PARAMETERS)
+    means = [
+        wide[wide["id_station"].isin(stations)].groupby("utc")[list(columns)].mean()
+        for wide, columns in ((o3, OZONE_PARAMETERS), (tmp_rh, CHEMISTRY_MET_PARAMETERS))
+    ]
+    chemistry = means[0].join(means[1], how="outer")
+    chemistry.index = chemistry.index.rename("h") - HOUR_LABEL_SHIFT
+    return chemistry
 
 
 def mean_wind_direction(wsp: pd.Series, wdr: pd.Series) -> float:
@@ -283,6 +303,13 @@ def load_table(raw_dir: Path, kind: str, years: list[int]) -> pd.DataFrame:
     """Concatenate `<kind>_<year>.csv.gz` for the given years; `kind` is 'contaminantes' or 'meteorologia'."""
     frames = [parse_table(io.BytesIO(read_zip_member(raw_dir / f"{kind}_{y}.csv.gz"))) for y in years]
     return pd.concat(frames, ignore_index=True)
+
+
+def load_chemistry(raw_dir: Path, years: list[int], stations: Collection[str]) -> pd.DataFrame:
+    """`domain_chemistry` of the SIMAT files of `years` in `raw_dir`."""
+    pol = load_table(raw_dir, "contaminantes", years)
+    met = load_table(raw_dir, "meteorologia", years)
+    return domain_chemistry(pol[pol["id_parameter"].isin(OZONE_PARAMETERS)], met, stations)
 
 
 def load_catalog(raw_dir: Path) -> pd.DataFrame:
