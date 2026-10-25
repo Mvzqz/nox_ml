@@ -67,3 +67,26 @@ Every method change must be a config field whose default is the baseline behavio
 - Domain wind: plain hourly mean of the station u, v. Boundary layer height: ERA5 filled with MERRA-2, averaged with the next hour, at least 200 m.
 - NO2/NOx ratio: rows with both values. TEMPO: valid pixels at the hour of their scan.
 - 9 road regions (3x3), 4 point sources, plume with 15 degrees of wind-direction uncertainty and TEMPO at its nominal weight (`nox_ml.inversion.linear`).
+
+## Diagnostics of the baseline
+
+```sh
+uv run nox-ml diagnose configs/experiments/baseline.yaml                  # about 8 minutes
+uv run nox-ml diagnose configs/experiments/baseline.yaml --only information   # about 25 seconds
+```
+
+It writes CSV files to `runs/<name>/diagnostics/` (`nox_ml.validation.diagnostics`; the functions return DataFrames, the plots are made in the notebooks). `--seeds` sets the random subsets per case (5); `--only` (repeatable) picks `information`, `ablation` or `learning`.
+
+| File | Contents |
+|---|---|
+| `variance_reduction.csv` | Per unknown (point source, or road region × day type): prior and posterior standard deviation and the fraction of the prior variance removed, with the stations only, TEMPO only and both. Computed from the prior and `J^T R^-1 J`, so it does not depend on the observed values |
+| `degrees_of_freedom.csv` | Degrees of freedom for signal (trace of the averaging kernel, the sum of the reductions above) per source, in total and by group (points, weekday, Saturday, Sunday or holiday) |
+| `ablation.csv` | All the metrics of `metrics.json` (`evaluate`, the same code as `nox-ml run`, with the model of the config) (as `block.name` columns, without the per-station table) for the `baseline`, `no_tempo`, `stations` (24, 15 and 9; random subsets that spread out over the domain, 5 seeds; all 24 is the baseline) and `wind_bias` (the wind of every hour turned +15 and +30 degrees clockwise) |
+| `learning_curve.csv` | In-sample RMSE at the stations and leave-one-station-out RMSE (model, IDW, hybrid) with 15, 30, 45 and 61 days (blocks of consecutive days, 5 seeds) and with 6, 12, 18 and 24 stations (5 seeds) |
+
+Notes for reading them:
+
+- The Jacobians are built once (by the baseline fit) and sliced for every variant that keeps the wind: subsets of stations, days, and no TEMPO. Only the wind-rotation cases build their own. The placebo refits inside `evaluate` still rebuild the Jacobians of the weekday hours once per case (`Inputs.on_days` starts an empty cache).
+- Station subsets start from a random station and add the others with probability proportional to the squared distance to the ones chosen (k-means++ seeding). Hours left without station rows are dropped, as in the input assembly; the wind and boundary layer height of an hour are not recomputed from the stations that remain.
+- The wind-direction case is a systematic rotation of the inputs; the 15 degrees of wind-direction uncertainty of the inversion are unchanged.
+- The variance reduction treats TEMPO pixels as independent, as the baseline does; it is an upper bound of what they can give.
