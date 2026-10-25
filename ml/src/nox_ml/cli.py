@@ -16,7 +16,7 @@ from nox_ml.data import pbl, simat, tempo
 from nox_ml.data.inputs import load_inputs
 from nox_ml.data.qc import render
 from nox_ml.validation import compare as comparison
-from nox_ml.validation import experiment
+from nox_ml.validation import diagnostics, experiment
 from nox_ml.validation import tune as tuning
 
 RAW = Path("data/raw")
@@ -178,6 +178,27 @@ def train_pinn(
     for gamma, row in kernel.validation.items():
         errors = (row["median_rel_error"], row["p90_rel_error"], row["mass_error"])
         typer.echo(f"{gamma:>5}  {errors[0]:>16.1%}  {errors[1]:>13.1%}  {errors[2]:>+10.1%}")
+
+
+@app.command()
+def diagnose(
+    config: Annotated[Path, typer.Argument(help="Experiment YAML, e.g. configs/experiments/baseline.yaml.")],
+    runs_dir: Annotated[Path, typer.Option(help="Where runs/<name>/diagnostics/ is written.")] = Path("runs"),
+    seeds: Annotated[int, typer.Option(min=1, help="Random subsets per case in the ablation and curves.")] = (
+        diagnostics.N_SEEDS
+    ),
+    only: Annotated[
+        list[diagnostics.Stage] | None, typer.Option(help="Run only these stages (repeat the option).")
+    ] = None,
+) -> None:
+    """Diagnostics of an experiment (information by observation, ablation, learning curves), as CSV files."""
+    try:
+        cfg = experiment.read_config(config)
+    except ValidationError as error:
+        typer.echo(f"Invalid config {config}:\n{error}", err=True)
+        raise typer.Exit(2) from error
+    out = diagnostics.run_diagnostics(cfg, runs_dir, seeds, only or tuple(diagnostics.Stage), typer.echo)
+    typer.echo(f"Written to {out}/")
 
 
 if __name__ == "__main__":
