@@ -20,7 +20,7 @@ fi
 uv --version
 
 step "Libraries (from uv.lock)"
-uv sync --all-packages --group dev --group notebooks
+uv sync --all-packages --group dev --group notebooks --extra pinn
 
 step "Pre-commit hooks"
 if [ -d .git ]; then

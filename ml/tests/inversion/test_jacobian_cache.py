@@ -4,7 +4,8 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
-import nox_ml.inversion.linear as linear
+import nox_ml.inversion.jacobian as jacobian_module
+from nox_ml.inversion.jacobian import plume_transport
 from nox_ml.inversion.linear import hour_systems, solve
 from nox_ml.models.inversion_plume import InversionPlume, InversionPlumeParams
 from nox_ml.validation.loo import leave_one_out
@@ -22,7 +23,7 @@ def rebuilt_systems(inputs, held_out):
 
 def test_cached_systems_without_a_station_equal_the_rebuilt_ones(make_inputs):
     inputs = make_inputs()
-    inputs.jacobians(SIGMA_THETA, 1.0)  # fill the cache with every station
+    inputs.jacobians(*plume_transport(SIGMA_THETA, 1.0))  # fill the cache with every station
 
     cached = hour_systems(
         inputs.without_stations(["BBB"]),
@@ -30,7 +31,7 @@ def test_cached_systems_without_a_station_equal_the_rebuilt_ones(make_inputs):
         inputs.points,
         inputs.no2_nox_ratio,
         N_REGIONS,
-        jacobians=inputs.jacobians_without_stations(["BBB"], SIGMA_THETA, 1.0),
+        jacobians=inputs.jacobians_without_stations(["BBB"], *plume_transport(SIGMA_THETA, 1.0)),
     )
 
     for a, b in zip(cached, rebuilt_systems(inputs, "BBB"), strict=True):
@@ -79,8 +80,10 @@ def test_cached_leave_one_out_table_equals_the_one_with_a_fresh_cache_per_fold(m
 def test_leave_one_out_builds_the_jacobians_once_per_transport_config(make_inputs, monkeypatch):
     inputs = make_inputs()
     calls = []
-    original = linear.jacobian_hour_plume
-    monkeypatch.setattr(linear, "jacobian_hour_plume", lambda *a, **k: calls.append(1) or original(*a, **k))
+    original = jacobian_module.jacobian_hour_plume
+    monkeypatch.setattr(
+        jacobian_module, "jacobian_hour_plume", lambda *a, **k: calls.append(1) or original(*a, **k)
+    )
 
     leave_one_out(inputs, InversionPlume)  # 3 held-out stations, one fit and one prediction each
 
@@ -101,15 +104,15 @@ def test_the_cache_keeps_a_bounded_number_of_configs(make_inputs):
     inputs = make_inputs()
 
     for u_min in (1.0, 1.5, 2.0, 2.5, 3.0, 3.5):
-        inputs.jacobians(SIGMA_THETA, u_min)
+        inputs.jacobians(*plume_transport(SIGMA_THETA, u_min))
 
     assert len(inputs.jacobian_cache) == 4
-    assert (SIGMA_THETA, 1.0) not in inputs.jacobian_cache
+    assert plume_transport(SIGMA_THETA, 1.0)[0] not in inputs.jacobian_cache
 
 
 def test_relabeling_days_shares_the_cache_and_selecting_days_does_not(make_inputs):
     inputs = make_inputs()
-    inputs.jacobians(SIGMA_THETA, 1.0)
+    inputs.jacobians(*plume_transport(SIGMA_THETA, 1.0))
 
     assert inputs.with_day_kinds({}).jacobian_cache is inputs.jacobian_cache
     assert inputs.on_days([inputs.hours[0].hour.normalize()]).jacobian_cache == {}

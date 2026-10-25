@@ -13,7 +13,7 @@ rows. Time labels: SIMAT stamps the end of the hour (local), so the start of the
 """
 
 import json
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Collection, Hashable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
@@ -24,7 +24,7 @@ import pandas as pd
 
 from nox_ml.data.pbl import ERA5_FILE, parse_era5
 from nox_ml.data.roads import N_SPLIT, UTM, read_roads, road_emission_cells
-from nox_ml.inversion.jacobian import HourJacobian, Receptors
+from nox_ml.inversion.jacobian import HourJacobian, HourJacobianFn, Receptors
 from nox_ml.inversion.linear import HourData, baseline_point_sources, hour_jacobians
 from nox_ml.time import local_day
 
@@ -49,9 +49,10 @@ class Inputs:
     no2_nox_ratio: float
     n_regions: int  # road regions of `zones`, passed explicitly to `invert`
     day_kinds: Mapping[pd.Timestamp, int] | None = None  # local day -> day type, overriding the calendar
-    # Jacobians of all the hours by transport params (sigma_theta, u_min). They depend on the hours, zones,
-    # points and ratio: whoever replaces those must pass a new cache (`on_days` does).
-    jacobian_cache: dict[tuple[float, float], list[HourJacobian]] = field(
+    # Jacobians of all the hours by transport key (`InversionPlume.transport_key`: the kernel and its params).
+    # They depend on the hours, zones, points and ratio: whoever replaces those must pass a new cache
+    # (`on_days` does).
+    jacobian_cache: dict[Hashable, list[HourJacobian]] = field(
         default_factory=dict, compare=False, repr=False
     )
 
@@ -63,25 +64,30 @@ class Inputs:
     def n_pixels(self) -> int:
         return sum(len(h.no2) for h in self.hours)
 
-    def jacobians(self, sigma_theta: float, u_min: float) -> list[HourJacobian]:
-        """The Jacobian of every hour (all its receptors) for the transport params, built once per
-        configuration and shared by every fit, held-out station, placebo refit and tune trial that uses it."""
-        key = (sigma_theta, u_min)
+    def jacobians(self, key: Hashable, transport: HourJacobianFn) -> list[HourJacobian]:
+        """The Jacobian of every hour (all its receptors) for a transport, built once per `key` (which names
+        the kernel and its params, so the plume and the PINN never share an entry) and shared by every fit,
+        held-out station, placebo refit and tune trial that uses it."""
         if key not in self.jacobian_cache:
             if len(self.jacobian_cache) >= MAX_CACHED_TRANSPORTS:
                 del self.jacobian_cache[next(iter(self.jacobian_cache))]  # the oldest
             self.jacobian_cache[key] = hour_jacobians(
-                self.hours, self.zones, self.points, self.no2_nox_ratio, self.n_regions, sigma_theta, u_min
+                self.hours,
+                self.zones,
+                self.points,
+                self.no2_nox_ratio,
+                self.n_regions,
+                jacobian=transport,
             )
         return self.jacobian_cache[key]
 
     def jacobians_without_stations(
-        self, stations: Collection[str], sigma_theta: float, u_min: float
+        self, stations: Collection[str], key: Hashable, transport: HourJacobianFn
     ) -> list[HourJacobian]:
         """The cached Jacobians with the rows of `stations` removed, aligned with `without_stations`."""
         return [
             jac.without_stations(~np.isin(ids, list(stations)))
-            for jac, ids in zip(self.jacobians(sigma_theta, u_min), self.station_ids, strict=True)
+            for jac, ids in zip(self.jacobians(key, transport), self.station_ids, strict=True)
         ]
 
     def without_stations(self, stations: Collection[str]) -> list[HourData]:

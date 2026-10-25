@@ -21,7 +21,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-      - run: uv sync --locked --all-packages --group dev
+      - run: uv sync --locked --all-packages --group dev --extra pinn
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pyright
@@ -36,7 +36,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-      - run: uv sync --locked --all-packages --group dev
+      - run: uv sync --locked --all-packages --group dev --extra pinn
       - name: Data (DVC from DagsHub)
         env:
           DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}

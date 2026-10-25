@@ -24,3 +24,6 @@ htmlcov/
 # Sistema
 .DS_Store
 /runs
+
+# Cachés de modelos entrenados (se regeneran con la configuración)
+/.cache
