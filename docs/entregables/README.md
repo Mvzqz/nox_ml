@@ -15,7 +15,7 @@ Cada archivo enlaza a los cuadernos y a los datos que usa. Al subir uno, cambiar
 
 ## Cuadernos
 
-Los cuadernos están en [`deliverables/`](../../deliverables/) sin salidas. Las exportaciones HTML, ya ejecutadas, están en [`html/`](html/) y se regeneran con `bin/export-notebooks` (ver [`deliverables/README.md`](../../deliverables/README.md)).
+Los cuadernos están en [`deliverables/`](../../deliverables/) sin salidas. Las exportaciones HTML, ya ejecutadas, van en [`html/`](html/): se generan al final, en la máquina del dueño donde están todas las corridas, con `bin/export-notebooks` (ver [`deliverables/README.md`](../../deliverables/README.md)).
 
 | Cuaderno | Contenido | Código | HTML |
 |---|---|---|---|
