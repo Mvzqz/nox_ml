@@ -4,6 +4,7 @@
 """What the comparison notebook shows from ``runs/``: the planned models that have not run yet, the two best
 eligible ones, and the trials of the searches. Everything tolerates missing runs."""
 
+import io
 from pathlib import Path
 
 import pandas as pd
@@ -28,6 +29,16 @@ PLANNED = [
 ]  # E5c (pinn_joint) is left out of the advance on purpose: the notebook explains why
 
 KAPPA_PREFIX = "pinn_puff_k"  # runs of the diffusivity grid (one `pinn_puff` per kappa): not competitors
+
+
+class NotebookFigure(Figure):
+    """A figure that draws itself in a notebook: Jupyter only shows the figures made with pyplot, and these
+    are made without it so that they do not pile up in memory."""
+
+    def _repr_png_(self) -> bytes:
+        buffer = io.BytesIO()
+        self.savefig(buffer, format="png", dpi=100, bbox_inches="tight")
+        return buffer.getvalue()
 
 
 def find_runs() -> Path:
@@ -165,14 +176,14 @@ def tuning_summary(runs_dir: Path, table: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def plot_trials(runs_dir: Path, table: pd.DataFrame) -> Figure | None:
+def plot_trials(runs_dir: Path, table: pd.DataFrame) -> NotebookFigure | None:
     """The trial curve of every search (RMSE of each trial and the best so far, against the untuned run);
     ``None`` when there is no ``trials.csv``."""
     trials = read_trials(runs_dir)
     if not trials:
         return None
     untuned = table.drop_duplicates("model").set_index("model")["loo_rmse_ppb"]
-    fig = Figure(figsize=(5.5 * len(trials), 3.8), layout="constrained")
+    fig = NotebookFigure(figsize=(5.5 * len(trials), 3.8), layout="constrained")
     for ax, (run, frame) in zip(fig.subplots(1, len(trials), squeeze=False)[0], trials.items(), strict=True):
         ax.plot(frame["trial"], frame["loo_rmse_ppb"], "o", alpha=0.6, label="prueba")
         ax.step(frame["trial"], frame["loo_rmse_ppb"].cummin(), where="post", label="mejor hasta ahora")

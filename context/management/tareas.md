@@ -37,6 +37,8 @@ Tareas abiertas para las siguientes sesiones (nube o local). Al terminar una, se
 - [x] **Periodo de prueba reservado.** Feb–may 2024 solo se usa para evaluar el modelo final; `nox-ml tune` rechaza configuraciones que lo incluyan (2026-10-25, PR #12).
 - [ ] **Eventos con respuesta conocida.** Migrar desde `research-archive` los datos y el cálculo del confinamiento 2020 frente a 2019 (`val2020_data.py`, `val2020_ratio.py`) y de las contingencias 2024 con CO (`contingencias_2024.py`, `contingencias_co.py`).
 
+- [x] **Cuadernos de experimentos.** `deliverables/experimentos/` (01 transporte, 02 emisión frente a clima, 03 ajuste de `pinn_puff`, 04 ablación, 05 viento y objetivo), con las funciones en `nox_ml.validation.report_experiments`. Ejecutados con los datos reales; el 03 tolera las corridas que solo existen en la máquina del dueño (2026-10-25, PR #31). **Falta** correr en local `pinn_puff`, sus búsquedas y la rejilla de `kappa` para que el 03 muestre resultados.
+
 ## Después del avance 5 (1 de noviembre)
 
 - [x] **Notebook "Exploración y preparación de datos".** Entregado como los dos cuadernos del curso: `deliverables/Avance1.39.ipynb` (estructura y tipos, estadísticos, faltantes y sus patrones, atípicos, univariadas, bivariado y multivariado, tendencias y decisiones de preprocesamiento: viento 2024 en mph, sensores atascados, capa límite con MERRA-2, filtros de TEMPO) y `deliverables/Avance2.39.ipynb` (características con justificación de dominio, transformaciones, selección y extracción, información por tipo de observación y conclusiones CRISP-ML(Q)). Solo llaman a `nox_ml.validation.report_eda`, con pruebas; ninguna decisión de modelado sale de feb–may 2024, que aparece solo en revisiones de calidad (2026-10-25, PR #29).
