@@ -118,7 +118,7 @@ space:
 3. Same seed → identical predictions.
 4. Leakage guard: changing every value of an excluded station does not change the fitted model.
 5. `params` round-trips through YAML.
-6. Models (`role: model`): `estimate_emissions` follows the schema for its `kind`, has finite means and positive uncertainty, and recovers the synthetic truth (absolute emissions, or the Sunday/weekday ratio for relative models) within the fixture tolerance.
+6. Models (`role: model`): `estimate_emissions` follows the schema for its `kind`, has finite means and positive uncertainty, and recovers the synthetic truth (absolute emissions, or the Sunday/weekday ratio for relative models) within the fixture tolerance. Models that learn from the weather instead of simulating it (`LEARN_FROM_WEATHER` in the test) are given eight weeks of synthetic stations (`ventilation_synthetic`), because two Sundays cannot be told apart from their wind.
 7. Models: a placebo on the fixture (no emission change) is centered on 1 within the tolerance.
 8. The run writes `oof.parquet` without any in-sample row of the held-out station.
 
