@@ -69,6 +69,17 @@ Se piden al menos 6 modelos individuales con **algoritmos distintos**. **Todos e
 
 - **Ajuste fino no anidado, justificado por costo.** `nox-ml tune` elige y reporta con la misma validación dejando una estación fuera (nov–dic 2023), así que el error del mejor modelo es ligeramente optimista. La validación anidada completa costaría ~24 veces más cómputo (una búsqueda completa por cada estación oculta): para `pinn_puff`, cuyas pruebas tardan ~10–30 min, serían días de CPU. Se reportan los tiempos medidos y se aclara que la evaluación sin sesgo se hace en el avance 5 sobre feb–may 2024, periodo que no se usó para ajustar ni seleccionar.
 
+- **Por qué E5c (PINN conjunta) queda fuera del avance 4.** En la investigación (`reports/pinn_prototipo.md`, rama `research-archive`, sección "Entrenamiento conjunto") se comparó, sobre nov–dic 2023 con solo estaciones, la red congelada con la solución estadística exacta contra el entrenamiento conjunto (pérdida = χ² de estaciones + supuesto inicial + λ · residuo de la ecuación; 150 pasos de Adam con lotes de 6 horas, arrancando de la solución congelada), con dos pesos de la física:
+
+  | | Red congelada (exacta) | Conjunto λ = 10 | Conjunto λ = 0.1 |
+  |---|---|---|---|
+  | Domingo ÷ hábil | 0.67 | 0.62 | 0.63 |
+  | Error en estaciones (ppb) | **11.6** | 12.9 | 12.7 |
+  | Error de la red frente a la solución exacta | 3.5–6.6 % | 3.6–7.5 % | 1.3–19 % (masa −12 %) |
+  | Tiempo | **17 s** | 286 s | 200 s |
+
+  Lectura: el problema es lineal en las emisiones, así que congelar la red y resolver la estadística exacta es mejor y mucho más barato; con λ bajo la red se aleja de la física sin ganar ajuste. Además, validarla sin fuga exige reentrenarla por cada estación oculta (~7 h, o ~1.2 h con 4 grupos). Tendría sentido para estimar parámetros físicos inciertos o con química no lineal; queda como opción para el avance 5.
+
 ## Avance 5: ensambles y modelo final (fecha: 1 de noviembre de 2026)
 
 Todo ensamble debe seguir **estimando emisión**. Como la concentración es lineal en la emisión, una combinación convexa (pesos ≥ 0 que suman 1) de las predicciones de concentración corresponde a la misma combinación de las emisiones.
