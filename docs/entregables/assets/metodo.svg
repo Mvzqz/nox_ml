@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 260" width="640" height="260" font-family="'Times New Roman','Liberation Serif',serif" font-size="13">
+  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#0b2a6b"/></marker></defs>
+  <g fill="#e6ebf5" stroke="#0b2a6b" stroke-width="1.2">
+    <rect x="10" y="10" width="170" height="52" rx="5"/>
+    <rect x="10" y="82" width="170" height="52" rx="5"/>
+    <rect x="10" y="190" width="170" height="52" rx="5"/>
+    <rect x="235" y="190" width="160" height="52" rx="5"/>
+    <rect x="235" y="70" width="160" height="64" rx="5"/>
+    <rect x="455" y="30" width="175" height="64" rx="5"/>
+    <rect x="455" y="110" width="175" height="64" rx="5"/>
+  </g>
+  <g fill="#000" text-anchor="middle">
+    <text x="95" y="31">NOₓ en estaciones</text><text x="95" y="48">(SIMAT, cada hora)</text>
+    <text x="95" y="103">NO₂ de TEMPO</text><text x="95" y="120">(columna, cada hora)</text>
+    <text x="95" y="211">Viento y capa de mezcla</text><text x="95" y="228">(REDMET, ERA5, MERRA-2)</text>
+    <text x="315" y="211">Modelo de transporte</text><text x="315" y="228">(pluma, puffs o PINN)</text>
+    <text x="315" y="97">Inversión bayesiana</text><text x="315" y="114">(a priori: inventario)</text>
+    <text x="542" y="55">Emisión por zona y</text><text x="542" y="72">tipo de día, con intervalo</text>
+    <text x="542" y="135">Índice de cambio</text><text x="542" y="152">normalizado por meteorología</text>
+  </g>
+  <g stroke="#0b2a6b" stroke-width="1.4" fill="none" marker-end="url(#a)">
+    <path d="M180,36 L208,36 L208,90 L233,90"/>
+    <path d="M180,108 L233,108"/>
+    <path d="M180,216 L233,216"/>
+    <path d="M315,190 L315,136"/>
+    <path d="M395,90 L425,90 L425,62 L453,62"/>
+    <path d="M395,114 L425,114 L425,142 L453,142"/>
+  </g>
+</svg>
