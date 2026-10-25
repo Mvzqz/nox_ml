@@ -3,11 +3,11 @@ import pandas as pd
 import pytest
 
 from nox_ml.inversion.linear import hour_systems, invert
+from nox_ml.models.inversion_plume import InversionPlume
 from nox_ml.validation.loo import (
     idw_and_hybrid,
     leave_one_out,
     predict_pixels,
-    predict_stations,
     station_rows,
     summarize,
 )
@@ -69,18 +69,17 @@ def test_idw_drops_the_hours_where_the_station_is_alone():
 
 def test_the_excluded_station_does_not_enter_the_background_of_the_others(make_inputs):
     inputs = make_inputs()
-    systems, post = fit(inputs)
     changed = make_inputs()
     for hour in changed.hours:
         hour.nox[1] += 50.0  # BBB reads 50 ppb more
+    others = ["AAA", "CCC"]
 
-    same = predict_stations(changed, systems, post, exclude="BBB")
-    other = predict_stations(changed, systems, post)
-    reference = predict_stations(inputs, systems, post, exclude="BBB")
+    same = InversionPlume().fit(inputs, exclude_stations=["BBB"]).predict_stations(changed, others)
+    reference = InversionPlume().fit(inputs, exclude_stations=["BBB"]).predict_stations(inputs, others)
+    other = InversionPlume().fit(inputs).predict_stations(changed, others)
 
-    keep = station_rows(inputs)["station"].to_numpy() != "BBB"
-    np.testing.assert_allclose(same[keep], reference[keep])
-    assert np.all(other[keep] > reference[keep])
+    np.testing.assert_allclose(same["nox_ppb_pred"], reference["nox_ppb_pred"])
+    assert np.all(other["nox_ppb_pred"] > reference["nox_ppb_pred"])
 
 
 def test_predict_pixels_returns_one_value_per_pixel(make_inputs):
@@ -95,13 +94,24 @@ def test_predict_pixels_returns_one_value_per_pixel(make_inputs):
 
 def test_leave_one_out_has_one_row_per_station_with_its_observations(make_inputs):
     inputs = make_inputs()
-    systems, _ = fit(inputs)
 
-    table = leave_one_out(inputs, systems)
+    table, _ = leave_one_out(inputs, InversionPlume)
 
     assert table.index.tolist() == ["AAA", "BBB", "CCC"]
     assert table["n"].tolist() == [len(inputs.hours)] * 3
     assert np.all(np.isfinite(table.to_numpy(float)))
+
+
+def test_leave_one_out_predicts_every_held_out_row_with_a_model_that_never_saw_the_station(make_inputs):
+    inputs = make_inputs()
+
+    _, oof = leave_one_out(inputs, InversionPlume)
+
+    assert len(oof) == inputs.n_station_rows
+    for station in ["AAA", "BBB", "CCC"]:
+        alone = InversionPlume().fit(inputs, exclude_stations=[station]).predict_stations(inputs, [station])
+        mine = oof[oof["station"] == station].reset_index(drop=True)
+        np.testing.assert_allclose(mine["nox_ppb_pred"], alone["nox_ppb_pred"])
 
 
 def test_summarize_pools_by_rows_and_splits_bias_from_the_hour_to_hour_error():
