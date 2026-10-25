@@ -438,3 +438,34 @@ def test_the_ablation_and_the_curves_build_the_jacobians_of_all_the_hours_once_u
     assert after_ablation == 2  # the baseline and the one wind bias; the other variants slice the baseline's
     assert jacobian_builds.count(n_hours) == after_ablation
     assert max(jacobian_builds) == n_hours
+
+
+# --- the emission estimate follows the variant --------------------------------------------------------------
+
+
+SUNDAY_KEYS = (
+    "day_types.sunday_over_weekday.value",  # the posterior
+    "day_types.sunday_over_weekday.lo",  # its bootstrap over days
+    "day_types.sunday_over_weekday.hi",
+    "summary.placebo_center",  # the refits on weekdays relabeled as Sundays
+)
+
+
+def sunday_estimates(inputs, cfg):
+    metrics = dict(diagnostics.flatten(diagnostics.evaluate(inputs, cfg).metrics))
+    return {key: metrics[key] for key in ("inputs.n_station_rows", *SUNDAY_KEYS)}
+
+
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")  # no TEMPO: its correlation is empty
+def test_removing_stations_changes_the_sunday_estimate_when_only_stations_inform(make_inputs):
+    stations_only = without_tempo(make_inputs(sunday_scale=0.5))
+    cfg = config(placebo={"n": 20, "refits": 3})
+
+    full = sunday_estimates(stations_only, cfg)
+    all_kept = sunday_estimates(with_stations(stations_only, ["AAA", "BBB", "CCC"]), cfg)
+    fewer = sunday_estimates(with_stations(stations_only, ["AAA", "BBB"]), cfg)
+
+    assert all_kept == full  # keeping every station changes nothing
+    assert fewer["inputs.n_station_rows"] < full["inputs.n_station_rows"]
+    for key in SUNDAY_KEYS:  # estimate, bootstrap and placebo are computed on the subset
+        assert fewer[key] != pytest.approx(full[key], abs=1e-3), key
