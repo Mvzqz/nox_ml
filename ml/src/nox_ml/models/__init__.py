@@ -2,8 +2,9 @@
 
 from nox_ml.models.base import Dataset, EmissionEstimate, Model, ModelParams
 from nox_ml.models.inversion_plume import InversionPlume
+from nox_ml.models.rf_deweather import RfDeweather
 
-REGISTRY: dict[str, type[Model]] = {InversionPlume.name: InversionPlume}
+REGISTRY: dict[str, type[Model]] = {InversionPlume.name: InversionPlume, RfDeweather.name: RfDeweather}
 
 try:
     from nox_ml.models.pinn.model import PinnPlume, PinnPuff

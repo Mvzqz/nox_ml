@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 import yaml
 from synthetic import PLACEBO_TOLERANCE, TOLERANCE, Synthetic, synthetic_dataset
+from ventilation_synthetic import ventilation_synthetic
 
 from nox_ml.models import REGISTRY
 from nox_ml.models.base import ABSOLUTE_COLUMNS, PREDICTION_COLUMNS, RELATIVE_COLUMNS
@@ -18,6 +19,7 @@ from nox_ml.validation import experiment
 from nox_ml.validation.experiment import ExperimentConfig, Placebo, model_placebo, run_experiment
 
 STATIONS = ["AAA", "BBB", "CCC"]
+LEARN_FROM_WEATHER = {"rf_deweather"}  # no forward model: judged on stations where weather sets the NOx
 
 
 @pytest.fixture(params=sorted(REGISTRY))
@@ -29,7 +31,12 @@ def model_cls(request):
 def own_synthetic(model_cls, make_inputs) -> Synthetic:
     """The fixture with observations simulated by the forward model of the model under test, when it has one
     (`transport()`): a model is judged on data from its own physics. Another physics moves the absolute
-    level by 25-40 % (the cross twin of reports/pinn_prototipo.md), which is not a defect of the estimator."""
+    level by 25-40 % (the cross twin of reports/pinn_prototipo.md), which is not a defect of the estimator.
+    A model that learns concentration from the weather has no forward model and needs weeks of hours to
+    learn it (two Sundays are fingerprinted by their wind, not separated from it): it gets 8 weeks of
+    stations with known Sunday ratio (`ventilation_synthetic`)."""
+    if model_cls.name in LEARN_FROM_WEATHER:
+        return ventilation_synthetic()
     transport = getattr(model_cls(), "transport", None)
     return synthetic_dataset(make_inputs(), jacobian=transport() if transport else None)
 
