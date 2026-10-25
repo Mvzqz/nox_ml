@@ -226,3 +226,14 @@ def test_without_torch_the_other_models_still_register_and_the_pinn_does_not():
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
 
     assert out.stdout.strip() == "['inversion_plume']"
+
+
+def test_pinn_and_plume_jacobians_never_share_a_cache_entry(make_inputs):
+    inputs = make_inputs()
+    plume, pinn = InversionPlume(), PinnPlume()
+
+    assert plume.transport_key() != pinn.transport_key()
+    plume.fit(inputs)
+    pinn.fit(inputs)
+
+    assert len(inputs.jacobian_cache) == 2
