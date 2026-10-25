@@ -21,12 +21,14 @@ from nox_ml.inversion.linear import (
     DAY_TYPE_NAMES,
     HOLIDAYS,
     SIGMA_STATION,
+    TRAFFIC_RATIO_SD,
     HourSystem,
     HourTransport,
     Posterior,
     background_mean,
     hour_systems,
     solve,
+    traffic_constraints,
 )
 from nox_ml.inversion.normalized import SATURDAY, SUNDAY_HOLIDAY, WEEKDAY, day_type, interval
 from nox_ml.models.base import PREDICTION_COLUMNS, EmissionEstimate, ModelParams
@@ -35,10 +37,21 @@ from nox_ml.validation import loo
 
 
 class PlumeInversionParams(ModelParams):
-    """What every model that inverts with this machinery shares: the bootstrap of the day-type ratios."""
+    """What every model that inverts with this machinery shares: the bootstrap of the day-type ratios, the
+    weight of the TEMPO pixels and the optional traffic ratio of the day types. The defaults are the
+    baseline (nominal TEMPO weight, no traffic constraint)."""
 
     bootstrap_n: int = Field(default=200, ge=1, description="replicates of the bootstrap over days")
     bootstrap_level: float = Field(default=0.90, gt=0, lt=1, description="central level of its intervals")
+    tempo_sigma_mult: float = Field(
+        default=1.0, gt=0, description="multiplies the error of every TEMPO pixel; 1 is the nominal weight"
+    )
+    traffic_constraint: bool = Field(
+        default=False, description="hold the Saturday and Sunday road totals at their traffic ratios"
+    )
+    traffic_sd: float = Field(
+        default=TRAFFIC_RATIO_SD, gt=0, description="standard deviation of those ratios (traffic constraint)"
+    )
 
 
 class InversionPlumeParams(PlumeInversionParams):
@@ -54,16 +67,18 @@ def ratio_intervals(
     n: int,
     level: float,
     seed: int,
+    constraints: Sequence[tuple[np.ndarray, float, float]] = (),
 ) -> pd.DataFrame:
     """Interval of each day type's road total over the weekday's (columns ``day_type``, ``lo``, ``hi``,
-    ``level``): `n` replicates that solve the systems again on whole days drawn with replacement."""
+    ``level``): `n` replicates that solve the systems again on whole days drawn with replacement, with the
+    same `constraints` as the fit."""
     days, day_index = np.unique([s.day for s in systems], return_inverse=True)
     rng = np.random.default_rng(seed)
     boot = []
     for _ in range(n):
         pick = rng.choice(len(days), len(days))
         weights = np.bincount(pick, minlength=len(days))[day_index]
-        boot.append(solve(systems, points, n_regions, weights).road_factors() @ prior)
+        boot.append(solve(systems, points, n_regions, weights, constraints).road_factors() @ prior)
     totals = np.array(boot)
     return pd.DataFrame(
         [
@@ -114,8 +129,27 @@ class InversionPlume:
     def n_params(self) -> int:
         return len(self._state[2].mean)
 
+    def road_prior(self, data: Inputs) -> np.ndarray:
+        """Prior emission of each road region (t/yr): the sum of its cells."""
+        return (
+            data.zones.groupby("region")["weight"]
+            .sum()
+            .reindex(range(data.n_regions), fill_value=0)
+            .to_numpy()
+        )
+
+    def constraints(self, data: Inputs) -> list[tuple[np.ndarray, float, float]]:
+        """The pseudo-observations of the fit: none by default (the baseline), the traffic ratios when on."""
+        p = self.params
+        assert isinstance(p, PlumeInversionParams)
+        if not p.traffic_constraint:
+            return []
+        return traffic_constraints(self.road_prior(data), len(data.points), p.traffic_sd)
+
     def fit(self, data: Inputs, *, exclude_stations: Sequence[str] = ()) -> Self:
         key, transport = self.transport_key(), self.transport()
+        p = self.params
+        assert isinstance(p, PlumeInversionParams)
         systems = hour_systems(
             data.without_stations(exclude_stations),
             data.zones,
@@ -125,8 +159,9 @@ class InversionPlume:
             HOLIDAYS,
             day_kinds=data.day_kinds,
             jacobians=data.jacobians_without_stations(exclude_stations, key, transport),
+            tempo_sigma_mult=p.tempo_sigma_mult,
         )
-        post = solve(systems, data.points, data.n_regions)
+        post = solve(systems, data.points, data.n_regions, constraints=self.constraints(data))
         self._fitted = (data, systems, post, frozenset(exclude_stations))
         return self
 
@@ -156,12 +191,7 @@ class InversionPlume:
 
     def estimate_emissions(self) -> EmissionEstimate:
         data, systems, post, _ = self._state
-        prior = (
-            data.zones.groupby("region")["weight"]
-            .sum()
-            .reindex(range(data.n_regions), fill_value=0)
-            .to_numpy()
-        )
+        prior = self.road_prior(data)
         table = pd.DataFrame(
             [
                 {
@@ -177,7 +207,14 @@ class InversionPlume:
         p = self.params
         assert isinstance(p, PlumeInversionParams)
         ci = ratio_intervals(
-            systems, data.points, data.n_regions, prior, p.bootstrap_n, p.bootstrap_level, p.seed
+            systems,
+            data.points,
+            data.n_regions,
+            prior,
+            p.bootstrap_n,
+            p.bootstrap_level,
+            p.seed,
+            self.constraints(data),
         )
         return EmissionEstimate("absolute", table, ci)
 
