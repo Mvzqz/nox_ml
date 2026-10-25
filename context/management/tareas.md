@@ -31,3 +31,8 @@ Tareas abiertas para las siguientes sesiones (nube o local). Al terminar una, se
 - [x] **Artefactos de corrida para ensambles.** `nox-ml run` guarda `oof.parquet` (predicciones fuera de muestra de la estación oculta) y `emissions.parquet` (`docs/models.md`, sección 4) (2026-10-25, PR #12).
 - [x] **Periodo de prueba reservado.** Feb–may 2024 solo se usa para evaluar el modelo final; `nox-ml tune` rechaza configuraciones que lo incluyan (2026-10-25, PR #12).
 - [ ] **Eventos con respuesta conocida.** Migrar desde `research-archive` los datos y el cálculo del confinamiento 2020 frente a 2019 (`val2020_data.py`, `val2020_ratio.py`) y de las contingencias 2024 con CO (`contingencias_2024.py`, `contingencias_co.py`).
+
+## Después del avance 5 (1 de noviembre)
+
+- [ ] **Notebook "Exploración y preparación de datos".** Uno solo, para el reporte final, reutilizando `nox_ml.data` y los hallazgos de la investigación: estructura y faltantes, viento 2024 en mph, sensores atascados, huecos de capa límite, control de calidad de TEMPO, ciclos horarios y semanales, relación con la ventilación. Puede incluir feb–may 2024 para revisar calidad, pero ninguna decisión de modelado sale de ese periodo (es el de prueba).
+- [ ] **Características de E6 justificadas.** Se hacen en la sesión de E6 (hora y día cíclicos, ventilación y su acumulado, dirección del viento con seno y coseno, tipo de día), con la justificación de cada transformación y codificación.
