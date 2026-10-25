@@ -5,7 +5,7 @@ repos:
     hooks:
       - id: check-added-large-files
         args: ["--maxkb=1000"]  # data goes to DVC
-        exclude: ^uv\.lock$
+        exclude: ^(uv\.lock|docs/entregables/html/.*)$
       - id: check-merge-conflict
       - id: check-toml
       - id: check-yaml
