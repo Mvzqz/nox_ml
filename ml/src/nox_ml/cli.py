@@ -112,7 +112,7 @@ def diagnose(
 ) -> None:
     """Diagnostics of an experiment: information by observation, ablation and learning curves, as CSV files.
 
-    The ablation and the curves refit the inversion many times (about an hour on the baseline).
+    The ablation and the curves refit the inversion many times (about 3 hours on the baseline).
     """
     try:
         cfg = experiment.read_config(config)

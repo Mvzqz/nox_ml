@@ -40,8 +40,8 @@ Every method change must be a config field whose default is the baseline behavio
 ## Diagnostics of the baseline
 
 ```sh
-uv run nox-ml diagnose configs/experiments/baseline.yaml                  # about an hour
-uv run nox-ml diagnose configs/experiments/baseline.yaml --only information   # seconds
+uv run nox-ml diagnose configs/experiments/baseline.yaml                  # about 3 hours: the ablation and the curves refit the inversion hundreds of times
+uv run nox-ml diagnose configs/experiments/baseline.yaml --only information   # under a minute
 ```
 
 It writes CSV files to `runs/<name>/diagnostics/` (`nox_ml.validation.diagnostics`; the functions return DataFrames, the plots are made in the notebooks). `--seeds` sets the random subsets per case (5); `--only` (repeatable) picks `information`, `ablation` or `learning`.
