@@ -47,3 +47,7 @@ Tareas abiertas para las siguientes sesiones (nube o local). Al terminar una, se
 - [ ] **Sensibilidad del periodo de prueba a la capa límite.** La capa límite de 2024 es MERRA-2 corregido y su corrección no mejora el error mediano fuera de muestra (376 m frente a 338 m sin corregir; Avance 1, 4.4). Junto con la tarea del desfase de MERRA-2, medir cuánto cambian los resultados de feb–may 2024 con otra capa límite (por ejemplo los topes de 1000 y 1500 m de la investigación).
 - [ ] **Corrección de mph por año de la etiqueta.** `simat.fix_wind_speed` decide por el año de `local`: la hora 24 del 31 de diciembre de 2024 (etiqueta 2025-01-01 00:00, 19 filas) queda sin corregir. Fuera de los periodos de estudio; corregir por archivo de origen.
 - [x] **Características de E6 justificadas.** Se hacen en la sesión de E6 (hora y día cíclicos, ventilación y su acumulado, dirección del viento con seno y coseno, tipo de día), con la justificación de cada transformación y codificación (2026-10-25, PR #20).
+
+## Ventajas del proyecto
+
+- [ ] Estudiar las ventajas posibles y comparar con modelos químicos completos (GEOS-CF, CAMS, AQFS-Mex): ver `plan_ventajas.md`.
