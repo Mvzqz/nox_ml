@@ -65,6 +65,10 @@ Se piden al menos 6 modelos individuales con **algoritmos distintos**. **Todos e
 | Ajuste de los 2 mejores: espacio de búsqueda, número de pruebas, curva de pruebas y mejora obtenida | 30 |
 | Modelo final: argumentos más allá de la métrica | 10 |
 
+### Notas para el notebook del avance 4
+
+- **Ajuste fino no anidado, justificado por costo.** `nox-ml tune` elige y reporta con la misma validación dejando una estación fuera (nov–dic 2023), así que el error del mejor modelo es ligeramente optimista. La validación anidada completa costaría ~24 veces más cómputo (una búsqueda completa por cada estación oculta): para `pinn_puff`, cuyas pruebas tardan ~10–30 min, serían días de CPU. Se reportan los tiempos medidos y se aclara que la evaluación sin sesgo se hace en el avance 5 sobre feb–may 2024, periodo que no se usó para ajustar ni seleccionar.
+
 ## Avance 5: ensambles y modelo final (fecha: 1 de noviembre de 2026)
 
 Todo ensamble debe seguir **estimando emisión**. Como la concentración es lineal en la emisión, una combinación convexa (pesos ≥ 0 que suman 1) de las predicciones de concentración corresponde a la misma combinación de las emisiones.
