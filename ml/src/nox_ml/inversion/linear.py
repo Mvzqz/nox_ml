@@ -49,6 +49,10 @@ ROAD_FACTOR = (1.0, 0.5)  # prior mean and standard deviation of every alpha
 
 N_DAY_TYPES = 3
 DAY_TYPE_NAMES = ("weekday", "saturday", "sunday_holiday")
+# Road total of a day type over the weekday's, from the Infovial traffic, by day type index (1, 2). Its
+# standard deviation is an assumption: the Sunday range of the traffic counts is 0.65-0.73.
+TRAFFIC_RATIOS = {1: 0.87, 2: 0.69}
+TRAFFIC_RATIO_SD = 0.04
 HOLIDAYS = (
     "2023-11-20",
     "2023-12-25",
@@ -252,14 +256,17 @@ def hour_systems(
     day_kinds: Mapping[pd.Timestamp, int] | None = None,
     jacobians: Sequence[HourJacobian] | None = None,
     jacobian: HourTransport | None = None,
+    tempo_sigma_mult: float = 1.0,
 ) -> list[HourSystem]:
     """The `HourSystem` of every hour. The Jacobians dominate the cost of an inversion; the systems can be
     solved again with other weights by `solve`. `sigma_theta` (rad) and `u_min` (m/s) are the plume
     parameters; `day_kinds` maps local days to a day type, overriding the calendar (placebos). `jacobians`
     are the ones of `hours` already computed with the transport (row for row), to skip building them;
     otherwise `jacobian` (a `HourJacobianFn` or `HistoryTransport`, default: the stationary plume with
-    `sigma_theta` and `u_min`) builds them."""
+    `sigma_theta` and `u_min`) builds them. `tempo_sigma_mult` multiplies the error of every TEMPO pixel
+    (1 is the nominal weight); it does not touch the Jacobians."""
     n_points = len(points)
+    sigma_pixel = SIGMA_PIXEL * tempo_sigma_mult
     days = pd.DatetimeIndex([local_day(h.hour) for h in hours])
     kinds = day_type(days, holidays)
     if day_kinds:
@@ -276,7 +283,7 @@ def hour_systems(
         gradient = np.zeros(len(columns))
         for k, y, sigma, background in (
             (jac.stations, data.nox, SIGMA_STATION, BACKGROUND_STATION),
-            (jac.pixels, data.no2, SIGMA_PIXEL, BACKGROUND_PIXEL),
+            (jac.pixels, data.no2, sigma_pixel, BACKGROUND_PIXEL),
         ):
             if len(y):
                 block_info, block_gradient = marginalized_block(k, y, sigma, background)
@@ -286,14 +293,34 @@ def hour_systems(
     return systems
 
 
+def traffic_constraints(
+    prior: Array, n_points: int, sd: float = TRAFFIC_RATIO_SD
+) -> list[tuple[Array, float, float]]:
+    """Pseudo-observations ``(row, target, sd)`` that hold the road total of Saturday and of Sunday or holiday
+    at its traffic ratio over the weekday's: ``sum_r prior_r alpha[k, r] - ratio_k sum_r prior_r alpha[0, r]``
+    is 0 with noise ``sd T0``, where ``T0`` is the weekday's prior total. Linear in the unknowns, so `solve`
+    takes them as they are; `prior` is the prior emission of each region."""
+    total = float(prior.sum())
+    constraints = []
+    for kind, ratio in TRAFFIC_RATIOS.items():
+        row = np.zeros(n_points + N_DAY_TYPES * len(prior))
+        row[n_points : n_points + len(prior)] = -ratio * prior
+        start = n_points + kind * len(prior)
+        row[start : start + len(prior)] = prior
+        constraints.append((row, 0.0, sd * total))
+    return constraints
+
+
 def solve(
     systems: Sequence[HourSystem],
     points: pd.DataFrame,
     n_regions: int,
     weights: Sequence[float] | None = None,
+    constraints: Sequence[tuple[Array, float, float]] = (),
 ) -> Posterior:
     """Posterior from the hour systems. `weights` (one per hour, default 1) multiply the information of
-    each hour: an hour with weight 2 counts as if it were repeated, as a bootstrap over days needs."""
+    each hour: an hour with weight 2 counts as if it were repeated, as a bootstrap over days needs. The
+    `constraints` (``(row, target, sd)``, `traffic_constraints`) are added once, whatever the weights."""
     mean, sd, labels = prior_state(points, n_regions)
     precision = np.diag(1 / sd**2)
     rhs = mean / sd**2
@@ -302,6 +329,9 @@ def solve(
         if w:
             precision[np.ix_(system.columns, system.columns)] += w * system.info
             rhs[system.columns] += w * system.gradient
+    for row, target, noise in constraints:
+        precision += np.outer(row, row) / noise**2
+        rhs += row * target / noise**2
     cov = np.linalg.inv(precision)
     return Posterior(labels, cov @ rhs, cov, mean, sd, len(points), n_regions)
 
