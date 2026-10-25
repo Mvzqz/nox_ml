@@ -14,9 +14,10 @@ system keeps only the source unknowns: the errors of a block of observations of 
 extra unknown per hour and kind, which is what the research code did.
 """
 
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass
 from functools import partial
+from typing import Protocol, runtime_checkable
 
 import geopandas as gpd
 import numpy as np
@@ -24,6 +25,7 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from nox_ml.data.roads import UTM
+from nox_ml.data.traffic import Infovial
 from nox_ml.inversion.jacobian import (
     HourJacobian,
     HourJacobianFn,
@@ -101,6 +103,32 @@ class HourData:
     nox: Array
     pixels: Receptors
     no2: Array
+
+
+@dataclass(frozen=True)
+class History:
+    """What a transport with memory (puffs) needs beyond the hours it is asked for: the hourly wind of the
+    whole domain (columns ``u``, ``v``, indexed by the UTC start of the hour; the fitted hours are only the
+    afternoons) and the Infovial profile of the roads. Without them the transport falls back to the winds
+    of the hours themselves and to the typical traffic profile."""
+
+    wind: pd.DataFrame | None = None
+    infovial: Infovial | None = None
+
+
+@runtime_checkable
+class HistoryTransport(Protocol):
+    """A transport whose matrix of an hour depends on earlier hours, so it cannot be a function of that hour
+    alone (`HourJacobianFn`). `for_hours` binds it to the hours being fitted and returns the function that
+    builds the matrix of one of them from its `HourData`, the sources and the NO2/NOx ratio."""
+
+    def for_hours(
+        self, hours: Sequence[HourData], history: History
+    ) -> Callable[[HourData, Sources, float], HourJacobian]: ...
+
+
+# Anything `hour_jacobians` accepts as the forward model.
+HourTransport = HourJacobianFn | HistoryTransport
 
 
 @dataclass(frozen=True)
@@ -195,13 +223,18 @@ def hour_jacobians(
     n_regions: int,
     sigma_theta: float = SIGMA_THETA,
     u_min: float = U_MIN,
-    jacobian: HourJacobianFn | None = None,
+    jacobian: HourTransport | None = None,
+    history: History | None = None,
 ) -> list[HourJacobian]:
     """The Jacobian of every hour, all its receptors, with the transport `jacobian` (default: the stationary
-    plume with `sigma_theta` and `u_min`). Rows do not depend on one another, so a subset of the rows is the
-    Jacobian of the subset of receptors (`HourJacobian.without_stations`)."""
+    plume with `sigma_theta` and `u_min`; a `HistoryTransport` also gets the `history` of the hours). Rows do
+    not depend on one another, so a subset of the rows is the Jacobian of the subset of receptors
+    (`HourJacobian.without_stations`)."""
     jacobian = jacobian or partial(jacobian_hour_plume, sigma_theta=sigma_theta, u_min=u_min)
     sources = road_sources(zones, points, n_regions)
+    if isinstance(jacobian, HistoryTransport):
+        at = jacobian.for_hours(hours, history or History())
+        return [at(data, sources, no2_nox_ratio) for data in hours]
     return [
         jacobian(data.wind, data.pbl, sources, data.stations, data.pixels, no2_nox_ratio) for data in hours
     ]
@@ -218,13 +251,13 @@ def hour_systems(
     u_min: float = U_MIN,
     day_kinds: Mapping[pd.Timestamp, int] | None = None,
     jacobians: Sequence[HourJacobian] | None = None,
-    jacobian: HourJacobianFn | None = None,
+    jacobian: HourTransport | None = None,
 ) -> list[HourSystem]:
     """The `HourSystem` of every hour. The Jacobians dominate the cost of an inversion; the systems can be
     solved again with other weights by `solve`. `sigma_theta` (rad) and `u_min` (m/s) are the plume
     parameters; `day_kinds` maps local days to a day type, overriding the calendar (placebos). `jacobians`
     are the ones of `hours` already computed with the transport (row for row), to skip building them;
-    otherwise `jacobian` (the signature of `HourJacobianFn`, default: the stationary plume with
+    otherwise `jacobian` (a `HourJacobianFn` or `HistoryTransport`, default: the stationary plume with
     `sigma_theta` and `u_min`) builds them."""
     n_points = len(points)
     days = pd.DatetimeIndex([local_day(h.hour) for h in hours])

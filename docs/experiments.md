@@ -43,7 +43,16 @@ Hyperparameters (`layers`, `width`, `learning_rate`, `physics_weight`, `adam_ste
 
 ## Random forest deweathering
 
-`configs/experiments/rf_deweather.yaml` (ADR 0005) fits a random forest of station NOx on meteorology and calendar and reports a **relative** emission index per day type (pooled over zones, weekday = 1) with its bootstrap interval; it gives no tonnes. Hyperparameters are the fields of `nox_ml.models.rf_deweather.RfDeweatherParams`. A run takes a few minutes, mostly the placebo refits.
+`configs/experiments/rf_deweather.yaml` (ADR 0006) fits a random forest of station NOx on meteorology and calendar and reports a **relative** emission index per day type (pooled over zones, weekday = 1) with its bootstrap interval; it gives no tonnes. Hyperparameters are the fields of `nox_ml.models.rf_deweather.RfDeweatherParams`. A run takes a few minutes, mostly the placebo refits.
+
+## The PINN puffs
+
+`configs/experiments/pinn_puff.yaml` is `pinn_plume.yaml` with `model: {name: pinn_puff}` (ADR 0005): the kernel of the network is applied to the plume of the last hour and to the puffs of the previous `max_age_h` hours (24 by default). It uses the same bundled network, so it does not train. Building its matrices takes about 11 minutes on one core, once per run:
+
+```sh
+uv run nox-ml run configs/experiments/pinn_puff.yaml
+uv run nox-ml compare runs/*
+```
 
 ## Comparing an improvement with the baseline
 

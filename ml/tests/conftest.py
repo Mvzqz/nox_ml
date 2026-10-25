@@ -5,10 +5,16 @@ from collections.abc import Callable
 import numpy as np
 import pandas as pd
 import pytest
+from hypothesis import settings
 
 from nox_ml.data.inputs import Inputs
 from nox_ml.inversion.jacobian import Receptors
 from nox_ml.inversion.linear import HourData
+
+# No per-example time limit: run time depends on the machine (CI, laptops, cloud sessions), and a
+# deadline only makes property tests fail at random without finding a bug.
+settings.register_profile("nox", deadline=None)
+settings.load_profile("nox")
 
 HOURS = 6  # afternoon hours per day
 
