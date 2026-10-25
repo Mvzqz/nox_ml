@@ -13,6 +13,8 @@ It writes `runs/<name>/` (not versioned in git):
 | `config.yaml` | The config as validated, with every default filled in |
 | `metrics.json` | The metrics below |
 | `code_version.json` | `git_hash` of the code and whether the tree had uncommitted changes |
+| `oof.parquet` | Leave-one-station-out predictions (`station`, `utc`, `nox_ppb_pred`), each from a model that never saw that station |
+| `emissions.parquet` | The emission estimate of the model fitted on all stations (models only, not references) |
 
 ## Metrics
 
@@ -21,7 +23,10 @@ It writes `runs/<name>/` (not versioned in git):
 | `in_sample` | Correlation of the fitted model with station NOx (`r_stations`, `rmse_stations`) and TEMPO NO2 (`r_tempo`) |
 | `loo` | Leave-one-station-out RMSE (ppb) of the model, IDW and the hybrid (model + IDW of the residuals), pooled by number of rows. `bias` is the part that repeats at each station and `hourly` the part that changes hour to hour. `hybrid_beats_idw` counts stations. `stations` has the per-station table |
 | `day_types` | Road emission by day type and the Saturday and Sunday over weekday ratios, with a percentile interval from a bootstrap over whole days |
+| `summary` | The flat row `nox-ml compare` reads: `loo_rmse_ppb`, emission metrics, `placebo_center` / `placebo_halfwidth` and the gate `eligible` (center within 1 ± 0.15), `fit_seconds`, `predict_seconds`, `n_params`. Emission fields are null for references |
 | `normalized` | Meteorology-normalized estimator (observed over modeled NOx with the prior emission): `placebo_half_width` is half the central interval of the ratio of fake Sundays among weekdays, the smallest change it could detect |
+
+The method is the `model: {name, params}` field (`nox_ml.models.REGISTRY`; see `docs/models.md`). `nox-ml compare runs/*` puts runs side by side and `nox-ml tune <search.yaml>` searches params on nov-dec 2023 (`docs/models.md`, section 7; the search file also names the experiment config with `config:`).
 
 ## Comparing an improvement with the baseline
 
