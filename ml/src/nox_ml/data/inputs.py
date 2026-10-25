@@ -24,8 +24,15 @@ import pandas as pd
 
 from nox_ml.data.pbl import ERA5_FILE, parse_era5
 from nox_ml.data.roads import N_SPLIT, UTM, read_roads, road_emission_cells
-from nox_ml.inversion.jacobian import HourJacobian, HourJacobianFn, Receptors
-from nox_ml.inversion.linear import HourData, baseline_point_sources, hour_jacobians
+from nox_ml.data.traffic import Infovial, read_infovial_profile
+from nox_ml.inversion.jacobian import HourJacobian, Receptors
+from nox_ml.inversion.linear import (
+    History,
+    HourData,
+    HourTransport,
+    baseline_point_sources,
+    hour_jacobians,
+)
 from nox_ml.time import local_day
 
 MIN_PBL_M = 200.0  # floor of the boundary layer height after averaging with the next hour
@@ -49,6 +56,10 @@ class Inputs:
     no2_nox_ratio: float
     n_regions: int  # road regions of `zones`, passed explicitly to `invert`
     day_kinds: Mapping[pd.Timestamp, int] | None = None  # local day -> day type, overriding the calendar
+    # For transports with memory (puffs): the hourly wind of the whole period, not only of the fitted hours,
+    # and the Infovial profile of the roads. Optional: without them the hours' own winds are used.
+    wind: pd.DataFrame | None = field(default=None, compare=False, repr=False)
+    infovial: Infovial | None = field(default=None, compare=False, repr=False)
     # Jacobians of all the hours by transport key (`InversionPlume.transport_key`: the kernel and its params).
     # They depend on the hours, zones, points and ratio: whoever replaces those must pass a new cache
     # (`on_days` does).
@@ -64,7 +75,7 @@ class Inputs:
     def n_pixels(self) -> int:
         return sum(len(h.no2) for h in self.hours)
 
-    def jacobians(self, key: Hashable, transport: HourJacobianFn) -> list[HourJacobian]:
+    def jacobians(self, key: Hashable, transport: HourTransport) -> list[HourJacobian]:
         """The Jacobian of every hour (all its receptors) for a transport, built once per `key` (which names
         the kernel and its params, so the plume and the PINN never share an entry) and shared by every fit,
         held-out station, placebo refit and tune trial that uses it."""
@@ -78,11 +89,12 @@ class Inputs:
                 self.no2_nox_ratio,
                 self.n_regions,
                 jacobian=transport,
+                history=History(self.wind, self.infovial),
             )
         return self.jacobian_cache[key]
 
     def jacobians_without_stations(
-        self, stations: Collection[str], key: Hashable, transport: HourJacobianFn
+        self, stations: Collection[str], key: Hashable, transport: HourTransport
     ) -> list[HourJacobian]:
         """The cached Jacobians with the rows of `stations` removed, aligned with `without_stations`."""
         return [
@@ -226,4 +238,19 @@ def load_inputs(data_dir: Path, start: str, end: str, local_hours: tuple[int, in
 
     hours, station_ids = assemble(nox, wind, pbl, pixels, station_xy)
     zones = road_emission_cells(read_roads(interim / "roads.gpkg"))
-    return Inputs(hours, station_ids, station_xy, zones, baseline_point_sources(), ratio, N_SPLIT**2)
+    # puffs look back one day: the winds from two days before the window (and nothing after it, so a period
+    # never reads the winds of another one)
+    first = pd.Timestamp(start) - pd.Timedelta(days=2)
+    last = pd.Timestamp(end) + pd.Timedelta(days=1)
+    profile = interim / "puffs_cdmx" / "perfil_infovial.json"
+    return Inputs(
+        hours,
+        station_ids,
+        station_xy,
+        zones,
+        baseline_point_sources(),
+        ratio,
+        N_SPLIT**2,
+        wind=wind.loc[first:last],
+        infovial=read_infovial_profile(profile) if profile.exists() else None,
+    )
