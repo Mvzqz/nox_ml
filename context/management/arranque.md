@@ -28,6 +28,9 @@ Si usas sesiones en la nube de Claude Code: crea tu propio entorno con `DAGSHUB_
 
 ## Reparto
 
+Cada frente tiene su guía con objetivo, tareas, código relevante, pruebas, trampas y tiempos: [frente A](frente_a.md), [frente B](frente_b.md), [frente C](frente_c.md).
+
+
 | Rol | Modelos | Toca sobre todo |
 |---|---|---|
 | A: transporte | E1 baseline (ya existe, registrar), E2 inversión con puffs y química, E7 estimador normalizado | `inversion/`, `physics/` |
