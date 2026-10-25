@@ -23,4 +23,4 @@ bin/export-notebooks deliverables/<name>.ipynb  # only some
 NOTEBOOK_TIMEOUT=7200 bin/export-notebooks    # seconds per cell (default 3600)
 ```
 
-The HTML keeps the outputs (the notebooks themselves stay without them). Commit the files in `docs/entregables/html/` after re-exporting; the large-file hook skips that folder. List the new notebook in [`docs/entregables/README.md`](../docs/entregables/README.md).
+The HTML keeps the outputs (the notebooks themselves stay without them). Export on the owner's machine, where all the runs exist (cloud exports are incomplete), and commit the files in `docs/entregables/html/`; the large-file hook skips that folder. List the new notebook in [`docs/entregables/README.md`](../docs/entregables/README.md).
