@@ -113,11 +113,13 @@ class HourData:
 class History:
     """What a transport with memory (puffs) needs beyond the hours it is asked for: the hourly wind of the
     whole domain (columns ``u``, ``v``, indexed by the UTC start of the hour; the fitted hours are only the
-    afternoons) and the Infovial profile of the roads. Without them the transport falls back to the winds
-    of the hours themselves and to the typical traffic profile."""
+    afternoons), the Infovial profile of the roads and, for a transport with OH chemistry, the NOx loss rate
+    (1/s, same index). Without wind and Infovial the transport falls back to the winds of the hours
+    themselves and to the typical traffic profile."""
 
     wind: pd.DataFrame | None = None
     infovial: Infovial | None = None
+    loss_rate: pd.Series | None = None
 
 
 @runtime_checkable
