@@ -25,7 +25,7 @@ fits, predicts and reads its emission estimate.
 import json
 import subprocess
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -37,7 +37,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 from nox_ml.data.inputs import Inputs, load_inputs
-from nox_ml.inversion.jacobian import plume_transport
+from nox_ml.inversion.jacobian import HourJacobian, plume_transport
 from nox_ml.inversion.linear import HOLIDAYS, SIGMA_THETA, U_MIN, HourSystem, hour_systems
 from nox_ml.inversion.normalized import SUNDAY_HOLIDAY, WEEKDAY, day_type, interval
 from nox_ml.models import REGISTRY, EmissionEstimate, Model
@@ -126,21 +126,28 @@ def _correlation(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.corrcoef(a, b)[0, 1])
 
 
+def normalized_days(inputs: Inputs, jacobians: Sequence[HourJacobian]) -> pd.DataFrame:
+    """The daily table of the normalized estimator: observed station NOx and the NOx modeled with the prior
+    emission (no background), summed over the hours of each local day (`daily_table`: ``obs``, ``model``,
+    ``hours``, ``weekday``, ``stagnation``). `jacobians` are the matrices of the hours, in their order."""
+    n_points = len(inputs.points)
+    prior = inputs.points["prior"].to_numpy(float)
+    rows = []
+    for hour, jac in zip(inputs.hours, jacobians, strict=True):
+        k = jac.stations
+        if len(k):
+            model = k[:, :n_points] @ prior + k[:, n_points:].sum(axis=1)
+            rows.append({"h": hour.hour, "obs": hour.nox.mean(), "model": model.mean()})
+    hourly = pd.DataFrame(rows).assign(day=lambda x: local_day(x["h"]))
+    return daily_table(hourly, HOLIDAYS)
+
+
 def normalized_estimator(
     inputs: Inputs, systems: list[HourSystem], config: Placebo
 ) -> dict[str, float | int]:
     """Observed over modeled station NOx with the prior emission (no background), per day; the spread of the
     ratio between fake and real-looking weekdays is the placebo width (half of the central interval)."""
-    n_points = len(inputs.points)
-    prior = inputs.points["prior"].to_numpy(float)
-    rows = []
-    for hour, system in zip(inputs.hours, systems, strict=True):
-        k = system.jacobian.stations
-        if len(k):
-            model = k[:, :n_points] @ prior + k[:, n_points:].sum(axis=1)
-            rows.append({"h": hour.hour, "obs": hour.nox.mean(), "model": model.mean()})
-    hourly = pd.DataFrame(rows).assign(day=lambda x: local_day(x["h"]))
-    days = daily_table(hourly, HOLIDAYS)
+    days = normalized_days(inputs, [system.jacobian for system in systems])
     kinds = day_type(pd.DatetimeIndex(days.index), HOLIDAYS)
     weekdays, n_sundays = days[kinds == WEEKDAY], int((kinds == SUNDAY_HOLIDAY).sum())
     daily_index = weekdays["obs"] / weekdays["model"]
@@ -165,9 +172,9 @@ class Evaluation:
     emissions: EmissionEstimate | None
 
 
-def model_placebo(inputs: Inputs, make_model: Callable[[], Model], config: Placebo) -> dict[str, float]:
+def placebo_ratios(inputs: Inputs, make_model: Callable[[], Model], config: Placebo) -> np.ndarray:
     """Sunday over weekday of the model fitted on weekdays only, a random subset of them relabeled as Sundays
-    (as many as the period has). There is no change to find: the center should be 1."""
+    (as many as the period has), once per refit. There is no change to find: they should be centered on 1."""
     days = pd.DatetimeIndex(sorted({local_day(h.hour) for h in inputs.hours}))
     kinds = day_type(days, HOLIDAYS)
     weekdays, n_fake = days[kinds == WEEKDAY], int((kinds == SUNDAY_HOLIDAY).sum())
@@ -182,7 +189,13 @@ def model_placebo(inputs: Inputs, make_model: Callable[[], Model], config: Place
         fake = rng.choice(len(weekdays), n_fake, replace=False)
         relabeled = base.with_day_kinds(dict.fromkeys(weekdays[fake], SUNDAY_HOLIDAY))
         ratios.append(make_model().fit(relabeled).estimate_emissions().day_type_ratio("sunday_holiday"))
-    lo, hi = interval(np.array(ratios), config.level)
+    return np.array(ratios)
+
+
+def model_placebo(inputs: Inputs, make_model: Callable[[], Model], config: Placebo) -> dict[str, float]:
+    """Summary of `placebo_ratios`: center (median) and the central interval at `config.level`."""
+    ratios = placebo_ratios(inputs, make_model, config)
+    lo, hi = interval(ratios, config.level)
     return {"center": float(np.median(ratios)), "half_width": (hi - lo) / 2, "lo": lo, "hi": hi}
 
 
