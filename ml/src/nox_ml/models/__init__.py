@@ -6,11 +6,12 @@ from nox_ml.models.inversion_plume import InversionPlume
 REGISTRY: dict[str, type[Model]] = {InversionPlume.name: InversionPlume}
 
 try:
-    from nox_ml.models.pinn.model import PinnPlume
+    from nox_ml.models.pinn.model import PinnPlume, PinnPuff
 except ModuleNotFoundError as error:  # the PINN needs torch, an optional extra (`uv sync --extra pinn`)
     if error.name != "torch":
         raise
 else:
     REGISTRY[PinnPlume.name] = PinnPlume
+    REGISTRY[PinnPuff.name] = PinnPuff
 
 __all__ = ["REGISTRY", "Dataset", "EmissionEstimate", "Model", "ModelParams"]
