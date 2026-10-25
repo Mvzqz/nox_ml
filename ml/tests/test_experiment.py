@@ -9,10 +9,11 @@ from typer.testing import CliRunner
 from nox_ml import cli
 from nox_ml.validation import experiment
 from nox_ml.validation.experiment import (
-    Bootstrap,
     ExperimentConfig,
+    ModelConfig,
+    Placebo,
     code_version,
-    compute_metrics,
+    evaluate,
     read_config,
     run_experiment,
 )
@@ -24,8 +25,8 @@ def config(**changes) -> ExperimentConfig:
     base = {
         "name": "t",
         "period": {"start": "2023-11-06", "end": "2023-11-19"},
-        "bootstrap": {"n": 8},
-        "placebo": {"n": 50},
+        "model": {"name": "inversion_plume", "params": {"bootstrap_n": 8}},
+        "placebo": {"n": 50, "refits": 3},
     }
     return ExperimentConfig.model_validate(base | changes)
 
@@ -39,7 +40,8 @@ def test_baseline_yaml_is_valid_and_states_the_defaults_it_documents():
     assert cfg.name == "baseline"
     assert (cfg.period.start.isoformat(), cfg.period.end.isoformat()) == ("2023-11-01", "2023-12-31")
     assert cfg.simat_hours == (12, 17)
-    assert cfg.bootstrap == Bootstrap()  # the YAML repeats the defaults; they must not drift apart
+    assert cfg.model == ModelConfig()  # the YAML repeats the defaults; they must not drift apart
+    assert cfg.placebo == Placebo()
 
 
 def test_config_rejects_unknown_fields_so_a_typo_does_not_run_the_baseline():
@@ -54,8 +56,11 @@ def test_config_rejects_unknown_fields_so_a_typo_does_not_run_the_baseline():
         {"simat_hours": [17, 12]},
         {"simat_hours": [12, 25]},
         {"name": "../escape"},
-        {"bootstrap": {"n": 0}},
-        {"bootstrap": {"level": 1.5}},
+        {"model": {"params": {"bootstrap_n": 0}}},
+        {"model": {"params": {"bootstrap_level": 1.5}}},
+        {"model": {"name": "nope"}},
+        {"model": {"params": {"sigma_thetta_deg": 30}}},
+        {"placebo": {"refits": 1}},
     ],
 )
 def test_config_rejects_values_that_make_no_sense(changes):
@@ -86,7 +91,7 @@ def test_code_version_is_unknown_outside_git(monkeypatch):
 
 
 def test_metrics_cover_every_block_of_the_baseline_table(make_inputs):
-    metrics = compute_metrics(make_inputs(), config())
+    metrics = evaluate(make_inputs(), config()).metrics
 
     assert metrics["inputs"]["n_hours"] == 84
     assert set(metrics["in_sample"]) == {"r_stations", "rmse_stations", "r_tempo"}
@@ -100,7 +105,7 @@ def test_metrics_cover_every_block_of_the_baseline_table(make_inputs):
 
 
 def test_sunday_over_weekday_is_below_one_when_sundays_have_less_nox(make_inputs):
-    metrics = compute_metrics(make_inputs(sunday_scale=0.3), config())
+    metrics = evaluate(make_inputs(sunday_scale=0.3), config()).metrics
 
     sunday = metrics["day_types"]["sunday_over_weekday"]
     assert sunday["value"] < 0.8
@@ -110,9 +115,11 @@ def test_sunday_over_weekday_is_below_one_when_sundays_have_less_nox(make_inputs
 def test_the_bootstrap_is_reproducible_from_its_seed(make_inputs):
     inputs = make_inputs()
 
-    a = compute_metrics(inputs, config())["day_types"]["sunday_over_weekday"]
-    b = compute_metrics(inputs, config())["day_types"]["sunday_over_weekday"]
-    c = compute_metrics(inputs, config(bootstrap={"n": 8, "seed": 99}))["day_types"]["sunday_over_weekday"]
+    a = evaluate(inputs, config()).metrics["day_types"]["sunday_over_weekday"]
+    b = evaluate(inputs, config()).metrics["day_types"]["sunday_over_weekday"]
+    c = evaluate(inputs, config(model={"params": {"bootstrap_n": 8, "seed": 99}})).metrics["day_types"][
+        "sunday_over_weekday"
+    ]
 
     assert a == b
     assert (a["lo"], a["hi"]) != (c["lo"], c["hi"])
@@ -120,7 +127,7 @@ def test_the_bootstrap_is_reproducible_from_its_seed(make_inputs):
 
 
 def test_placebo_half_width_is_half_the_interval_around_one(make_inputs):
-    quiet = compute_metrics(make_inputs(seed=1), config())["normalized"]
+    quiet = evaluate(make_inputs(seed=1), config()).metrics["normalized"]
     assert quiet["placebo_lo"] < 1 < quiet["placebo_hi"]
     assert quiet["placebo_half_width"] == pytest.approx((quiet["placebo_hi"] - quiet["placebo_lo"]) / 2)
 
@@ -148,13 +155,23 @@ def test_the_stored_config_includes_the_defaults(tmp_path, fake_data):
 
     stored = yaml.safe_load((out / "config.yaml").read_text())
     assert stored["simat_hours"] == [12, 17]
-    assert stored["bootstrap"] == {"n": 8, "seed": 7, "level": 0.9}
+    assert stored["model"] == {
+        "name": "inversion_plume",
+        "params": {
+            "seed": 7,
+            "sigma_theta_deg": 15.0,
+            "u_min_ms": 1.0,
+            "bootstrap_n": 8,
+            "bootstrap_level": 0.9,
+        },
+    }
 
 
 def test_the_cli_runs_a_config_and_prints_the_headline(tmp_path, fake_data):
     path = tmp_path / "trial.yaml"
     path.write_text(
-        "name: trial\nperiod: {start: 2023-11-06, end: 2023-11-19}\nbootstrap: {n: 4}\nplacebo: {n: 20}\n"
+        "name: trial\nperiod: {start: 2023-11-06, end: 2023-11-19}\n"
+        "model: {name: inversion_plume, params: {bootstrap_n: 4}}\nplacebo: {n: 20, refits: 2}\n"
     )
 
     result = CliRunner().invoke(cli.app, ["run", str(path), "--runs-dir", str(tmp_path / "runs")])

@@ -13,23 +13,15 @@ the held-out NOx:
 - hybrid: the model plus the IDW of the residuals of the model at the other stations (same hour).
 """
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
 from nox_ml.data.inputs import Inputs
-from nox_ml.inversion.linear import (
-    BACKGROUND_PIXEL,
-    BACKGROUND_STATION,
-    SIGMA_PIXEL,
-    SIGMA_STATION,
-    HourSystem,
-    Posterior,
-    background_mean,
-    invert,
-)
+from nox_ml.inversion.linear import BACKGROUND_PIXEL, SIGMA_PIXEL, HourSystem, Posterior, background_mean
+from nox_ml.models.base import Model
 
 Array = NDArray[np.float64]
 
@@ -46,20 +38,6 @@ def station_rows(inputs: Inputs) -> pd.DataFrame:
             "obs": np.concatenate([h.nox for h in inputs.hours]),
         }
     )
-
-
-def predict_stations(
-    inputs: Inputs, systems: Sequence[HourSystem], post: Posterior, exclude: str | None = None
-) -> Array:
-    """Model NOx (ppb) of every station row: the Jacobian with the sources of `post` plus the background of
-    its hour, estimated from the rows of that hour (not those of the station `exclude`, if given)."""
-    out = []
-    for hour, ids, system in zip(inputs.hours, inputs.station_ids, systems, strict=True):
-        base = system.jacobian.stations @ post.state(system.kind)
-        use = np.ones(len(ids), bool) if exclude is None else ids != exclude
-        background = background_mean((hour.nox - base)[use], SIGMA_STATION, BACKGROUND_STATION)
-        out.append(base + background)
-    return np.concatenate(out)
 
 
 def predict_pixels(inputs: Inputs, systems: Sequence[HourSystem], post: Posterior) -> tuple[Array, Array]:
@@ -102,26 +80,23 @@ def idw_and_hybrid(rows: pd.DataFrame, model: Array, station: str, station_xy: p
     )
 
 
-def leave_one_out(inputs: Inputs, systems: Sequence[HourSystem]) -> pd.DataFrame:
+def leave_one_out(inputs: Inputs, make_model: Callable[[], Model]) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Leave-one-station-out: one row per station with ``n`` and, for each predictor, its ``rmse_*``,
     ``bias_*`` (mean prediction minus observation) and ``r_*`` on the held-out rows.
 
-    `systems` are the hour systems of the fit with all stations; they give the Jacobian rows of the held-out
-    station. Each refit runs `invert` on the inputs without that station.
+    Each station gets a fresh model fitted with `exclude_stations=[station]`. Also returns the out-of-fold
+    predictions of the held-out rows (``station``, ``utc``, ``nox_ppb_pred``), each made by the model that
+    never saw that station.
     """
     rows = station_rows(inputs)
     stations = sorted(rows["station"].unique())
-    table = []
+    table, oof = [], []
     for station in stations:
-        post = invert(
-            inputs.without_station(station),
-            inputs.zones,
-            inputs.points,
-            inputs.no2_nox_ratio,
-            inputs.n_regions,
-        )
-        model = predict_stations(inputs, systems, post, exclude=station)
+        fold = make_model().fit(inputs, exclude_stations=[station]).predict_stations(inputs, stations)
+        predicted = rows.merge(fold, left_on=["station", "h"], right_on=["station", "utc"], how="left")
+        model = predicted["nox_ppb_pred"].to_numpy(float)
         held = idw_and_hybrid(rows, model, station, inputs.station_xy)
+        oof.append(fold[fold["station"] == station])
         entry: dict[str, float | str] = {"station": station, "n": len(held)}
         for name in PREDICTORS:
             error = held[name] - held["obs"]
@@ -129,7 +104,7 @@ def leave_one_out(inputs: Inputs, systems: Sequence[HourSystem]) -> pd.DataFrame
             entry[f"bias_{name}"] = float(np.mean(error))
             entry[f"r_{name}"] = float(np.corrcoef(held[name], held["obs"])[0, 1])
         table.append(entry)
-    return pd.DataFrame(table).set_index("station")
+    return pd.DataFrame(table).set_index("station"), pd.concat(oof, ignore_index=True)
 
 
 def summarize(loo: pd.DataFrame) -> dict:

@@ -6,5 +6,7 @@ period:
   start: 2023-11-01
   end: 2023-12-31
 simat_hours: [12, 17]
-bootstrap: {n: 200, seed: 7, level: 0.90}  # whole days, resolved from the hour systems
-placebo: {n: 2000, seed: 3, level: 0.90}  # fake Sundays among weekdays
+model:
+  name: inversion_plume
+  params: {sigma_theta_deg: 15, u_min_ms: 1, bootstrap_n: 200, bootstrap_level: 0.90, seed: 7}  # bootstrap over whole days
+placebo: {n: 2000, seed: 3, level: 0.90, refits: 8}  # fake Sundays among weekdays; the model is refit `refits` times
