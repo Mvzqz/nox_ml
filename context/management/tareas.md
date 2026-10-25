@@ -53,3 +53,12 @@ Tareas abiertas para las siguientes sesiones (nube o local). Al terminar una, se
 ## Ventajas del proyecto
 
 - [ ] Estudiar las ventajas posibles y comparar con modelos químicos completos (GEOS-CF, CAMS, AQFS-Mex): ver `plan_ventajas.md`.
+
+## M1 (peso de TEMPO y restricción de tráfico): pendientes después del avance 4
+
+Revisión del PR #30 con datos reales: con `traffic_sd` 0.04 la restricción casi no mueve el domingo (0.42 → 0.43); con una restricción fuerte (0.01–0.002) el domingo sube a 0.54–0.68, pero el placebo deja de ser válido (centro 0.70–0.84) porque los domingos falsos también quedan restringidos.
+
+- [x] **(Necesaria antes de usar la restricción) No aplicar la restricción en los reajustes del placebo.** Hecho: `InversionPlume.constraints` no la aplica cuando el reajuste es del placebo (`data.day_kinds`).
+- [ ] (Opcional) Restricción por región, como en la investigación (σ ≈ 0.02 por región).
+- [ ] (Opcional) Marcar en `compare` las corridas con restricción de tráfico, para no validar el domingo contra el tráfico cuando se impuso (circular).
+- [ ] (Opcional) Documentar que con `traffic_sd` ≥ 0.04 el efecto de la restricción es mínimo.
