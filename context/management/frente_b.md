@@ -14,6 +14,7 @@ Resolver la misma pregunta (cuánto emite cada zona) con algoritmos **distintos*
 | E4 | `lognormal_map` | Inversión no lineal: emisiones log-normales (siempre positivas), máximo a posteriori con L-BFGS-B; incertidumbre por aproximación de Laplace (inversa de la hessiana) | **Por hacer** |
 | R1 | `idw` | Interpolación por distancia inversa, como referencia (`role: reference`) | **Por hacer** (envolver lo existente) |
 | R2 | `kriging` | Proceso gaussiano **solo espacial, hora por hora**, como referencia | **Por hacer** |
+| M1 | Peso de TEMPO y restricción de tráfico | Dos hiperparámetros nuevos del modelo físico base (`PlumeInversionParams`), heredados por E1, E2, E5a y E5b: `tempo_sigma_mult` (multiplica el error de los píxeles; la investigación usó 3, es decir, un tercio de peso) y una restricción opcional del cociente sábado/domingo frente a hábil con el tráfico de Infovial (día completo ponderado por emisión: sábado ~0.87, domingo ~0.65–0.73, con su σ). Valores por defecto = comportamiento actual, para que el baseline no cambie | **Por hacer, prioridad alta** |
 
 ## Código relevante
 
@@ -24,6 +25,14 @@ Resolver la misma pregunta (cuánto emite cada zona) con algoritmos **distintos*
 - `ml/src/nox_ml/validation/loo.py`: `idw_and_hybrid` ya calcula IDW e híbrido; R1 lo envuelve como modelo de referencia.
 - `ml/src/nox_ml/data/inputs.py`: `Inputs` y la caché `Inputs.jacobians(...)`; las coordenadas de estaciones están ahí.
 - `scikit-learn` ya está en las dependencias (`GaussianProcessRegressor` para kriging).
+
+## Por qué M1 es prioritaria
+
+Todos los modelos físicos dan una baja dominical exagerada (domingo/hábil 0.42–0.47 frente a 0.65–0.73 del tráfico). El diagnóstico del baseline mostró que el satélite es quien empuja ese número hacia abajo (sin TEMPO sube a 0.80). En la investigación, darle un tercio de peso a TEMPO y agregar la restricción de tráfico llevó el domingo a 0.62–0.65 sin empeorar el error en estación oculta. Sin estos dos parámetros, el ajuste fino del avance 4 no puede explorar esa mejora.
+
+- Código: `models/inversion_plume.py` (`PlumeInversionParams`), `inversion/linear.py` (dónde entra el error de cada píxel y dónde se agregaría la restricción como pseudo-observación), `data/traffic.py` (perfil de Infovial).
+- Referencia en la investigación (`research-archive`): `scripts/real_check_linear.py` (`--tempo-sigma-mult`), `scripts/sunday_fix.py`, `reports/peso_tempo.md`, `reports/sesgo_domingos.md`.
+- Pruebas: con los valores por defecto, el baseline da exactamente los mismos números (13.6 / 11.6 / 11.7, domingo 0.42); con la restricción muy fuerte, el cociente estimado coincide con el impuesto; con `tempo_sigma_mult` muy grande, el resultado se acerca al de "sin TEMPO" del diagnóstico.
 
 ## Cuándo está listo
 
