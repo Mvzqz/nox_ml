@@ -30,7 +30,7 @@ Tabla 1. Resumen de los datos generales del proyecto.
 
 ## 1.2 Beneficiario
 
-El beneficiario es el **Hub de Ciencia de Datos del Tecnológico de Monterrey**. Recibe un método reproducible, con código, datos versionados y documentación, para estimar cambios de emisión a partir de mediciones. El Hub puede reutilizarlo en otras ciudades: el repositorio ya incluye a Los Ángeles como caso de control con satélite y a Bogotá como caso sin satélite.
+El beneficiario es el **Hub de Ciencia de Datos del Tecnológico de Monterrey**. Recibe un método reproducible, con código, datos versionados y documentación, para estimar cambios de emisión a partir de mediciones. El Hub puede reutilizarlo en otras ciudades: la fase de investigación ya probó el método en Los Ángeles (caso de control con satélite) y en Bogotá (caso sin satélite), y su integración al repositorio está planeada.
 
 ## 1.3 Sector y rama (SCIAN)
 

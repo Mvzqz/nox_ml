@@ -70,7 +70,7 @@ Figura 1. Esquema del método: de las mediciones a la emisión por zona y al ín
 
 ## 2.2 Contexto e importancia
 
-El proyecto es una prueba de concepto para la ZMVM, con Los Ángeles como control positivo (tiene TEMPO y datos públicos de tráfico) y Bogotá como caso sin satélite. El caso de uso principal es evaluar si bajó la emisión vial cuando se restringió la circulación, es decir, en las contingencias ambientales. Quién decide: la Comisión Ambiental de la Megalópolis y la SEDEMA. Qué decisión: mantener, endurecer o cambiar las restricciones vehiculares. Un caso secundario es verificar entre ediciones del inventario el reparto de la emisión vial por zona.
+El proyecto es una prueba de concepto para la ZMVM. En la fase de investigación se probó también en Los Ángeles, como control positivo (tiene TEMPO y datos públicos de tráfico), y en Bogotá, como caso sin satélite; su integración al repositorio está planeada. El caso de uso principal es evaluar si bajó la emisión vial cuando se restringió la circulación, es decir, en las contingencias ambientales. Quién decide: la Comisión Ambiental de la Megalópolis y la SEDEMA. Qué decisión: mantener, endurecer o cambiar las restricciones vehiculares. Un caso secundario es verificar entre ediciones del inventario el reparto de la emisión vial por zona.
 
 La importancia está en tres propiedades del método. Mide emisión y no concentración. Es independiente del inventario, que solo da el punto de partida: así puede verificarlo desde fuera. Y es frecuente y barato, porque usa datos públicos y no requiere campañas de medición. No sustituye al inventario: el inventario da el detalle por fuente y el método comprueba sus patrones y detecta cambios.
 
