@@ -63,11 +63,11 @@ class PinnPuff(PinnInversion):
     def transport(self) -> HistoryTransport:
         p = self.params
         assert isinstance(p, PinnPuffParams)
-        return PinnPuffTransport(self._kernel().table, p.tau_h, p.u_min, p.max_age_h)
+        return PinnPuffTransport(self._kernel().table, p.tau_h, p.u_min, p.max_age_h, p.lifetime)
 
     def transport_key(self) -> tuple:
         """The kernel, how it is evaluated and how long the puffs live: never the plume's, the PINN plume's or
         a Gaussian puff's key (that one has no kernel identity)."""
         p = self.params
         assert isinstance(p, PinnPuffParams)
-        return ("pinn_puff", p.training_key(), p.tau_h, p.u_min, p.max_age_h)
+        return ("pinn_puff", p.training_key(), p.tau_h, p.u_min, p.max_age_h, p.lifetime)

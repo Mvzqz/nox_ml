@@ -447,3 +447,32 @@ def test_run_qc_keeps_stuck_hours_when_masking_is_off(simat_dir, tmp_path):
 
     nox = pd.read_parquet(tmp_path / "simat_nox.parquet")
     assert nox.loc[nox["id_station"] == "MER", "NOX"].notna().all()
+
+
+# --- chemistry inputs -------------------------------------------------------------------------------------
+
+
+def test_domain_chemistry_averages_the_domain_stations_per_hour_and_labels_the_start_of_the_hour_in_utc():
+    pol = long_rows(
+        [
+            ("AAA", "O3", "2023-11-01 13:00", 40.0),
+            ("BBB", "O3", "2023-11-01 13:00", 60.0),
+            ("ZZZ", "O3", "2023-11-01 13:00", 500.0),  # outside the domain
+            ("AAA", "O3", "2023-11-01 14:00", 30.0),
+        ]
+    )
+    met = long_rows(
+        [
+            ("AAA", "TMP", "2023-11-01 13:00", 20.0),
+            ("BBB", "TMP", "2023-11-01 13:00", 22.0),
+            ("AAA", "RH", "2023-11-01 13:00", 30.0),
+            ("AAA", "WSP", "2023-11-01 13:00", 9.0),  # not a chemistry variable
+        ]
+    )
+
+    chem = simat.domain_chemistry(pol, met, ["AAA", "BBB"])
+
+    assert list(chem.columns) == ["O3", "TMP", "RH"]
+    assert list(chem.index) == [pd.Timestamp("2023-11-01 18:00"), pd.Timestamp("2023-11-01 19:00")]
+    assert chem.loc["2023-11-01 18:00"].to_list() == [50.0, 21.0, 30.0]
+    assert chem["TMP"].isna().iloc[1] and chem["RH"].isna().iloc[1]

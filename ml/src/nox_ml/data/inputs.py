@@ -24,6 +24,7 @@ import pandas as pd
 
 from nox_ml.data.pbl import ERA5_FILE, parse_era5
 from nox_ml.data.roads import N_SPLIT, UTM, read_roads, road_emission_cells
+from nox_ml.data.simat import load_chemistry
 from nox_ml.data.traffic import Infovial, read_infovial_profile
 from nox_ml.inversion.jacobian import HourJacobian, Receptors
 from nox_ml.inversion.linear import (
@@ -33,10 +34,21 @@ from nox_ml.inversion.linear import (
     baseline_point_sources,
     hour_jacobians,
 )
+from nox_ml.physics.chemistry import (
+    cos_zenith,
+    j_o1d,
+    nox_loss_rate,
+    oh_production,
+    reference_production,
+)
 from nox_ml.time import local_day
 
 MIN_PBL_M = 200.0  # floor of the boundary layer height after averaging with the next hour
 LABEL_SHIFT = pd.Timedelta(hours=1)  # SIMAT labels the end of the hour
+CHEMISTRY_GAP_H = 6  # longest gap of the chemistry variables that is interpolated (the rest: climatology)
+# April of this year sets the reference OH production (`physics.chemistry.reference_production`). It is not
+# the 2024 of the standard variant because feb-may 2024 is the held-out test period.
+CHEMISTRY_REF_YEAR = 2023
 MAX_CACHED_TRANSPORTS = 4  # transport configurations whose Jacobians an `Inputs` keeps (a tune can try many)
 
 
@@ -60,6 +72,10 @@ class Inputs:
     # and the Infovial profile of the roads. Optional: without them the hours' own winds are used.
     wind: pd.DataFrame | None = field(default=None, compare=False, repr=False)
     infovial: Infovial | None = field(default=None, compare=False, repr=False)
+    # For transports with OH chemistry: the hourly O3 (ppb), TMP (C) and RH (%) of the domain and the NOx loss
+    # rate (1/s) they give (`chemistry_loss_rate`), both indexed by the UTC start of the hour. Optional.
+    chemistry: pd.DataFrame | None = field(default=None, compare=False, repr=False)
+    loss_rate: pd.Series | None = field(default=None, compare=False, repr=False)
     # Jacobians of all the hours by transport key (`InversionPlume.transport_key`: the kernel and its params).
     # They depend on the hours, zones, points and ratio: whoever replaces those must pass a new cache
     # (`on_days` does).
@@ -89,7 +105,7 @@ class Inputs:
                 self.no2_nox_ratio,
                 self.n_regions,
                 jacobian=transport,
-                history=History(self.wind, self.infovial),
+                history=History(self.wind, self.infovial, self.loss_rate),
             )
         return self.jacobian_cache[key]
 
@@ -176,6 +192,26 @@ def hourly_pbl(filled: pd.Series, era5: pd.Series) -> pd.Series:
     return ((pbl + pbl.shift(-1)) / 2).clip(lower=MIN_PBL_M)
 
 
+def fill_chemistry(chemistry: pd.DataFrame) -> pd.DataFrame:
+    """The hourly chemistry variables without gaps: up to `CHEMISTRY_GAP_H` h are interpolated, the rest takes
+    the median of its month and hour (as the research did)."""
+    full = chemistry.reindex(pd.date_range(chemistry.index.min(), chemistry.index.max(), freq="h"))
+    full = full.interpolate(limit=CHEMISTRY_GAP_H)
+    climatology = full.groupby([full.index.month, full.index.hour]).transform("median")
+    return full.fillna(climatology)
+
+
+def chemistry_loss_rate(chemistry: pd.DataFrame, ref_year: int = CHEMISTRY_REF_YEAR) -> pd.Series:
+    """NOx loss rate (1/s, `nox_loss_rate`) of each hour of `chemistry` (``O3``, ``TMP``, ``RH``, filled),
+    with the OH production of local noon of April of `ref_year` as the reference (which must be in it)."""
+    p = pd.Series(
+        oh_production(j_o1d(cos_zenith(chemistry.index)), chemistry["O3"], chemistry["TMP"], chemistry["RH"]),
+        chemistry.index,
+    )
+    k = nox_loss_rate(p, reference_production(p, year=ref_year))
+    return pd.Series(k, chemistry.index, name="loss_rate")
+
+
 def assemble(
     nox: pd.DataFrame,
     wind: pd.DataFrame,
@@ -243,6 +279,12 @@ def load_inputs(data_dir: Path, start: str, end: str, local_hours: tuple[int, in
     first = pd.Timestamp(start) - pd.Timedelta(days=2)
     last = pd.Timestamp(end) + pd.Timedelta(days=1)
     profile = interim / "puffs_cdmx" / "perfil_infovial.json"
+    # chemistry: the day before the window is the history of the 24 h puffs; the reference April may be in
+    # another year than the window
+    years = sorted({CHEMISTRY_REF_YEAR, first.year, last.year})
+    chem = fill_chemistry(load_chemistry(data_dir / "raw" / "simat", years, ids))
+    loss = chemistry_loss_rate(chem)
+    window = slice(pd.Timestamp(start) - pd.Timedelta(days=1), last)
     return Inputs(
         hours,
         station_ids,
@@ -253,4 +295,6 @@ def load_inputs(data_dir: Path, start: str, end: str, local_hours: tuple[int, in
         N_SPLIT**2,
         wind=wind.loc[first:last],
         infovial=read_infovial_profile(profile) if profile.exists() else None,
+        chemistry=chem.loc[window],
+        loss_rate=loss.loc[window],
     )

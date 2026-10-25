@@ -2,7 +2,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from nox_ml.data.inputs import assemble, domain_wind, hourly_pbl, station_nox
+from nox_ml.data.inputs import (
+    assemble,
+    chemistry_loss_rate,
+    domain_wind,
+    fill_chemistry,
+    hourly_pbl,
+    station_nox,
+)
+from nox_ml.physics.chemistry import lifetime_h
+from nox_ml.time import utc_to_local
 
 
 def nox_table(rows):
@@ -143,3 +152,49 @@ def test_without_station_removes_its_rows_from_every_hour(make_inputs):
     assert len(inputs.hours[0].nox) == 3  # the original is untouched
     assert hours[0].nox.tolist() == inputs.hours[0].nox[[0, 2]].tolist()
     assert hours[0].stations.x.tolist() == [0.0, 2000.0]
+
+
+# --- chemistry --------------------------------------------------------------------------------------------
+
+
+def seasonal_chemistry() -> pd.DataFrame:
+    """Hourly O3, TMP and RH from April 2023 to June 2024: ozone-rich and warm around May, cool in winter."""
+    index = pd.date_range("2023-04-01", "2024-06-01", freq="h")
+    may = index.month.isin([5, 6])
+    winter = index.month.isin([11, 12, 1, 2])
+    return pd.DataFrame(
+        {
+            "O3": np.select([may, winter], [80.0, 45.0], 55.0),
+            "TMP": np.select([may, winter], [24.0, 14.0], 22.0),
+            "RH": np.select([may, winter], [40.0, 38.0], 38.0),
+        },
+        index=index,
+    )
+
+
+def noon_lifetime_h(loss: pd.Series, month: int, year: int) -> float:
+    local = utc_to_local(pd.DatetimeIndex(loss.index))
+    noon = loss[(local.hour == 12) & (local.month == month) & (local.year == year)]
+    return float(lifetime_h(noon).mean())
+
+
+def test_loss_rate_is_positive_in_daylight_and_the_noon_lifetime_is_shorter_in_may_than_in_december():
+    loss = chemistry_loss_rate(seasonal_chemistry())
+
+    assert (loss >= 0).all() and loss.max() > 0
+    assert noon_lifetime_h(loss, 5, 2024) == pytest.approx(4, abs=1.5)
+    assert noon_lifetime_h(loss, 12, 2023) == pytest.approx(20, abs=5)
+
+
+def test_fill_chemistry_interpolates_short_gaps_and_uses_the_month_hour_median_for_long_ones():
+    index = pd.date_range("2023-11-01", periods=24 * 5, freq="h")
+    chem = pd.DataFrame({"O3": np.arange(len(index), dtype=float), "TMP": 20.0, "RH": 40.0}, index=index)
+    chem.loc[index[10:13], "O3"] = np.nan  # 3 h: interpolated
+    chem.loc[index[60:80], "O3"] = np.nan  # 20 h: climatology
+
+    filled = fill_chemistry(chem)
+
+    assert filled["O3"].iloc[11] == pytest.approx(11.0)
+    assert bool(filled["O3"].notna().all())
+    expected = float(chem["O3"].groupby(index.hour).median().loc[index[70].hour])
+    assert filled["O3"].iloc[70] == pytest.approx(expected)
