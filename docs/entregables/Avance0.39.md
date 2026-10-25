@@ -26,7 +26,7 @@ Tabla 1. Herramientas actuales y brecha que atiende el proyecto.
 | Pronóstico (AQFS-Mex) | Modelo meteorológico y químico que predice concentraciones | Usa el inventario como entrada, de modo que hereda sus errores: supone las emisiones y no las estima |
 | Evaluación de políticas | Estudios que comparan concentraciones antes y después de una medida | Se confunde cuando la meteorología cambia entre los periodos comparados |
 
-Este último punto es crítico para las contingencias ambientales, que se declaran justo en los días de peor ventilación. En el periodo de febrero a mayo de 2024, el NOₓ de la tarde fue casi igual en días de contingencia que en días hábiles normales (17.5 frente a 17.9 ppb). Con solo concentraciones caben dos lecturas, indistinguibles entre sí: las restricciones no redujeron la emisión, o la redujeron pero el aire estaba tan estancado que no se notó. La decisión correcta es opuesta en cada caso. Los estudios clásicos sobre el programa Hoy No Circula, como el de Davis (2008), se basan en concentraciones y por ello enfrentan esta ambigüedad.
+Este último punto es crítico para las contingencias ambientales, que se declaran justo en los días de peor ventilación. Con solo concentraciones caben dos lecturas, indistinguibles entre sí: las restricciones no redujeron la emisión, o la redujeron pero el aire estaba tan estancado que no se notó. La decisión correcta es opuesta en cada caso. Los estudios clásicos sobre el programa Hoy No Circula, como el de Davis (2008), se basan en concentraciones y por ello enfrentan esta ambigüedad.
 
 La brecha es, entonces, de **medición de la emisión**. Las concentraciones se miden cada hora, pero mezclan emisión y meteorología. La emisión se estima cada varios años mediante inventarios de abajo hacia arriba. Este proyecto propone estimar la emisión de arriba hacia abajo, a partir de lo que se mide en el aire, y separarla del efecto del clima.
 
@@ -34,7 +34,7 @@ La brecha es, entonces, de **medición de la emisión**. Las concentraciones se 
 
 La **Red Automática de Monitoreo Atmosférico (RAMA)** y la **Red de Meteorología y Radiación Solar (REDMET)** forman parte del Sistema de Monitoreo Atmosférico de la Ciudad de México (SIMAT), operado por la Secretaría del Medio Ambiente (SEDEMA). Publican datos horarios de NO, NO₂, NOₓ y otros contaminantes, y de viento y otras variables meteorológicas, en un portal de datos abiertos.
 
-El satélite **TEMPO** (Tropospheric Emissions: Monitoring of Pollution) de la NASA es un instrumento en órbita geoestacionaria que observa Norteamérica de forma repetida durante el día y mide la columna troposférica de NO₂ (Zoogman et al., 2017). Opera desde 2023. Sobre el dominio del proyecto hay entre 12 y 16 escaneos por día que cubren las 12:00 a 17:00 horas locales, con píxeles de unos 2 × 4.5 km. A diferencia de las estaciones, TEMPO observa toda la ciudad, incluida la zona noreste (Ecatepec, Acolman y el aeropuerto AIFA), donde las estaciones casi no llegan.
+El satélite **TEMPO** (Tropospheric Emissions: Monitoring of Pollution) de la NASA es un instrumento en órbita geoestacionaria que observa Norteamérica de forma repetida durante el día y mide la columna troposférica de NO₂ (Zoogman et al., 2017). Opera desde 2023. Sobre el dominio del proyecto hay cerca de un escaneo por hora (396 escaneos en noviembre–diciembre de 2023) entre las 12:00 y las 17:00 horas locales, con píxeles de unos 2 × 4.5 km. A diferencia de las estaciones, TEMPO observa toda la ciudad, incluida la zona noreste (Ecatepec, Acolman y el aeropuerto AIFA), donde las estaciones casi no llegan.
 
 ## 1.5 Problemas inversos y redes neuronales informadas por la física
 
@@ -126,7 +126,7 @@ Tabla 4. Riesgos de calidad identificados y mitigación.
 | Riesgo | Mitigación |
 |---|---|
 | La velocidad del viento de REDMET en 2024 está multiplicada por cerca de 2.2 (parece unidades de mph etiquetadas como m/s) | Corrección dividiendo entre 2.237, con el valor original conservado; la corrección está aprobada y documentada |
-| Pocas estaciones con NOₓ (entre 14 y 20 válidas por mes) y mediana de 5.6 km entre vecinas | TEMPO como segunda fuente; validación dejando una estación fuera |
+| Pocas estaciones con NOₓ (entre 20 y 24 estaciones reportan NOₓ cada mes y entre 16 y 20 tienen al menos 75 % de las horas de la tarde) y mediana de 5.6 km entre vecinas | TEMPO como segunda fuente; validación dejando una estación fuera |
 | Las nubes y las banderas de calidad descartan buena parte de los píxeles de TEMPO | Usar TEMPO por píxel y no exigir cobertura mínima del dominio |
 | El total absoluto depende del modelo de transporte | Reportar cocientes y cambios relativos, no toneladas |
 | Fechas de contingencias tomadas de la prensa | Contrastar con los boletines de la CAMe antes de usarlas como resultado final |
@@ -154,7 +154,7 @@ Los proveedores de datos y los usuarios potenciales no participan formalmente en
 
 **Estaciones de SIMAT.** La RAMA mide NO, NO₂ y NOₓ en partes por mil millones (ppb) cada hora; la REDMET mide viento. La revisión de calidad (QC) encontró que los datos de NOₓ de 2023 y 2024 son aptos (sin duplicados ni negativos, con el pico matutino de 07 a 09 h y menores valores en domingo). Se filtran 59 horas con sensor pegado. El dominio tiene 24 estaciones con NOₓ.
 
-**TEMPO.** Columna troposférica de NO₂ nivel 2, versión V04, recortada al dominio del proyecto (1,068 gránulos de noviembre de 2023 a mayo de 2024, en las horas de la tarde). En nov–dic 2023 la concordancia con las estaciones es r = 0.76 sobre 4,424 pares hora-estación. En el periodo feb–may 2024 baja a r = 0.71, y a r = 0.55 dentro de cada gránulo, por debajo de la meta de 0.6. El 41 % de los píxeles se rechaza por nubes y el 19 % por banderas de calidad.
+**TEMPO.** Columna troposférica de NO₂ nivel 2, versión V04, recortada al dominio del proyecto (1,068 gránulos de noviembre de 2023 a mayo de 2024, en las horas de la tarde). En nov–dic 2023 la concordancia con las estaciones es r = 0.77 sobre 4,906 pares hora-estación (0.70 dentro de cada escaneo). De los 165,082 píxeles de ese periodo, las nubes rechazan por sí solas el 43.9 %, las banderas de calidad el 19.2 % y la columna ausente el 2.8 %; queda el 47.4 % (78,240 píxeles). El periodo febrero–mayo de 2024 está reservado para la prueba final y no se usa aquí como resultado.
 
 **Meteorología.** El viento por hora proviene de REDMET y, como respaldo, de los reportes METAR de los aeropuertos MMMX y MMSM. La altura de la capa límite viene de ERA5 y de MERRA-2, y la verificación con radiosondeos de IGRA. La velocidad de REDMET 2024 tiene un error de unidades que se corrige (Tabla 4).
 
@@ -162,7 +162,7 @@ Los proveedores de datos y los usuarios potenciales no participan formalmente en
 
 **Inventarios y fuentes puntuales.** El inventario de la SEDEMA (edición 2018) da un total de 144,597.8 t/año de NOₓ (cuadro 7 del informe), pero no reporta NOₓ por municipio. EDGAR v8.1 da emisiones por sector en una malla de 0.1°, Climate TRACE da las de las centrales eléctricas, y el DENUE de INEGI los establecimientos industriales. Se usan como a priori y para comparar al final, nunca para ajustar.
 
-**Datos de validación.** Contingencias de 2024 (23 días, tomados de la prensa), movilidad de Google y Apple de 2020, y los casos de Los Ángeles (EPA AQS, HRRR) y Bogotá (RMCAB).
+**Datos de validación.** Contingencias de 2024 (23 días, tomados de la prensa), movilidad de Google y Apple de 2020, y, solo en la fase de investigación y todavía fuera del repositorio, los casos de Los Ángeles (EPA AQS, HRRR) y Bogotá (RMCAB).
 
 La Tabla 6 resume las fuentes. El catálogo completo, con licencia y tamaño, está en `data/README.md` del repositorio.
 
@@ -171,7 +171,7 @@ Tabla 6. Fuentes de datos: periodo, resolución, formato y acceso.
 | Fuente | Periodo | Resolución | Formato | Acceso |
 |---|---|---|---|---|
 | SIMAT: RAMA (NO, NO₂, NOₓ) y REDMET (viento) | 2019, 2020, 2023, 2024 | Horaria; 24 estaciones con NOₓ en el dominio | CSV comprimido; catálogos en CSV | Datos abiertos de la CDMX (SEDEMA) |
-| NASA TEMPO NO₂ L2 V04 | Nov 2023 a may 2024, tardes | Píxel de ~2 × 4.5 km; 12–16 escaneos por día | NetCDF | NASA ASDC; requiere cuenta Earthdata gratuita |
+| NASA TEMPO NO₂ L2 V04 | Nov 2023 a may 2024, tardes | Píxel de ~2 × 4.5 km; ~1 escaneo por hora (12–17 h) | NetCDF | NASA ASDC; requiere cuenta Earthdata gratuita |
 | METAR (MMMX, MMSM) | 2019–2020 y 2023–2024 | Horaria, en el aeropuerto | CSV | IEM ASOS, Iowa State University |
 | ERA5 vía Open-Meteo | 2019–2020 y 2023–2024 | Horaria, celda de la CDMX | JSON | API pública, licencia CC BY 4.0 |
 | MERRA-2 (altura de capa límite) | Ene 2023 a jun 2024 | Horaria, 3 × 3 celdas | NetCDF4 | NASA GES DISC; requiere cuenta Earthdata |
@@ -183,6 +183,7 @@ Tabla 6. Fuentes de datos: periodo, resolución, formato y acceso.
 | Climate TRACE (centrales eléctricas) | 2021–2026 | Mensual, por instalación | ZIP y CSV | Climate TRACE; licencia CC BY 4.0 |
 | DENUE (INEGI) | Corte de mayo de 2026 | Por establecimiento | CSV comprimido | INEGI, términos de libre uso |
 | Contingencias 2024 | 2024 | Fechas (23 días) | CSV | Compilado por el equipo desde la prensa; pendiente de contrastar con la CAMe |
+| EPA AQS y HRRR (Los Ángeles); RMCAB (Bogotá) | 2023 | Horaria | CSV y GRIB | **Solo investigación:** se usaron en la fase de investigación y todavía no están en el repositorio |
 
 Los resultados preliminares de la fase de investigación, obtenidos antes de la evaluación formal en el periodo de prueba, muestran la viabilidad del método (Tabla 7).
 
@@ -194,12 +195,12 @@ Tabla 7. Resultados preliminares de la fase de investigación (no son resultados
 | Error LOO: baseline, IDW e híbrido | 13.6, 11.6 y 11.7 ppb | IDW es el piso de concentración |
 | Domingo/hábil, inversión completa | 0.42 (IC 90 %: 0.35–0.54) | Tráfico contado: 0.65–0.73; la inversión exagera la baja |
 | Domingo/hábil, estimador normalizado | 0.65 (IC 90 %: 0.55–0.75) | Coherente con el tráfico contado |
-| Placebo de días al azar | Entre ±10 % y ±20 % | Criterio de elegibilidad: 1 ± 0.15 |
-| Confinamiento de 2020 | Baja de 41–42 % con la configuración estándar | Esperado: baja de 40–60 % |
-| Contingencias 2024 (23 días) | Sin baja de emisión de NOₓ ni de CO | Pendiente de contrastar las fechas con la CAMe |
+| Placebo de días al azar (baseline) | Centro 1.08 y semiancho 0.35 (1.08 ± 0.35) | Elegibilidad: el centro en 1 ± 0.15; el semiancho es el cambio mínimo detectable |
+| Confinamiento de 2020 | Baja de 41–42 % (−41/−42 %) con la configuración estándar | Esperado: baja de 40–60 % |
+| Contingencias 2024 (23 días) | Reservadas para el periodo de prueba (feb–may 2024); no se reportan resultados | Pendiente de contrastar las fechas con la CAMe |
 | Total absoluto | No confiable: entre 40 % y 100 % del inventario según la configuración | Por eso se reportan cocientes |
 
-Las limitaciones conocidas son que la inversión no da fuentes industriales individuales (su señal es unas 100 veces menor que la vial de su región), que el viento es el error dominante, y que los cambios menores a 10–20 % no se distinguen. En la práctica, el método detecta cambios relativos grandes (≥ 20 %) de la emisión vial por zona entre grupos de días.
+Las limitaciones conocidas son que la inversión no da fuentes industriales individuales (su señal es unas 100 veces menor que la vial de su región), que el viento es el error dominante, y que, con un semiancho del placebo de 0.35, los cambios menores a unos 35 % no se distinguen. En la práctica, el método detecta cambios relativos grandes (≥ 35 %) de la emisión vial por zona entre grupos de días.
 
 ## 3.2 Técnica de aprendizaje automático
 
@@ -215,7 +216,7 @@ Tabla 8. Comparación de las técnicas consideradas.
 
 | Técnica | Emisión que estima | Ventajas | Limitaciones |
 |---|---|---|---|
-| Inversión bayesiana lineal con pluma estacionaria (baseline) | Absoluta por zona y tipo de día | Solución cerrada, rápida (~30 s por ajuste), con incertidumbre e interpretable | Transporte estacionario; exagera la baja dominical |
+| Inversión bayesiana lineal con pluma estacionaria (baseline) | Absoluta por zona y tipo de día | Solución cerrada, rápida (~12–14 s por ajuste), con incertidumbre e interpretable | Transporte estacionario; exagera la baja dominical |
 | Inversión con puffs y vida química por OH | Absoluta | Sigue la emisión hora por hora; mejora el ajuste regional (TEMPO r = 0.83 en la investigación) | Más costosa de calcular que la pluma estacionaria |
 | Mínimos cuadrados regularizados (ridge y no negativos) | Absoluta | Sin supuesto bayesiano; simple | Sin incertidumbre propia; la penalización fija el resultado |
 | Inversión log-normal (máximo a posteriori) | Absoluta, siempre positiva | Evita emisiones negativas | Solución no lineal y aproximación de Laplace para la incertidumbre |
