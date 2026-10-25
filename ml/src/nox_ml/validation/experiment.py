@@ -37,7 +37,8 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 from nox_ml.data.inputs import Inputs, load_inputs
-from nox_ml.inversion.linear import HOLIDAYS, HourSystem, hour_systems
+from nox_ml.inversion.jacobian import plume_transport
+from nox_ml.inversion.linear import HOLIDAYS, SIGMA_THETA, U_MIN, HourSystem, hour_systems
 from nox_ml.inversion.normalized import SUNDAY_HOLIDAY, WEEKDAY, day_type, interval
 from nox_ml.models import REGISTRY, EmissionEstimate, Model
 from nox_ml.time import local_day
@@ -255,7 +256,13 @@ def evaluate(inputs: Inputs, config: ExperimentConfig) -> Evaluation:
         estimate = model.estimate_emissions().validate()
         metrics["day_types"] = day_types_block(inputs, estimate)
         systems = hour_systems(
-            inputs.hours, inputs.zones, inputs.points, inputs.no2_nox_ratio, inputs.n_regions, HOLIDAYS
+            inputs.hours,
+            inputs.zones,
+            inputs.points,
+            inputs.no2_nox_ratio,
+            inputs.n_regions,
+            HOLIDAYS,
+            jacobians=inputs.jacobians(*plume_transport(SIGMA_THETA, U_MIN)),
         )
         metrics["normalized"] = normalized_estimator(inputs, systems, config.placebo)
         placebo = model_placebo(inputs, make_model, config.placebo)

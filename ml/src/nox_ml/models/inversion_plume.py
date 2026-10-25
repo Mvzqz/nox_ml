@@ -8,7 +8,6 @@ for ratios between day types comes from a bootstrap over whole days that solves 
 """
 
 from collections.abc import Sequence
-from functools import partial
 from typing import ClassVar, Literal, Self
 
 import numpy as np
@@ -16,7 +15,7 @@ import pandas as pd
 from pydantic import Field
 
 from nox_ml.data.inputs import Inputs
-from nox_ml.inversion.jacobian import HourJacobianFn, Receptors, jacobian_hour_plume
+from nox_ml.inversion.jacobian import HourJacobianFn, plume_transport
 from nox_ml.inversion.linear import (
     BACKGROUND_STATION,
     DAY_TYPE_NAMES,
@@ -26,15 +25,12 @@ from nox_ml.inversion.linear import (
     Posterior,
     background_mean,
     hour_systems,
-    road_sources,
     solve,
 )
 from nox_ml.inversion.normalized import SATURDAY, SUNDAY_HOLIDAY, WEEKDAY, day_type, interval
 from nox_ml.models.base import PREDICTION_COLUMNS, EmissionEstimate, ModelParams
 from nox_ml.time import local_day
 from nox_ml.validation import loo
-
-NO_PIXELS = Receptors(np.zeros(0), np.zeros(0))
 
 
 class PlumeInversionParams(ModelParams):
@@ -103,23 +99,30 @@ class InversionPlume:
         model the inversion assumes, which the contract tests also use to simulate data."""
         p = self.params
         assert isinstance(p, InversionPlumeParams)
-        return partial(jacobian_hour_plume, sigma_theta=np.deg2rad(p.sigma_theta_deg), u_min=p.u_min_ms)
+        return plume_transport(np.deg2rad(p.sigma_theta_deg), p.u_min_ms)[1]
+
+    def transport_key(self) -> tuple:
+        """What identifies the transport in the Jacobian cache (`Inputs.jacobians`): the kernel and every
+        param it is evaluated with. Models with another kernel put its identity first."""
+        p = self.params
+        assert isinstance(p, InversionPlumeParams)
+        return plume_transport(np.deg2rad(p.sigma_theta_deg), p.u_min_ms)[0]
 
     @property
     def n_params(self) -> int:
         return len(self._state[2].mean)
 
     def fit(self, data: Inputs, *, exclude_stations: Sequence[str] = ()) -> Self:
-        hours = data.without_stations(exclude_stations)
+        key, transport = self.transport_key(), self.transport()
         systems = hour_systems(
-            hours,
+            data.without_stations(exclude_stations),
             data.zones,
             data.points,
             data.no2_nox_ratio,
             data.n_regions,
             HOLIDAYS,
             day_kinds=data.day_kinds,
-            jacobian=self.transport(),
+            jacobians=data.jacobians_without_stations(exclude_stations, key, transport),
         )
         post = solve(systems, data.points, data.n_regions)
         self._fitted = (data, systems, post, frozenset(exclude_stations))
@@ -129,16 +132,16 @@ class InversionPlume:
         """Jacobian with the fitted sources plus the background of each hour, estimated from the rows of the
         stations the model was fitted with (never the excluded ones)."""
         _, _, post, excluded = self._state
-        transport = self.transport()
-        sources = road_sources(data.zones, data.points, data.n_regions)
+        jacobians = data.jacobians(self.transport_key(), self.transport())
         days = pd.DatetimeIndex([local_day(h.hour) for h in data.hours])
         kinds = day_type(days, HOLIDAYS)
         rows = []
-        for hour, ids, day, kind in zip(data.hours, data.station_ids, days, kinds, strict=True):
+        for hour, jac, ids, day, kind in zip(
+            data.hours, jacobians, data.station_ids, days, kinds, strict=True
+        ):
             wanted = np.isin(ids, list(stations))
             if not wanted.any():
                 continue
-            jac = transport(hour.wind, hour.pbl, sources, hour.stations, NO_PIXELS, data.no2_nox_ratio)
             base = jac.stations @ post.state((data.day_kinds or {}).get(day, int(kind)))
             seen = ~np.isin(ids, list(excluded))
             background = background_mean((hour.nox - base)[seen], SIGMA_STATION, BACKGROUND_STATION)
