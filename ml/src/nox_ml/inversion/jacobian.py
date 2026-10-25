@@ -14,7 +14,7 @@ afternoon).
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from functools import cache
+from functools import cache, partial
 
 import numpy as np
 import pandas as pd
@@ -92,6 +92,11 @@ class HourJacobian:
 
     stations: Array  # ppb
     pixels: Array  # molecules/cm2
+
+    def without_stations(self, keep: NDArray[np.bool_]) -> "HourJacobian":
+        """Only the station rows where `keep` is true: each row depends on its own receptor alone, so this is
+        the matrix that would be built without the other stations."""
+        return HourJacobian(self.stations[keep], self.pixels)
 
 
 def standard_transport(wind: pd.DataFrame, loss_rate: pd.Series, road_profile: HourProfile) -> Transport:
@@ -243,3 +248,8 @@ def jacobian_hour_plume(
         return plume(xs, ys, xr, yr, u, v, pbl_h, extra_sy, sigma_theta=sigma_theta, u_min=u_min)
 
     return jacobian_hour_steady(response, sources, stations, pixels, no2_nox_ratio)
+
+
+def plume_transport(sigma_theta: float, u_min: float) -> tuple[tuple, HourJacobianFn]:
+    """The stationary plume as a transport: its Jacobian-cache key (kernel and params) and the function."""
+    return ("plume", sigma_theta, u_min), partial(jacobian_hour_plume, sigma_theta=sigma_theta, u_min=u_min)

@@ -34,6 +34,12 @@ class PinnPlume(InversionPlume):
         assert isinstance(p, PinnParams)
         return partial(jacobian_hour_pinn, table=self._kernel().table, tau_h=p.tau_h, u_min=p.u_min)
 
+    def transport_key(self) -> tuple:
+        """The kernel (by its training hash) and the params it is evaluated with: never the plume's key."""
+        p = self.params
+        assert isinstance(p, PinnParams)
+        return ("pinn", p.training_key(), p.tau_h, p.u_min)
+
     @property
     def n_params(self) -> int:
         """Unknowns of the inversion plus the weights of the network."""
