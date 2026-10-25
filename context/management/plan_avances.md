@@ -38,7 +38,9 @@ Se piden al menos 6 modelos individuales con **algoritmos distintos**. **Todos e
 | E2 | `inversion_puff` | Inversión bayesiana lineal + puffs y vida química por OH | Absoluta | duración del puff, vida química, σθ, viento mínimo, peso de TEMPO | A |
 | E3 | `regularized_ls` | Mínimos cuadrados regularizados y no negativos (ridge/NNLS) sobre la tabla física, sin supuesto bayesiano | Absoluta | α de regularización, tipo de penalización | B |
 | E4 | `lognormal_map` | Inversión no lineal: emisiones log-normales (siempre positivas), máximo a posteriori con L-BFGS-B e incertidumbre por aproximación de Laplace | Absoluta | σ log del supuesto inicial, tolerancia, iteraciones | B |
-| E5 | `pinn` | Red neuronal informada por la física | Absoluta | capas, ancho, tasa de aprendizaje, peso de la física, pasos | C |
+| E5a | `pinn_plume` | PINN (núcleo de pluma aprendido) + inversión bayesiana | Absoluta | capas, ancho, tasa de aprendizaje, peso de la física, pasos | C (hecho) |
+| E5b | `pinn_puff` | PINN aplicada a cada tramo de puff + inversión bayesiana | Absoluta | los de E5a + duración del puff, vida química | C |
+| E5c | `pinn_joint` | PINN entrenada con física y estaciones a la vez | Absoluta | los de E5a + peso de los datos | C |
 | E6 | `rf_deweather` | Normalización meteorológica con bosque aleatorio (aprende concentración ~ meteorología + calendario; la emisión es lo que queda al fijar la meteorología) | Relativa (índice por tipo de día y zona) | número de árboles, profundidad, variables meteorológicas | C |
 | E7 | `normalized_ratio` | Estimador normalizado con el modelo de transporte (observado ÷ esperado con emisión fija) | Relativa | modelo de transporte, ventana horaria, bootstrap | B |
 | R1, R2 | `idw`, `kriging` | Interpolación (referencias) | — | potencia o kernel | B |
