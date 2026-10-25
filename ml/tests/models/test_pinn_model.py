@@ -243,3 +243,18 @@ def test_pinn_and_plume_jacobians_never_share_a_cache_entry(make_inputs):
     pinn.fit(inputs)
 
     assert len(inputs.jacobian_cache) == 2
+
+
+def test_the_diffusivity_changes_the_transport_key_and_the_default_keeps_it():
+    default = PinnParams()
+
+    assert PinnPlume().transport_key() == ("pinn", default.training_key(), 12.0, 1.0)
+    assert PinnPlume(PinnParams(kappa=1500.0)).transport_key() == PinnPlume().transport_key()
+    assert PinnPlume(PinnParams(kappa=3000.0)).transport_key() != PinnPlume().transport_key()
+
+
+def test_an_explicit_default_diffusivity_is_the_bundled_network_and_gives_its_table():
+    explicit = obtain_kernel(PinnParams(kappa=1500.0))
+
+    assert explicit is obtain_kernel(PinnParams())
+    np.testing.assert_array_equal(explicit.table.values, reference_kernel().table.values)

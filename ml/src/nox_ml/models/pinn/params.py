@@ -20,7 +20,8 @@ TRAINING_FIELDS = {
     "adam_steps",
     "lbfgs_rounds",
     "seed",
-}
+}  # plus `kappa`, which enters the key as the equation constant it replaces
+
 EQUATION_CONSTANTS = ("L_M", "KAPPA_M", "SOURCE_SIGMA", "A_RANGE", "C_MAX", "GAMMA_RANGE")
 
 
@@ -43,6 +44,14 @@ class PinnParams(PlumeInversionParams):
     lbfgs_rounds: Annotated[
         int, Field(ge=0, description="L-BFGS rounds (60 iterations each) on renewed fixed points.")
     ] = 15
+    kappa: Annotated[
+        float,
+        Field(
+            gt=0,
+            description="Turbulent diffusivity over wind speed (m): K = kappa |u|. It enters the equation as "
+            "eps = kappa / L, so each value needs its own network (the default is the bundled one).",
+        ),
+    ] = equation.KAPPA_M
     seed: int = 0  # the research seed of the network (the contract default, 7, would retrain it)
     tau_h: Annotated[
         float, Field(gt=0, description="Lifetime of NOx (h). 12 h is almost no loss within the domain.")
@@ -57,6 +66,7 @@ class PinnParams(PlumeInversionParams):
         """Hash of what determines the trained network: the name of its cache entry. It includes the equation
         constants, so a change to the physics does not reuse an old network."""
         physics = {name: getattr(equation, name) for name in EQUATION_CONSTANTS}
+        physics["KAPPA_M"] = self.kappa  # the default gives the key of the bundled network
         text = json.dumps(
             {"params": self.model_dump(include=TRAINING_FIELDS), "physics": physics}, sort_keys=True
         )

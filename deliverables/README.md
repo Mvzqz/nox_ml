@@ -1,6 +1,6 @@
 # Deliverables
 
-Progress notebooks for the advisor and published documents, written in Spanish. Notebooks **only reuse functions** from `nox_ml` (no logic of their own; tables and figures live in `nox_ml.report`), are stored without outputs (nbstripout), and CI checks that they execute.
+Progress notebooks for the advisor and published documents, written in Spanish. Notebooks **only reuse functions** from `nox_ml` (no logic of their own; tables and figures live in `nox_ml.validation.report_baseline`), are stored without outputs (nbstripout), and CI checks that they execute.
 
 Naming: `Avance<N>.39.ipynb` for the progress reports (see `context/management/plan_avances.md`), `YYYY-MM-DD_topic.ipynb` for the rest.
 
