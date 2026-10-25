@@ -41,6 +41,15 @@ uv run nox-ml run configs/experiments/pinn_plume.yaml
 
 Hyperparameters (`layers`, `width`, `learning_rate`, `physics_weight`, `adam_steps`, `lbfgs_rounds`, `seed`, `tau_h`, `u_min`, bootstrap) are the fields of `nox_ml.models.pinn.params.PinnParams`; `tau_h` and `u_min` do not retrain.
 
+## The PINN puffs
+
+`configs/experiments/pinn_puff.yaml` is `pinn_plume.yaml` with `model: {name: pinn_puff}` (ADR 0005): the kernel of the network is applied to the plume of the last hour and to the puffs of the previous `max_age_h` hours (24 by default). It uses the same bundled network, so it does not train. Building its matrices takes about 11 minutes on one core, once per run:
+
+```sh
+uv run nox-ml run configs/experiments/pinn_puff.yaml
+uv run nox-ml compare runs/*
+```
+
 ## Comparing an improvement with the baseline
 
 1. Copy `baseline.yaml`, change `name` and the field of the improvement, run it.

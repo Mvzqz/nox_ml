@@ -9,6 +9,7 @@ from pydantic import Field
 from nox_ml.inversion.linear import U_MIN
 from nox_ml.models.inversion_plume import PlumeInversionParams
 from nox_ml.models.pinn import equation
+from nox_ml.physics.puff import MAX_AGE_H
 
 # The fields that decide the trained network; the others only matter when it is evaluated.
 TRAINING_FIELDS = {
@@ -60,3 +61,12 @@ class PinnParams(PlumeInversionParams):
             {"params": self.model_dump(include=TRAINING_FIELDS), "physics": physics}, sort_keys=True
         )
         return hashlib.sha256(text.encode()).hexdigest()[:16]
+
+
+class PinnPuffParams(PinnParams):
+    """The PINN plume's hyperparameters plus the memory of the puffs. The network is the same (`max_age_h`
+    does not enter the training key), so `pinn_puff` and `pinn_plume` share the bundled kernel."""
+
+    max_age_h: Annotated[
+        int, Field(ge=0, description="Hours a puff is followed (0: only the plume of the last hour).")
+    ] = MAX_AGE_H

@@ -15,13 +15,14 @@ import pandas as pd
 from pydantic import Field
 
 from nox_ml.data.inputs import Inputs
-from nox_ml.inversion.jacobian import HourJacobianFn, plume_transport
+from nox_ml.inversion.jacobian import plume_transport
 from nox_ml.inversion.linear import (
     BACKGROUND_STATION,
     DAY_TYPE_NAMES,
     HOLIDAYS,
     SIGMA_STATION,
     HourSystem,
+    HourTransport,
     Posterior,
     background_mean,
     hour_systems,
@@ -94,9 +95,10 @@ class InversionPlume:
             raise RuntimeError("fit the model first")
         return self._fitted
 
-    def transport(self) -> HourJacobianFn:
-        """The source-receptor matrix of one hour (`nox_ml.inversion.jacobian.HourJacobianFn`): the forward
-        model the inversion assumes, which the contract tests also use to simulate data."""
+    def transport(self) -> HourTransport:
+        """The source-receptor matrix of one hour (`HourJacobianFn`, or a `HistoryTransport` when it depends
+        on earlier hours): the forward model the inversion assumes, which the contract tests also use to
+        simulate data."""
         p = self.params
         assert isinstance(p, InversionPlumeParams)
         return plume_transport(np.deg2rad(p.sigma_theta_deg), p.u_min_ms)[1]
