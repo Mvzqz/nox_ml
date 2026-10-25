@@ -9,6 +9,7 @@ from dataclasses import dataclass, replace
 import numpy as np
 
 from nox_ml.data.inputs import Inputs
+from nox_ml.inversion.jacobian import HourJacobianFn
 from nox_ml.inversion.linear import BACKGROUND_PIXEL, BACKGROUND_STATION, HOLIDAYS, hour_systems
 
 TRUTH = {"weekday": 1.3, "saturday": 1.0, "sunday_holiday": 0.6}  # road factor of every region, by day type
@@ -27,12 +28,19 @@ class Synthetic:
 
 
 def synthetic_dataset(
-    base: Inputs, seed: int = 1, noise_ppb: float = 0.5, strength: float = 20.0
+    base: Inputs,
+    seed: int = 1,
+    noise_ppb: float = 0.5,
+    strength: float = 20.0,
+    jacobian: HourJacobianFn | None = None,
 ) -> Synthetic:
-    """`strength` scales the road prior so the stations respond enough to identify the factors."""
+    """`strength` scales the road prior so the stations respond enough to identify the factors. `jacobian` is
+    the forward model that generates the observations (default: the stationary plume)."""
     rng = np.random.default_rng(seed)
     base = replace(base, zones=base.zones.assign(weight=base.zones["weight"] * strength))
-    systems = hour_systems(base.hours, base.zones, base.points, base.no2_nox_ratio, base.n_regions, HOLIDAYS)
+    systems = hour_systems(
+        base.hours, base.zones, base.points, base.no2_nox_ratio, base.n_regions, HOLIDAYS, jacobian=jacobian
+    )
     factors = list(TRUTH.values())
     hours = []
     for hour, system in zip(base.hours, systems, strict=True):

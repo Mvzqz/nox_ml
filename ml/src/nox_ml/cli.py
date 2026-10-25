@@ -152,5 +152,33 @@ def tune(
     typer.echo(f"Trials and the refit of the best in {out}/")
 
 
+@app.command("train-pinn")
+def train_pinn(
+    config: Annotated[Path, typer.Argument(help="Experiment YAML with model: {name: pinn_plume}.")],
+) -> None:
+    """Train (or find in the cache) the PINN kernel of an experiment and print its validation against the
+    exact solution. Needs the ``pinn`` extra. Takes a few minutes the first time; the default network is
+    bundled and needs no training."""
+    from nox_ml.models.pinn.cache import obtain_kernel
+    from nox_ml.models.pinn.params import PinnParams
+
+    try:
+        cfg = experiment.read_config(config)
+    except ValidationError as error:
+        typer.echo(f"Invalid config {config}:\n{error}", err=True)
+        raise typer.Exit(2) from error
+    if cfg.model.name != "pinn_plume":
+        typer.echo(f"{config} runs model {cfg.model.name!r}, not 'pinn_plume'.", err=True)
+        raise typer.Exit(2)
+    params = PinnParams.model_validate(cfg.model.params)
+    directory = Path(params.kernel_dir) if params.kernel_dir else None
+    kernel = obtain_kernel(params, directory, progress=typer.echo)
+    typer.echo(f"Kernel {params.training_key()} (trained in {kernel.seconds:.0f} s)")
+    typer.echo("gamma  median_rel_error  p90_rel_error  mass_error")
+    for gamma, row in kernel.validation.items():
+        errors = (row["median_rel_error"], row["p90_rel_error"], row["mass_error"])
+        typer.echo(f"{gamma:>5}  {errors[0]:>16.1%}  {errors[1]:>13.1%}  {errors[2]:>+10.1%}")
+
+
 if __name__ == "__main__":
     app()
