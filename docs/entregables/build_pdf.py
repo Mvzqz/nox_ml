@@ -48,6 +48,7 @@ p { margin: 0 0 0.6em; orphans: 3; widows: 3; }
 ul, ol { margin: 0 0 0.6em 0; padding-left: 1.4em; }
 li { margin-bottom: 0.2em; }
 a { color: inherit; text-decoration: none; }
+sub, sup { font-size: 0.7em; line-height: 0; }
 code { font-family: 'DejaVu Sans Mono', monospace; font-size: 9pt; }
 table { border-collapse: collapse; width: 100%; margin: 0 0 1em; font-size: 9.5pt;
   text-align: left; hyphens: manual; }
@@ -78,6 +79,19 @@ figure img { max-width: 100%; }
 .toc a::after { content: leader('.') target-counter(attr(href), page); font-weight: normal; }
 .refs p { padding-left: 1.5em; text-indent: -1.5em; text-align: left; }
 """
+
+
+SUB = {**{chr(0x2080 + i): str(i) for i in range(10)}, "\u2093": "x"}
+SUP = {"\u00b2": "2", "\u00b3": "3", "\u00b9": "1"}
+
+
+def scripts(text: str) -> str:
+    """Turn Unicode sub/superscripts into <sub>/<sup> (the serif font lacks them)."""
+    for k, v in SUB.items():
+        text = text.replace(k, f"<sub>{v}</sub>")
+    for k, v in SUP.items():
+        text = text.replace(k, f"<sup>{v}</sup>")
+    return text.replace("</sub><sub>", "").replace("</sup><sup>", "")
 
 
 def parse(src: str) -> tuple[dict[str, str], str]:
@@ -154,7 +168,7 @@ def build(name: str) -> None:
     doc = (
         f'<!doctype html><html lang="es"><head><meta charset="utf-8">'
         f"<title>{html.escape(meta['title'])}</title><style>{CSS}</style></head><body>"
-        f"{cover(meta)}{toc}{content}</body></html>"
+        f"{scripts(cover(meta))}{scripts(toc)}{scripts(content)}</body></html>"
     )
     out_html = HERE / f"{name}.html"
     out_html.write_text(doc, encoding="utf-8")
