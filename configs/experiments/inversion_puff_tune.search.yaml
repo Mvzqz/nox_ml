@@ -1,0 +1,13 @@
+# Tuning of E2 (inversion_puff) on nov-dec 2023 (`nox-ml tune`). The name is inversion_puff_tune on purpose: the
+# refit of the best trial goes to runs/inversion_puff_tune/ and does not overwrite runs/inversion_puff/.
+# Grid of 16 trials: the puff age and the lifetime change the transport (one Jacobian set each); the TEMPO weight
+# and the traffic constraint do not (they are read from the same cache).
+config: inversion_puff.yaml
+model: inversion_puff
+search: grid
+seed: 7
+space:
+  max_age_h: [12, 24]
+  lifetime: [oh, fixed]
+  tempo_sigma_mult: [1, 3]
+  traffic_constraint: [false, true]

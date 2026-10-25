@@ -1,0 +1,13 @@
+# E2, inversion_puff: the baseline inversion with the puff transport (nox_ml.models.inversion_puff): the plume of
+# the last hour plus the puffs of the previous 24 h, their NOx lost by the OH-based loss rate of the inputs.
+# Same data, priors and metrics as baseline.yaml; only the transport changes.
+# Run: uv run nox-ml run configs/experiments/inversion_puff.yaml  ->  runs/inversion_puff/
+name: inversion_puff
+period:
+  start: 2023-11-01
+  end: 2023-12-31
+simat_hours: [12, 17]
+model:
+  name: inversion_puff
+  params: {max_age_h: 24, lifetime: oh, bootstrap_n: 200, bootstrap_level: 0.90, seed: 7}
+placebo: {n: 2000, seed: 3, level: 0.90, refits: 8}
