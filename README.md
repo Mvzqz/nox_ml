@@ -16,7 +16,7 @@ Details in [`docs/installation.md`](docs/installation.md).
 
 | Folder | Contents |
 |---|---|
-| `ml/` | `nox_ml` package: data, physics, inversion, validation and the `nox-ml` CLI |
+| `ml/` | `nox_ml` package: data, physics, inversion, models, validation and the `nox-ml` CLI |
 | `app/` | `nox_app` package: user interface (Streamlit). Reads exported results only |
 | `tests/` | End-to-end tests (ML → exported results → app). Unit tests live in each package |
 | `configs/` | Per-city and per-experiment configuration |

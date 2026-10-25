@@ -28,6 +28,19 @@ It writes `runs/<name>/` (not versioned in git):
 
 The method is the `model: {name, params}` field (`nox_ml.models.REGISTRY`; see `docs/models.md`). `nox-ml compare runs/*` puts runs side by side and `nox-ml tune <search.yaml>` searches params on nov-dec 2023 (`docs/models.md`, section 7; the search file also names the experiment config with `config:`).
 
+## The PINN plume
+
+`configs/experiments/pinn_plume.yaml` is the baseline with `model: {name: pinn_plume}` (ADR 0004): the same inversion, data, priors and metrics, with the source-receptor matrix given by a physics-informed network instead of the Gaussian plume. It needs the `pinn` extra (`bin/uptodate` installs it); without torch the model is not registered.
+
+The network of the default parameters is bundled, so the run does not train. Other parameters train one the first time (about 3 minutes on 4 cores) and keep it in `kernel_dir` for the next run:
+
+```sh
+uv run nox-ml train-pinn configs/experiments/pinn_plume.yaml   # network + validation against the exact solution
+uv run nox-ml run configs/experiments/pinn_plume.yaml
+```
+
+Hyperparameters (`layers`, `width`, `learning_rate`, `physics_weight`, `adam_steps`, `lbfgs_rounds`, `seed`, `tau_h`, `u_min`, bootstrap) are the fields of `nox_ml.models.pinn.params.PinnParams`; `tau_h` and `u_min` do not retrain.
+
 ## Comparing an improvement with the baseline
 
 1. Copy `baseline.yaml`, change `name` and the field of the improvement, run it.
