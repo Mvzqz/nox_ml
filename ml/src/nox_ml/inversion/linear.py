@@ -180,6 +180,26 @@ class HourSystem:
     gradient: Array
 
 
+def hour_jacobians(
+    hours: Sequence[HourData],
+    zones: pd.DataFrame,
+    points: pd.DataFrame,
+    no2_nox_ratio: float,
+    n_regions: int,
+    sigma_theta: float = SIGMA_THETA,
+    u_min: float = U_MIN,
+) -> list[HourJacobian]:
+    """The Jacobian of every hour, all its receptors. Rows do not depend on one another, so a subset of the
+    rows is the Jacobian of the subset of receptors (`HourJacobian.without_stations`)."""
+    sources = road_sources(zones, points, n_regions)
+    return [
+        jacobian_hour_plume(
+            data.wind, data.pbl, sources, data.stations, data.pixels, no2_nox_ratio, sigma_theta, u_min
+        )
+        for data in hours
+    ]
+
+
 def hour_systems(
     hours: Sequence[HourData],
     zones: pd.DataFrame,
@@ -190,21 +210,21 @@ def hour_systems(
     sigma_theta: float = SIGMA_THETA,
     u_min: float = U_MIN,
     day_kinds: Mapping[pd.Timestamp, int] | None = None,
+    jacobians: Sequence[HourJacobian] | None = None,
 ) -> list[HourSystem]:
     """The `HourSystem` of every hour. The Jacobians dominate the cost of an inversion; the systems can be
     solved again with other weights by `solve`. `sigma_theta` (rad) and `u_min` (m/s) are the plume
-    parameters; `day_kinds` maps local days to a day type, overriding the calendar (placebos)."""
-    sources = road_sources(zones, points, n_regions)
+    parameters; `day_kinds` maps local days to a day type, overriding the calendar (placebos). `jacobians`
+    are the ones of `hours` already computed with those parameters (row for row), to skip building them."""
     n_points = len(points)
     days = pd.DatetimeIndex([local_day(h.hour) for h in hours])
     kinds = day_type(days, holidays)
     if day_kinds:
         kinds = np.array([day_kinds.get(d, k) for d, k in zip(days, kinds, strict=True)])
+    if jacobians is None:
+        jacobians = hour_jacobians(hours, zones, points, no2_nox_ratio, n_regions, sigma_theta, u_min)
     systems = []
-    for data, day, kind in zip(hours, days, kinds, strict=True):
-        jac = jacobian_hour_plume(
-            data.wind, data.pbl, sources, data.stations, data.pixels, no2_nox_ratio, SIGMA_THETA, U_MIN
-        )
+    for data, jac, day, kind in zip(hours, jacobians, days, kinds, strict=True):
         # the columns of the road regions go to the ones of this day type
         columns = np.r_[np.arange(n_points), n_points + n_regions * kind + np.arange(n_regions)]
         info = np.zeros((len(columns), len(columns)))

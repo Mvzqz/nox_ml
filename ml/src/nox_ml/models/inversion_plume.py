@@ -15,7 +15,6 @@ import pandas as pd
 from pydantic import Field
 
 from nox_ml.data.inputs import Inputs
-from nox_ml.inversion.jacobian import Receptors, jacobian_hour_plume
 from nox_ml.inversion.linear import (
     BACKGROUND_STATION,
     DAY_TYPE_NAMES,
@@ -25,15 +24,12 @@ from nox_ml.inversion.linear import (
     Posterior,
     background_mean,
     hour_systems,
-    road_sources,
     solve,
 )
 from nox_ml.inversion.normalized import SATURDAY, SUNDAY_HOLIDAY, WEEKDAY, day_type, interval
 from nox_ml.models.base import PREDICTION_COLUMNS, EmissionEstimate, ModelParams
 from nox_ml.time import local_day
 from nox_ml.validation import loo
-
-NO_PIXELS = Receptors(np.zeros(0), np.zeros(0))
 
 
 class InversionPlumeParams(ModelParams):
@@ -79,17 +75,18 @@ class InversionPlume:
 
     def fit(self, data: Inputs, *, exclude_stations: Sequence[str] = ()) -> Self:
         p = self.params
-        hours = data.without_stations(exclude_stations)
+        sigma_theta = np.deg2rad(p.sigma_theta_deg)
         systems = hour_systems(
-            hours,
+            data.without_stations(exclude_stations),
             data.zones,
             data.points,
             data.no2_nox_ratio,
             data.n_regions,
             HOLIDAYS,
-            np.deg2rad(p.sigma_theta_deg),
+            sigma_theta,
             p.u_min_ms,
             data.day_kinds,
+            data.jacobians_without_stations(exclude_stations, sigma_theta, p.u_min_ms),
         )
         post = solve(systems, data.points, data.n_regions)
         self._fitted = (data, systems, post, frozenset(exclude_stations))
@@ -100,24 +97,16 @@ class InversionPlume:
         stations the model was fitted with (never the excluded ones)."""
         p = self.params
         _, _, post, excluded = self._state
-        sources = road_sources(data.zones, data.points, data.n_regions)
+        jacobians = data.jacobians(np.deg2rad(p.sigma_theta_deg), p.u_min_ms)
         days = pd.DatetimeIndex([local_day(h.hour) for h in data.hours])
         kinds = day_type(days, HOLIDAYS)
         rows = []
-        for hour, ids, day, kind in zip(data.hours, data.station_ids, days, kinds, strict=True):
+        for hour, jac, ids, day, kind in zip(
+            data.hours, jacobians, data.station_ids, days, kinds, strict=True
+        ):
             wanted = np.isin(ids, list(stations))
             if not wanted.any():
                 continue
-            jac = jacobian_hour_plume(
-                hour.wind,
-                hour.pbl,
-                sources,
-                hour.stations,
-                NO_PIXELS,
-                data.no2_nox_ratio,
-                np.deg2rad(p.sigma_theta_deg),
-                p.u_min_ms,
-            )
             base = jac.stations @ post.state((data.day_kinds or {}).get(day, int(kind)))
             seen = ~np.isin(ids, list(excluded))
             background = background_mean((hour.nox - base)[seen], SIGMA_STATION, BACKGROUND_STATION)
