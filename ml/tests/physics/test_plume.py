@@ -3,7 +3,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 from numpy.testing import assert_allclose
 
-from nox_ml.physics.plume import U_MIN, X_MAX, plume, speed
+from nox_ml.physics.plume import U_MIN, X_MAX, effective_height, plume, speed
 
 coords = st.floats(-20e3, 20e3)
 wind_component = st.floats(-10, 10)
@@ -136,3 +136,18 @@ def test_plume_reproduces_the_research_reference_value():
     g, col = plume(_points([0.0]), _points([0.0]), _points([5_000.0]), _points([0.0]), 3.0, 0.0, 1_000.0)
     assert_allclose(g[0, 0], 4.79004711e-08, rtol=1e-7)
     assert_allclose(col[0, 0], 4.79004711e-05, rtol=1e-7)
+
+
+@given(along=st.floats(-5e3, 60e3), pbl=st.floats(100, 3000))
+def test_the_effective_height_is_limited_by_the_boundary_layer_and_never_zero(along, pbl):
+    height = effective_height(along, pbl)
+
+    assert 0 < height <= pbl
+
+
+def test_the_effective_height_grows_with_distance_until_the_boundary_layer_caps_it():
+    near, mid, far = (effective_height(x, 5000.0) for x in (100.0, 1000.0, 10_000.0))
+
+    assert near == effective_height(300.0, 5000.0)  # dispersion is evaluated at no less than 300 m
+    assert near < mid < far
+    assert effective_height(40_000.0, 800.0) == 800.0

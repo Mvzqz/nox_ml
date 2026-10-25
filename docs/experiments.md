@@ -13,6 +13,8 @@ It writes `runs/<name>/` (not versioned in git):
 | `config.yaml` | The config as validated, with every default filled in |
 | `metrics.json` | The metrics below |
 | `code_version.json` | `git_hash` of the code and whether the tree had uncommitted changes |
+| `oof.parquet` | Leave-one-station-out predictions (`station`, `utc`, `nox_ppb_pred`), each from a model that never saw that station |
+| `emissions.parquet` | The emission estimate of the model fitted on all stations (models only, not references) |
 
 ## Metrics
 
@@ -21,7 +23,23 @@ It writes `runs/<name>/` (not versioned in git):
 | `in_sample` | Correlation of the fitted model with station NOx (`r_stations`, `rmse_stations`) and TEMPO NO2 (`r_tempo`) |
 | `loo` | Leave-one-station-out RMSE (ppb) of the model, IDW and the hybrid (model + IDW of the residuals), pooled by number of rows. `bias` is the part that repeats at each station and `hourly` the part that changes hour to hour. `hybrid_beats_idw` counts stations. `stations` has the per-station table |
 | `day_types` | Road emission by day type and the Saturday and Sunday over weekday ratios, with a percentile interval from a bootstrap over whole days |
+| `summary` | The flat row `nox-ml compare` reads: `loo_rmse_ppb`, emission metrics, `placebo_center` / `placebo_halfwidth` and the gate `eligible` (center within 1 ± 0.15), `fit_seconds`, `predict_seconds`, `n_params`. Emission fields are null for references |
 | `normalized` | Meteorology-normalized estimator (observed over modeled NOx with the prior emission): `placebo_half_width` is half the central interval of the ratio of fake Sundays among weekdays, the smallest change it could detect |
+
+The method is the `model: {name, params}` field (`nox_ml.models.REGISTRY`; see `docs/models.md`). `nox-ml compare runs/*` puts runs side by side and `nox-ml tune <search.yaml>` searches params on nov-dec 2023 (`docs/models.md`, section 7; the search file also names the experiment config with `config:`).
+
+## The PINN plume
+
+`configs/experiments/pinn_plume.yaml` is the baseline with `model: {name: pinn_plume}` (ADR 0004): the same inversion, data, priors and metrics, with the source-receptor matrix given by a physics-informed network instead of the Gaussian plume. It needs the `pinn` extra (`bin/uptodate` installs it); without torch the model is not registered.
+
+The network of the default parameters is bundled, so the run does not train. Other parameters train one the first time (about 3 minutes on 4 cores) and keep it in `kernel_dir` for the next run:
+
+```sh
+uv run nox-ml train-pinn configs/experiments/pinn_plume.yaml   # network + validation against the exact solution
+uv run nox-ml run configs/experiments/pinn_plume.yaml
+```
+
+Hyperparameters (`layers`, `width`, `learning_rate`, `physics_weight`, `adam_steps`, `lbfgs_rounds`, `seed`, `tau_h`, `u_min`, bootstrap) are the fields of `nox_ml.models.pinn.params.PinnParams`; `tau_h` and `u_min` do not retrain.
 
 ## Comparing an improvement with the baseline
 

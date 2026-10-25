@@ -8,12 +8,14 @@ import pytest
 from typer.testing import CliRunner
 
 from nox_ml import cli
-from nox_ml.inversion.linear import DAY_TYPE_NAMES, hour_systems, solve
+from nox_ml.inversion.linear import DAY_TYPE_NAMES, hour_jacobians, hour_systems, solve
+from nox_ml.models import REGISTRY
 from nox_ml.validation import diagnostics
 from nox_ml.validation.diagnostics import (
     ablation,
     information_by_observation,
     learning_curve,
+    model_systems,
     posterior_sd,
     rotate_wind,
     spatial_subset,
@@ -31,14 +33,17 @@ def config(**changes) -> ExperimentConfig:
     base = {
         "name": "t",
         "period": {"start": "2023-11-06", "end": "2023-11-19"},
-        "bootstrap": {"n": 4},
-        "placebo": {"n": 20},
+        "model": {"name": "inversion_plume", "params": {"bootstrap_n": 4}},
+        "placebo": {"n": 20, "refits": 2},
     }
     return ExperimentConfig.model_validate(base | changes)
 
 
+MAKE_MODEL = config().model.build  # the registered baseline, inversion_plume
+
+
 def systems_of(inputs):
-    return hour_systems(inputs.hours, inputs.zones, inputs.points, inputs.no2_nox_ratio, N_REGIONS)
+    return model_systems(inputs, config().model.build())
 
 
 @pytest.fixture
@@ -241,7 +246,9 @@ def test_the_ablation_changes_what_it_says_it_changes(table):
 
 @pytest.fixture
 def curve(make_inputs):
-    return learning_curve(make_inputs(), day_counts=(5, 9, 14, 61), station_counts=(2, 3, 9), seeds=range(2))
+    return learning_curve(
+        make_inputs(), MAKE_MODEL, day_counts=(5, 9, 14, 61), station_counts=(2, 3, 9), seeds=range(2)
+    )
 
 
 def test_the_learning_curve_runs_full_cases_once_and_counts_beyond_the_data_as_full(curve):
@@ -273,7 +280,9 @@ def test_in_sample_error_is_not_larger_than_the_leave_one_out_error(curve):
 
 
 def test_the_learning_curve_is_reproducible_from_its_seeds(make_inputs, curve):
-    again = learning_curve(make_inputs(), day_counts=(5, 9, 14, 61), station_counts=(2, 3, 9), seeds=range(2))
+    again = learning_curve(
+        make_inputs(), MAKE_MODEL, day_counts=(5, 9, 14, 61), station_counts=(2, 3, 9), seeds=range(2)
+    )
 
     pd.testing.assert_frame_equal(curve, again)
 
@@ -325,3 +334,107 @@ def test_the_cli_reports_an_invalid_config_without_running(tmp_path):
 
     assert result.exit_code == 2
     assert not (tmp_path / "runs").exists()
+
+
+# --- the model and the Jacobian cache ---------------------------------------------------------------------
+
+
+@pytest.fixture
+def jacobian_builds(monkeypatch):
+    """The number of hours of every call that builds Jacobians (`Inputs.jacobians` goes through
+    `hour_jacobians`)."""
+    from nox_ml.data import inputs as inputs_module
+
+    calls = []
+    build = inputs_module.hour_jacobians
+
+    def counted(hours, *args, **kwargs):
+        calls.append(len(hours))
+        return build(hours, *args, **kwargs)
+
+    monkeypatch.setattr(inputs_module, "hour_jacobians", counted)
+    return calls
+
+
+def test_the_diagnostics_use_the_registered_baseline_model():
+    assert type(MAKE_MODEL()) is REGISTRY["inversion_plume"]
+
+
+def test_the_systems_come_from_the_cache_of_the_model(make_inputs, jacobian_builds):
+    inputs = make_inputs()
+    model = MAKE_MODEL()
+
+    first = model_systems(inputs, model)
+    again = model_systems(inputs, model)
+
+    assert len(jacobian_builds) == 1
+    assert (
+        first[0].jacobian
+        is again[0].jacobian
+        is inputs.jacobians(model.transport_key(), model.transport())[0]
+    )
+
+
+def test_the_information_needs_a_plume_inversion_model(make_inputs):
+    class Reference:
+        name = "idw"
+
+    with pytest.raises(ValueError, match="plume inversion"):
+        model_systems(make_inputs(), Reference())
+
+
+@pytest.mark.parametrize(
+    "variant",
+    [
+        lambda i: with_stations(i, ["AAA", "CCC"]),
+        lambda i: with_days(i, diagnostics.local_days(i)[2:7]),
+        without_tempo,
+    ],
+    ids=["stations", "days", "no_tempo"],
+)
+def test_a_variant_slices_the_cached_jacobians_instead_of_building_them(
+    make_inputs, jacobian_builds, variant
+):
+    inputs = make_inputs()
+    model = MAKE_MODEL()
+    key, transport = model.transport_key(), model.transport()
+    inputs.jacobians(key, transport)  # the baseline fills the cache
+    builds = list(jacobian_builds)
+
+    out = variant(inputs)
+    sliced = out.jacobians(key, transport)
+
+    assert jacobian_builds == builds  # nothing built for the variant
+    fresh = hour_jacobians(
+        out.hours, out.zones, out.points, out.no2_nox_ratio, out.n_regions, jacobian=transport
+    )
+    for a, b in zip(sliced, fresh, strict=True):
+        np.testing.assert_allclose(a.stations, b.stations, rtol=1e-12)
+        np.testing.assert_allclose(a.pixels, b.pixels, rtol=1e-12)
+
+
+def test_a_rotated_wind_builds_its_own_jacobians(make_inputs, jacobian_builds):
+    inputs = make_inputs()
+    model = MAKE_MODEL()
+    inputs.jacobians(model.transport_key(), model.transport())
+
+    out = rotate_wind(inputs, 30)
+    out.jacobians(model.transport_key(), model.transport())
+
+    assert jacobian_builds == [len(inputs.hours)] * 2
+    assert len(inputs.jacobian_cache) == 1  # the baseline cache is untouched
+
+
+def test_the_ablation_and_the_curves_build_the_jacobians_of_all_the_hours_once_unless_the_wind_changes(
+    make_inputs, jacobian_builds
+):
+    inputs = make_inputs()
+    n_hours = len(inputs.hours)
+
+    ablation(inputs, config(), station_counts=(3, 2), wind_biases=(15.0,), seeds=range(2))
+    after_ablation = jacobian_builds.count(n_hours)
+    learning_curve(inputs, MAKE_MODEL, day_counts=(5, 14), station_counts=(2, 3), seeds=range(2))
+
+    assert after_ablation == 2  # the baseline and the one wind bias; the other variants slice the baseline's
+    assert jacobian_builds.count(n_hours) == after_ablation
+    assert max(jacobian_builds) == n_hours

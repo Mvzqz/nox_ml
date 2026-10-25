@@ -13,8 +13,8 @@ rows. Time labels: SIMAT stamps the end of the hour (local), so the start of the
 """
 
 import json
-from collections.abc import Sequence
-from dataclasses import dataclass, replace
+from collections.abc import Collection, Hashable, Mapping, Sequence
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -24,11 +24,13 @@ import pandas as pd
 
 from nox_ml.data.pbl import ERA5_FILE, parse_era5
 from nox_ml.data.roads import N_SPLIT, UTM, read_roads, road_emission_cells
-from nox_ml.inversion.jacobian import Receptors
-from nox_ml.inversion.linear import HourData, baseline_point_sources
+from nox_ml.inversion.jacobian import HourJacobian, HourJacobianFn, Receptors
+from nox_ml.inversion.linear import HourData, baseline_point_sources, hour_jacobians
+from nox_ml.time import local_day
 
 MIN_PBL_M = 200.0  # floor of the boundary layer height after averaging with the next hour
 LABEL_SHIFT = pd.Timedelta(hours=1)  # SIMAT labels the end of the hour
+MAX_CACHED_TRANSPORTS = 4  # transport configurations whose Jacobians an `Inputs` keeps (a tune can try many)
 
 
 @dataclass(frozen=True)
@@ -46,6 +48,13 @@ class Inputs:
     points: pd.DataFrame
     no2_nox_ratio: float
     n_regions: int  # road regions of `zones`, passed explicitly to `invert`
+    day_kinds: Mapping[pd.Timestamp, int] | None = None  # local day -> day type, overriding the calendar
+    # Jacobians of all the hours by transport key (`InversionPlume.transport_key`: the kernel and its params).
+    # They depend on the hours, zones, points and ratio: whoever replaces those must pass a new cache
+    # (`on_days` does).
+    jacobian_cache: dict[Hashable, list[HourJacobian]] = field(
+        default_factory=dict, compare=False, repr=False
+    )
 
     @property
     def n_station_rows(self) -> int:
@@ -55,14 +64,58 @@ class Inputs:
     def n_pixels(self) -> int:
         return sum(len(h.no2) for h in self.hours)
 
-    def without_station(self, station: str) -> list[HourData]:
-        """The hours with the rows of `station` removed: for leave-one-out, before the system is built."""
+    def jacobians(self, key: Hashable, transport: HourJacobianFn) -> list[HourJacobian]:
+        """The Jacobian of every hour (all its receptors) for a transport, built once per `key` (which names
+        the kernel and its params, so the plume and the PINN never share an entry) and shared by every fit,
+        held-out station, placebo refit and tune trial that uses it."""
+        if key not in self.jacobian_cache:
+            if len(self.jacobian_cache) >= MAX_CACHED_TRANSPORTS:
+                del self.jacobian_cache[next(iter(self.jacobian_cache))]  # the oldest
+            self.jacobian_cache[key] = hour_jacobians(
+                self.hours,
+                self.zones,
+                self.points,
+                self.no2_nox_ratio,
+                self.n_regions,
+                jacobian=transport,
+            )
+        return self.jacobian_cache[key]
+
+    def jacobians_without_stations(
+        self, stations: Collection[str], key: Hashable, transport: HourJacobianFn
+    ) -> list[HourJacobian]:
+        """The cached Jacobians with the rows of `stations` removed, aligned with `without_stations`."""
+        return [
+            jac.without_stations(~np.isin(ids, list(stations)))
+            for jac, ids in zip(self.jacobians(key, transport), self.station_ids, strict=True)
+        ]
+
+    def without_stations(self, stations: Collection[str]) -> list[HourData]:
+        """The hours with the rows of `stations` removed: for leave-one-out, before the system is built."""
         out = []
         for hour, ids in zip(self.hours, self.station_ids, strict=True):
-            keep = ids != station
-            stations = Receptors(hour.stations.x[keep], hour.stations.y[keep])
-            out.append(replace(hour, stations=stations, nox=hour.nox[keep]))
+            keep = ~np.isin(ids, list(stations))
+            receptors = Receptors(hour.stations.x[keep], hour.stations.y[keep])
+            out.append(replace(hour, stations=receptors, nox=hour.nox[keep]))
         return out
+
+    def without_station(self, station: str) -> list[HourData]:
+        return self.without_stations([station])
+
+    def on_days(self, days: Collection[pd.Timestamp]) -> "Inputs":
+        """Only the hours whose local day is in `days`."""
+        keep = [i for i, h in enumerate(self.hours) if local_day(h.hour) in set(days)]
+        return replace(
+            self,
+            hours=[self.hours[i] for i in keep],
+            station_ids=[self.station_ids[i] for i in keep],
+            jacobian_cache={},
+        )
+
+    def with_day_kinds(self, kinds: Mapping[pd.Timestamp, int]) -> "Inputs":
+        """The same data with the day type of some local days replaced (a placebo relabels weekdays). The
+        Jacobians do not depend on the day type, so the cache is shared."""
+        return replace(self, day_kinds=kinds)
 
 
 # --- Pure functions ----------------------------------------------------------------------------------------
@@ -79,7 +132,7 @@ def station_nox(
     """
     rows = nox[
         nox["local"].between(start, f"{end} 23:59")
-        & nox["hour"].between(*local_hours)
+        & nox["local"].dt.hour.between(*local_hours)
         & nox["id_station"].isin(stations)
     ]
     both = rows[rows["NOX"].notna() & rows["NO2"].notna()]
