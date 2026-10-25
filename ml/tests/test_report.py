@@ -1,137 +1,88 @@
-# pyright: reportArgumentType=false, reportAttributeAccessIssue=false, reportIndexIssue=false, reportCallIssue=false
-# pyright: reportOperatorIssue=false, reportReturnType=false, reportAssignmentType=false, reportGeneralTypeIssues=false
-import copy
+import json
 
+import pandas as pd
 import pytest
-from matplotlib.figure import Figure
+import yaml
 
-from nox_ml import report
-from nox_ml.validation import diagnostics
-from nox_ml.validation.experiment import ExperimentConfig, evaluate
-
-N_REGIONS = 2
+from nox_ml.validation import compare, report
 
 
-def config() -> ExperimentConfig:
-    return ExperimentConfig.model_validate(
-        {
-            "name": "t",
-            "period": {"start": "2023-11-06", "end": "2023-11-19"},
-            "model": {"name": "inversion_plume", "params": {"bootstrap_n": 4}},
-            "placebo": {"n": 20, "refits": 2},
-        }
-    )
+def write_run(folder, model, rmse, role="model", eligible: bool | None = True, trials=None):
+    folder.mkdir(parents=True)
+    summary = {"model": model, "role": role, "loo_rmse_ppb": rmse, "eligible": eligible, "sunday_ratio": 0.6}
+    (folder / "metrics.json").write_text(json.dumps({"summary": summary}))
+    (folder / "config.yaml").write_text(yaml.safe_dump({"model": {"name": model}}))
+    if trials is not None:
+        pd.DataFrame(trials).to_csv(folder / "trials.csv", index=False)
 
 
 @pytest.fixture
-def inputs(make_inputs):
-    return make_inputs()
+def runs(tmp_path):
+    write_run(tmp_path / "baseline", "inversion_plume", 13.6)
+    write_run(tmp_path / "puff", "inversion_puff", 12.0)
+    write_run(tmp_path / "rf", "rf_deweather", 11.0, eligible=False)
+    write_run(tmp_path / "idw", "idw", 11.6, role="reference", eligible=None)
+    trials = {"trial": [0, 1, 2], "u_min_ms": [0.5, 1.0, 2.0], "loo_rmse_ppb": [13.0, 11.5, 12.0]}
+    write_run(tmp_path / "puff_tuned", "inversion_puff", 11.5, trials=trials)
+    return tmp_path
 
 
-@pytest.fixture
-def metrics(inputs):
-    return evaluate(inputs, config()).metrics
+def comparison(runs):
+    return compare.collect(report.run_dirs(runs))[0]
 
 
-def test_find_root_locates_the_repository_from_a_subfolder(tmp_path):
-    root = tmp_path / "repo"
-    (root / "configs").mkdir(parents=True)
-    (root / "pyproject.toml").write_text("")
-    (root / "deliverables").mkdir()
-    assert report.find_root(root / "deliverables") == root
+def test_the_comparison_leaves_out_the_tuned_runs_and_the_tuned_runs_are_listed_apart(runs):
+    assert "puff_tuned" not in set(comparison(runs)["run"])
+    assert [p.name for p in report.run_dirs(runs, tuned=True)] == ["puff_tuned"]
 
 
-def test_find_root_fails_outside_a_repository(tmp_path):
-    with pytest.raises(FileNotFoundError):
-        report.find_root(tmp_path)
+def test_missing_lists_the_planned_models_without_a_run(runs):
+    pending = report.missing(comparison(runs))
+
+    assert {"inversion_plume", "inversion_puff", "rf_deweather", "idw"}.isdisjoint(pending["model"])
+    assert {"regularized_ls", "pinn_plume"} <= set(pending["model"])
 
 
-def test_load_config_reads_the_baseline_with_the_data_of_the_repository():
-    config = report.load_config("baseline")
-    assert config.model.name == "inversion_plume"
-    assert config.data_dir == report.find_root() / "data"
+def test_selection_takes_the_best_eligible_models_and_never_a_reference(runs):
+    best = report.selection(comparison(runs))
+
+    assert list(best["model"]) == ["inversion_puff", "inversion_plume"]  # rf is faster but fails the placebo
 
 
-def test_data_overview_counts_what_the_inputs_hold(inputs):
-    table = report.data_overview(inputs, config())
-    assert list(table.columns) == ["dato", "contenido"]
-    assert "3 estaciones" in table.loc[0, "contenido"]
-    assert "14 días" in table.loc[table["dato"] == "Periodo", "contenido"].item()
+def test_selection_with_fewer_eligible_models_than_asked_returns_those(tmp_path):
+    write_run(tmp_path / "baseline", "inversion_plume", 13.6)
+
+    assert len(report.selection(comparison(tmp_path))) == 1
 
 
-def test_capacity_table_gives_the_pixels_per_parameter(metrics):
-    table = report.capacity_table(metrics).set_index("concepto")["valor"]
-    assert table["Parámetros del modelo"] == str(metrics["summary"]["n_params"])
+def test_tuning_summary_reports_the_gain_over_the_untuned_run(runs):
+    summary = report.tuning_summary(runs, comparison(runs)).iloc[0]
+
+    assert (summary["model"], summary["n_trials"], summary["best_trial"]) == ("inversion_puff", 3, 1)
+    assert summary["gain_ppb"] == pytest.approx(12.0 - 11.5)
+    assert summary["refit_rmse_ppb"] == pytest.approx(11.5)
 
 
-def passes(table, criterion):
-    return table.set_index("criterio").loc[criterion, "cumple"]
+def test_search_space_shows_the_range_each_param_took(runs):
+    space = report.search_space(report.read_trials(runs)["puff_tuned"])
+
+    assert space.iloc[0].to_dict() == {"param": "u_min_ms", "min": 0.5, "max": 2.0, "values": 3}
 
 
-def test_minimum_performance_checks_each_criterion_on_the_summary(metrics):
-    run = copy.deepcopy(metrics)
-    run["summary"] |= {
-        "placebo_center": 1.08,
-        "sunday_ratio": 0.42,
-        "sunday_ratio_lo": 0.35,
-        "sunday_ratio_hi": 0.54,
-    }
-    run["loo"]["rmse"] |= {"model": 13.6, "idw": 11.6}
-    table = report.minimum_performance(run)
-    assert passes(table, "Placebo centrado en 1")
-    assert passes(table, "Dirección del domingo")
-    assert not passes(table, "Magnitud del domingo (referencia)")
-    assert passes(table, "Cercanía a IDW")
+def test_everything_tolerates_a_folder_without_runs(tmp_path):
+    empty = tmp_path / "no_runs_here"
+    table = comparison(empty)
+
+    assert table.empty
+    assert len(report.missing(table)) == len(report.PLANNED)
+    assert report.selection(table).empty
+    assert report.read_trials(empty) == {}
+    assert report.tuning_summary(empty, table).empty
+    assert report.plot_trials(empty, table) is None
 
 
-def test_minimum_performance_fails_a_placebo_off_center_and_a_model_far_from_idw(metrics):
-    run = copy.deepcopy(metrics)
-    run["summary"]["placebo_center"] = 1.3
-    run["loo"]["rmse"] |= {"model": 20.0, "idw": 11.6}
-    table = report.minimum_performance(run)
-    assert not passes(table, "Placebo centrado en 1")
-    assert not passes(table, "Cercanía a IDW")
+def test_the_trial_curve_has_one_panel_per_search(runs):
+    fig = report.plot_trials(runs, comparison(runs))
 
-
-def test_in_sample_vs_held_out_has_a_row_per_station(inputs, metrics):
-    table = report.in_sample_vs_held_out(inputs, config(), metrics)
-    assert list(table.index) == ["AAA", "BBB", "CCC"]
-    assert table[["rmse_en_muestra", "rmse_oculta"]].notna().all().all()
-
-
-def test_the_figures_of_the_run_are_figures(inputs, metrics):
-    held = report.in_sample_vs_held_out(inputs, config(), metrics)
-    figures = [
-        report.plot_domain(inputs),
-        report.plot_daily_context(inputs),
-        report.plot_loo_by_station(metrics),
-        report.plot_level_and_rhythm(metrics),
-        report.plot_emission_metrics(metrics),
-        report.plot_in_sample_vs_held_out(held),
-    ]
-    assert all(isinstance(fig, Figure) for fig in figures)
-
-
-def test_the_figures_of_the_diagnostics_are_figures(inputs):
-    cfg = config()
-    systems = diagnostics.model_systems(inputs, cfg.model.build())
-    reduction, dofs = diagnostics.information_by_observation(systems, inputs.points, N_REGIONS)
-    ablation = diagnostics.ablation(inputs, cfg, station_counts=(2,), wind_biases=(15.0,), seeds=range(2))
-    curve = diagnostics.learning_curve(
-        inputs, cfg.model.build, day_counts=(7, 14), station_counts=(2, 3), seeds=range(2)
-    )
-    figures = [
-        report.plot_information(reduction, dofs),
-        report.plot_ablation(ablation),
-        report.plot_learning_curves(curve),
-    ]
-    assert all(isinstance(fig, Figure) for fig in figures)
-
-
-def test_load_metrics_and_diagnostics_read_what_the_runner_wrote(tmp_path):
-    (tmp_path / "diagnostics").mkdir()
-    (tmp_path / "metrics.json").write_text('{"a": 1}')
-    for name in ("variance_reduction", "degrees_of_freedom", "ablation", "learning_curve"):
-        (tmp_path / "diagnostics" / f"{name}.csv").write_text("x\n1\n")
-    assert report.load_metrics(tmp_path) == {"a": 1}
-    assert set(report.load_diagnostics(tmp_path)) == {"reduction", "dofs", "ablation", "curve"}
+    assert fig is not None
+    assert len(fig.axes) == 1
