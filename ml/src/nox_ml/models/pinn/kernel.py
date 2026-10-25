@@ -22,6 +22,8 @@ from nox_ml.models.pinn.equation import (
     EPS,
     GAMMA_CHECKS,
     GAMMA_RANGE,
+    KAPPA_M,
+    L_M,
     SOURCE_SIGMA,
     exact,
 )
@@ -92,16 +94,16 @@ def source(a: torch.Tensor, c: torch.Tensor) -> torch.Tensor:
 
 
 def residual(
-    net: KernelNet, a: torch.Tensor, c: torch.Tensor, gamma: torch.Tensor
+    net: KernelNet, a: torch.Tensor, c: torch.Tensor, gamma: torch.Tensor, eps: float = EPS
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """Residual of the equation at the points, and the value of the network there."""
+    """Residual of the equation (diffusion `eps` = kappa / L) at the points, and the value of the network."""
     a = a.detach().requires_grad_(True)
     c = c.detach().requires_grad_(True)
     f = net(a, c, gamma)
     fa, fc = torch.autograd.grad(f.sum(), (a, c), create_graph=True)
     faa = torch.autograd.grad(fa.sum(), a, create_graph=True)[0]
     fcc = torch.autograd.grad(fc.sum(), c, create_graph=True)[0]
-    return fa - EPS * (faa + fcc) + gamma * f - source(a, c), f
+    return fa - eps * (faa + fcc) + gamma * f - source(a, c), f
 
 
 def random_gamma(n: int, gen: torch.Generator) -> torch.Tensor:
@@ -142,14 +144,18 @@ def boundary(n: int, gen: torch.Generator) -> Points:
     return a, c, random_gamma(n, gen)
 
 
-def loss(net: KernelNet, interior: Points, edge: Points, physics_weight: float) -> torch.Tensor:
+def loss(
+    net: KernelNet, interior: Points, edge: Points, physics_weight: float, eps: float = EPS
+) -> torch.Tensor:
     """Equation residual (relative to the local value) times `physics_weight` plus the boundary term."""
-    r, f = residual(net, *interior)
+    r, f = residual(net, *interior, eps)
     equation_term = ((r / (f.detach() + REL_FLOOR)) ** 2).mean()
     return physics_weight * equation_term + BOUNDARY_WEIGHT * net(*edge).pow(2).mean()
 
 
-def lbfgs_round(net: KernelNet, interior: Points, edge: Points, physics_weight: float) -> float:
+def lbfgs_round(
+    net: KernelNet, interior: Points, edge: Points, physics_weight: float, eps: float = EPS
+) -> float:
     """One L-BFGS round on fixed points; returns the loss at its start."""
     optimizer = torch.optim.LBFGS(
         net.parameters(),
@@ -161,7 +167,7 @@ def lbfgs_round(net: KernelNet, interior: Points, edge: Points, physics_weight: 
 
     def closure() -> torch.Tensor:
         optimizer.zero_grad()
-        value = loss(net, interior, edge, physics_weight)
+        value = loss(net, interior, edge, physics_weight, eps)
         value.backward()
         return value
 
@@ -177,6 +183,7 @@ def train_kernel(params: PinnParams, progress: Progress | None = None) -> Traine
         torch.manual_seed(params.seed)
         gen = torch.Generator().manual_seed(params.seed)
         net = KernelNet(params.layers, params.width)
+        eps = params.kappa / L_M
         log: list[tuple[str, int, float, float]] = []
         start = time.time()
 
@@ -188,7 +195,11 @@ def train_kernel(params: PinnParams, progress: Progress | None = None) -> Traine
         for k in range(steps):
             opt.zero_grad()
             value = loss(
-                net, collocation(ADAM_POINTS, gen), boundary(ADAM_BOUNDARY_POINTS, gen), params.physics_weight
+                net,
+                collocation(ADAM_POINTS, gen),
+                boundary(ADAM_BOUNDARY_POINTS, gen),
+                params.physics_weight,
+                eps,
             )
             value.backward()
             opt.step()
@@ -201,12 +212,12 @@ def train_kernel(params: PinnParams, progress: Progress | None = None) -> Traine
         for r in range(params.lbfgs_rounds):
             interior = collocation(LBFGS_POINTS, gen)
             edge = boundary(LBFGS_BOUNDARY_POINTS, gen)
-            value = lbfgs_round(net, interior, edge, params.physics_weight)
+            value = lbfgs_round(net, interior, edge, params.physics_weight, eps)
             log.append(("lbfgs", r, value, time.time() - start))
             say(f"lbfgs round {r:3d}  loss {value:.3e}  {time.time() - start:.0f} s")
         net.eval()
     seconds = time.time() - start
-    return TrainedKernel(net, params, log, seconds, validate(net))
+    return TrainedKernel(net, params, log, seconds, validate(net, kappa=params.kappa))
 
 
 def evaluate(net: KernelNet, a: np.ndarray, c: np.ndarray, gamma: float | np.ndarray) -> np.ndarray:
@@ -218,14 +229,16 @@ def evaluate(net: KernelNet, a: np.ndarray, c: np.ndarray, gamma: float | np.nda
         return net(ta, tc, tg).numpy().reshape(np.shape(a))
 
 
-def validate(net: KernelNet, gammas: tuple[float, ...] = GAMMA_CHECKS) -> dict[str, dict[str, float]]:
-    """Error against the exact solution at each of `gammas`, in the window ``-0.5 <= A <= 4``,
-    ``|C| <= 2.5`` (5 km upwind to 40 km downwind), where the exact value is above 5 % of its maximum:
-    ``median_rel_error`` and ``p90_rel_error`` of the plume, ``mass_error`` (sum over the window) and the
-    value on the centerline 5 and 20 km from the source, of the network and of the exact solution."""
+def validate(
+    net: KernelNet, gammas: tuple[float, ...] = GAMMA_CHECKS, kappa: float = KAPPA_M
+) -> dict[str, dict[str, float]]:
+    """Error against the exact solution (diffusivity `kappa`) at each of `gammas`, in the window
+    ``-0.5 <= A <= 4``, ``|C| <= 2.5`` (5 km upwind to 40 km downwind), where the exact value is above 5 % of
+    its maximum: ``median_rel_error`` and ``p90_rel_error`` of the plume, ``mass_error`` (sum over the window)
+    and the value on the centerline 5 and 20 km from the source, of the network and of the exact solution."""
     out = {}
     for gamma in gammas:
-        a, c, f_exact = exact(gamma)
+        a, c, f_exact = exact(gamma, kappa=kappa)
         in_a, in_c = (a >= -0.5) & (a <= 4.0), np.abs(c) <= 2.5
         aa, cc = np.meshgrid(a[in_a][::5], c[in_c][::5], indexing="ij")
         exact_window = f_exact[np.ix_(in_a, in_c)][::5, ::5]

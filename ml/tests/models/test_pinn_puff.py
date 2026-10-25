@@ -227,6 +227,7 @@ def test_the_transport_key_never_collides_with_the_plume_the_pinn_plume_or_other
         "lifetime": PinnPuff(PinnPuffParams(tau_h=6.0)).transport_key(),
         "floor": PinnPuff(PinnPuffParams(u_min=2.0)).transport_key(),
         "kernel": PinnPuff(PinnPuffParams(width=32)).transport_key(),
+        "kappa": PinnPuff(PinnPuffParams(kappa=3000.0)).transport_key(),
     }
 
     assert len(set(keys.values())) == len(keys)
