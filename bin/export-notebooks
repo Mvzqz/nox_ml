@@ -1,0 +1,25 @@
+#!/bin/sh
+# Executes every notebook in deliverables/ (recursively) and exports it to HTML in
+# docs/entregables/html/, keeping the relative names. Usage: bin/export-notebooks [notebook...]
+set -eu
+cd "$(dirname "$0")/.."
+
+out=docs/entregables/html
+timeout=${NOTEBOOK_TIMEOUT:-3600}  # seconds per cell
+
+if [ "$#" -gt 0 ]; then
+    list=$(printf '%s\n' "$@")
+else
+    list=$(find deliverables -name '*.ipynb' -not -path '*/.ipynb_checkpoints/*' | sort)
+fi
+[ -n "$list" ] || { echo "No notebooks found in deliverables/" >&2; exit 1; }
+
+printf '%s\n' "$list" | while IFS= read -r nb; do
+    rel=${nb#deliverables/}
+    dir=$(dirname "$rel")
+    echo "==> $nb"
+    mkdir -p "$out/$dir"
+    uv run jupyter nbconvert --execute --to html \
+        --ExecutePreprocessor.timeout="$timeout" \
+        --output-dir "$out/$dir" "$nb"
+done
