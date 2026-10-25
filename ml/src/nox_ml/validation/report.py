@@ -5,6 +5,7 @@
 eligible ones, and the trials of the searches. Everything tolerates missing runs."""
 
 import io
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -142,6 +143,28 @@ def kappa_grid(runs_dir: Path) -> pd.DataFrame:
         kappas.append(float(params.get("kappa", KAPPA_DEFAULT_M)))
     keep = ["kappa_m", "run", "loo_rmse_ppb", "loo_bias_ppb", "sunday_ratio", "eligible", "fit_seconds"]
     return table.assign(kappa_m=kappas)[keep].sort_values("kappa_m", kind="stable").reset_index(drop=True)
+
+
+def road_total_ratio(runs_dir: Path, model: str, reference: str = "baseline") -> pd.DataFrame:
+    """Weekday road emission (t/año) of the run `model` and of the run `reference`, and their ratio, read from
+    ``metrics.json``; empty when either run is missing or does not estimate absolute emission."""
+    totals = {}
+    for name in (model, reference):
+        path = runs_dir / name / "metrics.json"
+        if path.is_file():
+            weekday = json.loads(path.read_text()).get("day_types", {}).get("road_total", {}).get("weekday")
+            if weekday is not None:
+                totals[name] = float(weekday)
+    if len(totals) < 2:
+        return pd.DataFrame(columns=["run", "reference", "road_weekday_t_year", "reference_t_year", "ratio"])
+    row = {
+        "run": model,
+        "reference": reference,
+        "road_weekday_t_year": totals[model],
+        "reference_t_year": totals[reference],
+        "ratio": totals[model] / totals[reference],
+    }
+    return pd.DataFrame([row])
 
 
 def tuning_summary(runs_dir: Path, table: pd.DataFrame) -> pd.DataFrame:
