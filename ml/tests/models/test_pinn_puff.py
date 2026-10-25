@@ -21,7 +21,7 @@ from nox_ml.models.pinn.model import PinnPlume, PinnPuff
 from nox_ml.models.pinn.params import PinnParams, PinnPuffParams
 from nox_ml.models.pinn.puff import PinnPuffTransport, jacobian_hour_pinn_puff, radial_profile
 from nox_ml.models.pinn.transport import jacobian_hour_pinn
-from nox_ml.physics.puff import Trajectories, fixed_lifetime
+from nox_ml.physics.puff import Trajectories, fixed_lifetime, local_hour_profile
 from nox_ml.validation.experiment import read_config
 
 CONFIGS = Path(__file__).parents[3] / "configs" / "experiments"
@@ -277,3 +277,92 @@ def test_the_model_reads_the_hourly_wind_of_the_inputs_when_it_has_it(make_input
 def test_the_transport_is_a_history_transport_that_the_plume_models_are_not():
     assert isinstance(PinnPuffTransport(TABLE, TAU_H, U_MIN, 24), HistoryTransport)
     assert not isinstance(PinnPlume().transport(), HistoryTransport)
+
+
+# --- the survival of the puffs: fixed or from the OH loss ---------------------------------------------------
+
+
+def hour_matrix(make_inputs, transport: PinnPuffTransport, history: History):
+    inputs = make_inputs()
+    sources = road_sources(inputs.zones, inputs.points, inputs.n_regions)
+    return transport.for_hours(inputs.hours, history)(inputs.hours[40], sources, inputs.no2_nox_ratio)
+
+
+def hourly_history(make_inputs, loss_per_s: float | None) -> History:
+    inputs = make_inputs()
+    index = pd.date_range(inputs.hours[0].hour - pd.Timedelta(days=2), inputs.hours[-1].hour, freq="h")
+    wind = pd.DataFrame({"u": 3.0, "v": 0.0}, index=index)
+    return History(wind=wind, loss_rate=None if loss_per_s is None else pd.Series(loss_per_s, index))
+
+
+def test_the_lifetime_is_fixed_by_default_and_the_loss_rate_of_the_inputs_is_then_ignored(make_inputs):
+    assert PinnPuffParams().lifetime == "fixed"
+    transport = PinnPuff().transport()
+    assert transport.lifetime == "fixed"
+
+    without = hour_matrix(make_inputs, transport, hourly_history(make_inputs, None))
+    with_loss = hour_matrix(make_inputs, transport, hourly_history(make_inputs, 1e-3))
+
+    assert np.array_equal(without.stations, with_loss.stations)
+    assert np.array_equal(without.pixels, with_loss.pixels)
+
+
+def test_the_fixed_lifetime_builds_the_matrix_of_the_puffs_with_a_fixed_survival(make_inputs):
+    inputs = make_inputs()
+    history = hourly_history(make_inputs, None)
+    sources = road_sources(inputs.zones, inputs.points, inputs.n_regions)
+    hour = inputs.hours[40]
+    transport = Transport(
+        Trajectories.from_wind(history.wind, U_MIN), fixed_lifetime(TAU_H), local_hour_profile(), 24
+    )
+
+    own = PinnPuffTransport(TABLE, TAU_H, U_MIN, 24).for_hours(inputs.hours, history)(
+        hour, sources, inputs.no2_nox_ratio
+    )
+    explicit = jacobian_hour_pinn_puff(
+        hour.hour, hour.wind, hour.pbl, transport, sources, hour.stations, hour.pixels,
+        inputs.no2_nox_ratio, TABLE, TAU_H, U_MIN,
+    )  # fmt: skip
+
+    assert np.array_equal(own.stations, explicit.stations)
+    assert np.array_equal(own.pixels, explicit.pixels)
+
+
+def test_a_constant_oh_loss_equal_to_the_fixed_lifetime_gives_the_fixed_matrix(make_inputs):
+    fixed = PinnPuffTransport(TABLE, TAU_H, U_MIN, 24, "fixed")
+    oh = PinnPuffTransport(TABLE, TAU_H, U_MIN, 24, "oh")
+
+    a = hour_matrix(make_inputs, fixed, hourly_history(make_inputs, None))
+    b = hour_matrix(make_inputs, oh, hourly_history(make_inputs, 1 / (TAU_H * 3600)))
+
+    assert_allclose(b.stations, a.stations, rtol=1e-9)
+    assert_allclose(b.pixels, a.pixels, rtol=1e-9)
+
+
+def test_a_stronger_oh_loss_lowers_what_the_old_puffs_deliver(make_inputs):
+    oh = PinnPuffTransport(TABLE, TAU_H, U_MIN, 24, "oh")
+
+    slow = hour_matrix(make_inputs, oh, hourly_history(make_inputs, 1 / (12 * 3600)))
+    fast = hour_matrix(make_inputs, oh, hourly_history(make_inputs, 1 / (2 * 3600)))
+
+    assert (fast.stations <= slow.stations).all() and (fast.stations < slow.stations).any()
+
+
+def test_the_oh_lifetime_without_a_loss_rate_in_the_inputs_says_so(make_inputs):
+    oh = PinnPuff(PinnPuffParams(lifetime="oh")).transport()
+
+    with pytest.raises(ValueError, match="loss_rate"):
+        hour_matrix(make_inputs, oh, hourly_history(make_inputs, None))
+
+
+def test_the_oh_lifetime_changes_the_transport_key_and_does_not_retrain_the_network():
+    fixed, oh = PinnPuff(), PinnPuff(PinnPuffParams(lifetime="oh"))
+
+    assert fixed.transport_key() != oh.transport_key()
+    assert PinnPuffParams(lifetime="oh").training_key() == PinnParams().training_key()
+
+
+def test_the_synthetic_inputs_have_no_chemistry_so_the_other_models_are_untouched(make_inputs):
+    inputs = make_inputs()
+
+    assert inputs.chemistry is None and inputs.loss_rate is None

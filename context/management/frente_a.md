@@ -23,7 +23,7 @@ Que el modelo físico principal deje de ser una pluma fija y pase a seguir la co
 - `ml/src/nox_ml/physics/puff.py`: trayectorias, supervivencia (`fixed_lifetime`, `variable_lifetime`, `cumulative_loss`) y perfil horario del tráfico.
 - `ml/src/nox_ml/physics/chemistry.py`: `nox_loss_rate`, `lifetime_h` (OH a partir del sol, ozono, temperatura y humedad).
 - `ml/src/nox_ml/inversion/normalized.py`: `index`, `ratio`, `bootstrap_ratio`, `interval`, para E7.
-- `ml/src/nox_ml/data/inputs.py`: `Inputs` (el `Dataset` del contrato) y la caché `Inputs.jacobians(...)`.
+- `ml/src/nox_ml/data/inputs.py`: `Inputs` (el `Dataset` del contrato; incluye `chemistry` y `loss_rate`) y la caché `Inputs.jacobians(...)`.
 
 ## Cuándo está listo
 
@@ -41,13 +41,8 @@ Que el modelo físico principal deje de ser una pluma fija y pase a seguir la co
 
 ## Trampas y riesgos
 
-- **Variables de química: los datos ya están, falta conectarlos.** La vida química usa ozono, temperatura y humedad horarios de SIMAT. **No hay que descargar nada:** vienen en los mismos archivos que ya se usan para NOₓ y viento (`data/raw/simat/contaminantes_AAAA.csv.gz` trae `O3`; `meteorologia_AAAA.csv.gz` trae `TMP` y `RH`). Solo hace falta:
-  1. pedir esas columnas con los lectores que ya existen en `nox_ml.data.simat` (`parse_table`, `pivot_hourly`), igual que se hace con `NOX` y `WSP`;
-  2. promediarlas por hora en el dominio y agregarlas a `Inputs`;
-  3. calcular la pérdida con `physics.chemistry.nox_loss_rate` y pasarla a `standard_transport`.
-
-  Es la primera tarea de E2 (~30 min). Referencia de cómo lo hacía la investigación: `scripts/vida_quimica.py` en la rama `research-archive`.
-- **Reutilizar `HistoryTransport` (llega con el pull request #19, E5b).** Los puffs necesitan el viento de las horas anteriores, que una función de transporte normal no recibe. E5b ya resolvió eso para todos: `HistoryTransport` y `History` en `inversion/linear.py` (`hour_jacobians` llama a `for_hours` si el transporte lo tiene), y `Inputs.wind` (viento horario del periodo) e `Inputs.infovial` llenados por `load_inputs`. **E2 debe usar ese mecanismo, no crear otro**; ver `models/pinn/puff.py` (`PinnPuffTransport`) como ejemplo y el ADR 0005. Si tu rama empezó antes de que se fusionara #19, actualízala sobre `main` antes de tocar `linear.py` o `inputs.py`. Cuando E2 agregue la pérdida por OH a `Inputs`, E5b también podrá usarla (hoy usa una vida fija `tau_h`).
+- **Química: ya está en `Inputs`, solo falta usarla.** `load_inputs` llena `Inputs.chemistry` (O₃, TMP y RH horarios, promedio de las estaciones del dominio, de `nox_ml.data.simat.load_chemistry`) e `Inputs.loss_rate` (pérdida de NOₓ en 1/s, de `physics.chemistry.nox_loss_rate`) para el periodo del experimento más el día anterior (historia de los puffs de 24 h); fuera de `load_inputs` valen `None` (los datos sintéticos no cambian). **No hay que descargar ni leer nada más.** E2 solo debe pasar `inputs.loss_rate` a `standard_transport(wind, loss_rate, road_profile)`; la referencia de OH usa abril de 2023 (no abril de 2024, que cae en el periodo de prueba; la diferencia es ~7 % en la escala de la pérdida). Referencia de la investigación: `scripts/vida_quimica.py` en la rama `research-archive`.
+- **Reutilizar `HistoryTransport` (llega con el pull request #19, E5b).** Los puffs necesitan el viento de las horas anteriores, que una función de transporte normal no recibe. E5b ya resolvió eso para todos: `HistoryTransport` y `History` en `inversion/linear.py` (`hour_jacobians` llama a `for_hours` si el transporte lo tiene), y `Inputs.wind` (viento horario del periodo) e `Inputs.infovial` llenados por `load_inputs`. **E2 debe usar ese mecanismo, no crear otro**; ver `models/pinn/puff.py` (`PinnPuffTransport`) como ejemplo y el ADR 0005. Si tu rama empezó antes de que se fusionara #19, actualízala sobre `main` antes de tocar `linear.py` o `inputs.py`. E5b ya puede usar la pérdida por OH de `Inputs.loss_rate` con el parámetro `lifetime: oh` (por defecto `fixed`: vida fija `tau_h`).
 - **Caché obligatoria.** E2 debe definir su propia `transport_key()` (duración del puff, vida química, σθ, viento mínimo). Sin ella cada reajuste recalcula la tabla: horas en lugar de minutos.
 - **Cómputo.** Construir la tabla de puffs para 366 horas tarda ~5–10 min. El ajuste fino de E2 debe hacerse en dos niveles: grilla chica (2–3 valores) para lo que cambia la tabla, búsqueda amplia para lo que no.
 - **E7 es relativo.** Su `EmissionEstimate` es de tipo `relative` (índice por tipo de día). No tiene totales; no intentes inventarlos.
