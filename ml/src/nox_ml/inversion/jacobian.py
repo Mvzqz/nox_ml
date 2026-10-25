@@ -93,6 +93,11 @@ class HourJacobian:
     stations: Array  # ppb
     pixels: Array  # molecules/cm2
 
+    def without_stations(self, keep: NDArray[np.bool_]) -> "HourJacobian":
+        """Only the station rows where `keep` is true: each row depends on its own receptor alone, so this is
+        the matrix that would be built without the other stations."""
+        return HourJacobian(self.stations[keep], self.pixels)
+
 
 def standard_transport(wind: pd.DataFrame, loss_rate: pd.Series, road_profile: HourProfile) -> Transport:
     """Standard configuration: puffs of 24 h with the NOx lifetime of the OH-based loss (`loss_rate`, 1/s,
