@@ -16,6 +16,7 @@ extra unknown per hour and kind, which is what the research code did.
 
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
+from functools import partial
 
 import geopandas as gpd
 import numpy as np
@@ -23,7 +24,13 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from nox_ml.data.roads import UTM
-from nox_ml.inversion.jacobian import HourJacobian, Receptors, Sources, jacobian_hour_plume
+from nox_ml.inversion.jacobian import (
+    HourJacobian,
+    HourJacobianFn,
+    Receptors,
+    Sources,
+    jacobian_hour_plume,
+)
 from nox_ml.inversion.normalized import day_type
 from nox_ml.time import local_day
 
@@ -190,10 +197,14 @@ def hour_systems(
     sigma_theta: float = SIGMA_THETA,
     u_min: float = U_MIN,
     day_kinds: Mapping[pd.Timestamp, int] | None = None,
+    jacobian: HourJacobianFn | None = None,
 ) -> list[HourSystem]:
     """The `HourSystem` of every hour. The Jacobians dominate the cost of an inversion; the systems can be
     solved again with other weights by `solve`. `sigma_theta` (rad) and `u_min` (m/s) are the plume
-    parameters; `day_kinds` maps local days to a day type, overriding the calendar (placebos)."""
+    parameters; `day_kinds` maps local days to a day type, overriding the calendar (placebos). `jacobian` is
+    the transport of one hour (default: the stationary plume with `sigma_theta` and `u_min`); any function
+    with the signature of `HourJacobianFn` plugs in."""
+    jacobian = jacobian or partial(jacobian_hour_plume, sigma_theta=sigma_theta, u_min=u_min)
     sources = road_sources(zones, points, n_regions)
     n_points = len(points)
     days = pd.DatetimeIndex([local_day(h.hour) for h in hours])
@@ -202,9 +213,7 @@ def hour_systems(
         kinds = np.array([day_kinds.get(d, k) for d, k in zip(days, kinds, strict=True)])
     systems = []
     for data, day, kind in zip(hours, days, kinds, strict=True):
-        jac = jacobian_hour_plume(
-            data.wind, data.pbl, sources, data.stations, data.pixels, no2_nox_ratio, SIGMA_THETA, U_MIN
-        )
+        jac = jacobian(data.wind, data.pbl, sources, data.stations, data.pixels, no2_nox_ratio)
         # the columns of the road regions go to the ones of this day type
         columns = np.r_[np.arange(n_points), n_points + n_regions * kind + np.arange(n_regions)]
         info = np.zeros((len(columns), len(columns)))

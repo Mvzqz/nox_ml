@@ -1,0 +1,26 @@
+# PINN plume: the baseline inversion with the transport learned by a physics-informed network
+# (nox_ml.models.pinn). Same data, priors and metrics as baseline.yaml; only the model changes.
+# Run: uv run nox-ml run configs/experiments/pinn_plume.yaml  ->  runs/pinn_plume/
+# The network of these parameters is bundled with the package; other parameters train one (about 3 minutes
+# on 4 CPU cores) and cache it in kernel_dir.
+name: pinn_plume
+period:
+  start: 2023-11-01
+  end: 2023-12-31
+simat_hours: [12, 17]
+model:
+  name: pinn_plume
+  params:
+    layers: 4          # hidden layers
+    width: 64          # neurons per layer
+    learning_rate: 0.002
+    physics_weight: 1.0
+    adam_steps: 3000
+    lbfgs_rounds: 15
+    seed: 0            # network and bootstrap
+    tau_h: 12.0        # NOx lifetime (h); does not retrain
+    u_min: 1.0         # transport speed floor (m/s), as the baseline
+    bootstrap_n: 200
+    bootstrap_level: 0.90
+    kernel_dir: .cache/pinn
+placebo: {n: 2000, seed: 3, level: 0.90, refits: 8}
