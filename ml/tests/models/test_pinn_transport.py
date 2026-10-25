@@ -49,6 +49,21 @@ def test_the_crosswind_flux_of_the_column_is_the_mass_that_survives():
         assert speed * g.sum() * 100 == pytest.approx(np.exp(r * x / L_M) / root, rel=0.01)
 
 
+def test_a_larger_diffusivity_widens_the_plume_and_lowers_the_centerline_column():
+    """Same kernel equation with kappa 500, 1500 and 3000 m: the column across the wind at 15 km is wider
+    (second moment) and lower on the axis, and the mass that crosses (the integral) is the same."""
+    across = np.arange(-30_000, 30_001, 100.0)
+    widths, centers, fluxes = [], [], []
+    for kappa in (500.0, 1500.0, 3000.0):
+        g, _ = column(np.full_like(across, 15_000.0), across, 3.0, 0.0, exact_table(kappa), TAU_H, U_MIN)
+        widths.append(np.sqrt((g * across**2).sum() / g.sum()))
+        centers.append(g[across.size // 2])
+        fluxes.append(g.sum())
+
+    assert widths == sorted(widths) and centers == sorted(centers, reverse=True)
+    assert_allclose(fluxes, fluxes[1], rtol=0.05)
+
+
 @pytest.mark.parametrize("degrees", [0, 37, 90, 180, 251])
 def test_the_column_does_not_depend_on_the_direction_of_the_wind(degrees):
     """The receptor is placed 5 km along and 1.5 km across the wind, whatever way it blows."""
