@@ -218,14 +218,20 @@ def test_the_cli_refuses_a_config_of_another_model(tmp_path):
 
 def test_without_torch_the_other_models_still_register_and_the_pinn_does_not():
     code = (
-        "import sys; sys.modules['torch'] = None\n"
+        # as if torch were not installed (a None in sys.modules breaks the array API probe of scipy)
+        "import sys\n"
+        "class NoTorch:\n"
+        "    def find_spec(self, name, path=None, target=None):\n"
+        "        if name == 'torch':\n"
+        "            raise ModuleNotFoundError(\"No module named 'torch'\", name='torch')\n"
+        "sys.meta_path.insert(0, NoTorch())\n"
         "from nox_ml.models import REGISTRY\n"
         "print(sorted(REGISTRY))\n"
     )
 
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
 
-    assert out.stdout.strip() == "['inversion_plume']"
+    assert out.stdout.strip() == "['inversion_plume', 'rf_deweather']"
 
 
 def test_pinn_and_plume_jacobians_never_share_a_cache_entry(make_inputs):
