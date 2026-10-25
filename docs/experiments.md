@@ -41,6 +41,10 @@ uv run nox-ml run configs/experiments/pinn_plume.yaml
 
 Hyperparameters (`layers`, `width`, `learning_rate`, `physics_weight`, `adam_steps`, `lbfgs_rounds`, `seed`, `tau_h`, `u_min`, bootstrap) are the fields of `nox_ml.models.pinn.params.PinnParams`; `tau_h` and `u_min` do not retrain.
 
+## Random forest deweathering
+
+`configs/experiments/rf_deweather.yaml` (ADR 0005) fits a random forest of station NOx on meteorology and calendar and reports a **relative** emission index per day type (pooled over zones, weekday = 1) with its bootstrap interval; it gives no tonnes. Hyperparameters are the fields of `nox_ml.models.rf_deweather.RfDeweatherParams`. A run takes a few minutes, mostly the placebo refits.
+
 ## Comparing an improvement with the baseline
 
 1. Copy `baseline.yaml`, change `name` and the field of the improvement, run it.

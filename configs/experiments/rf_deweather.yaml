@@ -1,0 +1,22 @@
+# Random forest deweathering (nox_ml.models.rf_deweather): station NOx ~ meteorology + calendar; the emission
+# index of a day type is the forest's prediction with the weather held fixed. Relative (no tonnes), pooled over
+# zones. Same data and placebo as baseline.yaml; only the model changes.
+# Run: uv run nox-ml run configs/experiments/rf_deweather.yaml  ->  runs/rf_deweather/
+name: rf_deweather
+period:
+  start: 2023-11-01
+  end: 2023-12-31
+simat_hours: [12, 17]
+model:
+  name: rf_deweather
+  params:
+    n_estimators: 200
+    max_depth: null         # grow until min_samples_leaf
+    min_samples_leaf: 3     # station rows per leaf
+    max_features: 1.0       # fraction of the features tried per split
+    seed: 7
+    background_ppb: 5.0     # as the baseline prior
+    weather_samples: 20     # weather draws of the period per row
+    bootstrap_n: 10
+    bootstrap_level: 0.90
+placebo: {n: 2000, seed: 3, level: 0.90, refits: 8}
