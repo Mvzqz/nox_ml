@@ -212,15 +212,21 @@ def without_tempo(inputs: Inputs) -> Inputs:
     )
 
 
-def rotate_wind(inputs: Inputs, degrees: float) -> Inputs:
+def rotate_wind(inputs: Inputs, degrees: float | Sequence[float]) -> Inputs:
     """The inputs with the wind of every hour turned `degrees` clockwise (a wind from the south that blows
     towards the north now blows towards the north-east for +45): a systematic error of the wind direction.
-    The speed is the same. The Jacobians depend on the wind, so this variant builds its own."""
-    angle = np.deg2rad(degrees)
-    cos, sin = np.cos(angle), np.sin(angle)
+    `degrees` is one angle for all the hours or one per hour (a random error). The speed is the same. The
+    Jacobians depend on the wind, so this variant builds its own."""
+    angles = np.broadcast_to(np.deg2rad(degrees), len(inputs.hours))
     turned = [
-        replace(h, wind=(h.wind[0] * cos + h.wind[1] * sin, -h.wind[0] * sin + h.wind[1] * cos))
-        for h in inputs.hours
+        replace(
+            h,
+            wind=(
+                h.wind[0] * np.cos(angle) + h.wind[1] * np.sin(angle),
+                -h.wind[0] * np.sin(angle) + h.wind[1] * np.cos(angle),
+            ),
+        )
+        for h, angle in zip(inputs.hours, angles, strict=True)
     ]
     return replace(inputs, hours=turned, jacobian_cache={})
 
