@@ -29,6 +29,15 @@ else
     warn "not a git repository; skipping hooks"
 fi
 
+step "Git identity"
+# Cloud sessions commit as the person who runs them, never as the AI. Set GIT_USER_NAME and GIT_USER_EMAIL
+# in the cloud environment (each teammate uses their own).
+if [ -n "${GIT_USER_NAME:-}" ] && [ -n "${GIT_USER_EMAIL:-}" ]; then
+    git config user.name "$GIT_USER_NAME"
+    git config user.email "$GIT_USER_EMAIL"
+fi
+echo "    $(git config user.name 2>/dev/null || echo unset) <$(git config user.email 2>/dev/null || echo unset)>"
+
 step "Data (DVC)"
 # In cloud sessions the DagsHub token comes from the environment (DAGSHUB_USER, DAGSHUB_TOKEN).
 if [ ! -f .dvc/config.local ] && [ -n "${DAGSHUB_TOKEN:-}" ]; then
