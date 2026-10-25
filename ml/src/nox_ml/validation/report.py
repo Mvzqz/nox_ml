@@ -10,6 +10,7 @@ import pandas as pd
 import yaml
 from matplotlib.figure import Figure
 
+from nox_ml.models.pinn.equation import KAPPA_M as KAPPA_DEFAULT_M
 from nox_ml.validation import compare
 
 # (id, registered model, experiment config) of every model the comparison expects (docs/models.md)
@@ -20,12 +21,13 @@ PLANNED = [
     ("E4", "lognormal_map", "lognormal_map"),
     ("E5a", "pinn_plume", "pinn_plume"),
     ("E5b", "pinn_puff", "pinn_puff"),
-    ("E5c", "pinn_joint", "pinn_joint"),
     ("E6", "rf_deweather", "rf_deweather"),
     ("E7", "normalized_ratio", "normalized_ratio"),
     ("R1", "idw", "idw"),
     ("R2", "kriging", "kriging"),
-]
+]  # E5c (pinn_joint) is left out of the advance on purpose: the notebook explains why
+
+KAPPA_PREFIX = "pinn_puff_k"  # runs of the diffusivity grid (one `pinn_puff` per kappa): not competitors
 
 
 def find_runs() -> Path:
@@ -39,9 +41,12 @@ def find_runs() -> Path:
 
 def run_dirs(runs_dir: Path, *, tuned: bool = False) -> list[Path]:
     """The run folders of `runs_dir`: those of ``nox-ml run`` or, with `tuned`, those of ``nox-ml tune`` (the
-    ones with a ``trials.csv``). A missing folder has no runs."""
+    ones with a ``trials.csv``). The runs of the kappa grid are left out (`kappa_grid` reads them: they are
+    variants of one model, not competitors). A missing folder has no runs."""
     folders = sorted(p for p in runs_dir.iterdir() if p.is_dir()) if runs_dir.is_dir() else []
-    return [p for p in folders if (p / "trials.csv").is_file() == tuned]
+    return [
+        p for p in folders if (p / "trials.csv").is_file() == tuned and not p.name.startswith(KAPPA_PREFIX)
+    ]
 
 
 def missing(table: pd.DataFrame) -> pd.DataFrame:
@@ -53,6 +58,12 @@ def missing(table: pd.DataFrame) -> pd.DataFrame:
         if model not in done
     ]
     return pd.DataFrame(rows, columns=["id", "model", "run"])
+
+
+def models(table: pd.DataFrame, names: list[str]) -> pd.DataFrame:
+    """The rows of the registered models `names` (those with a run), in the order of `names`."""
+    rows = table[table["model"].isin(names)]
+    return rows.sort_values("model", key=lambda m: m.map(names.index), kind="stable").reset_index(drop=True)
 
 
 def selection(table: pd.DataFrame, n: int = 2) -> pd.DataFrame:
@@ -84,6 +95,42 @@ def search_space(trials: pd.DataFrame) -> pd.DataFrame:
 def best_trial(trials: pd.DataFrame) -> pd.Series:
     """The row of the lowest ``loo_rmse_ppb`` (the first one on a tie)."""
     return trials.loc[trials["loo_rmse_ppb"].idxmin()]
+
+
+def param_effects(trials: pd.DataFrame) -> pd.DataFrame:
+    """How much each searched param moved the error: the rank correlation of its values with
+    ``loo_rmse_ppb`` (0 when it did not matter, negative when more is better), the spread of the error between
+    the best and worst value of the param, and its value in the best trial. Params that took one value have
+    no effect to measure."""
+    best = best_trial(trials)
+    rows = []
+    for param in search_space(trials).query("values > 1")["param"]:
+        by_value = trials.groupby(param)["loo_rmse_ppb"].min()
+        rows.append(
+            {
+                "param": param,
+                "rank_corr": trials[param].corr(trials["loo_rmse_ppb"], method="spearman"),
+                "best_by_value_spread_ppb": by_value.max() - by_value.min(),
+                "best_value": best[param],
+            }
+        )
+    return pd.DataFrame(rows, columns=["param", "rank_corr", "best_by_value_spread_ppb", "best_value"])
+
+
+def kappa_grid(runs_dir: Path) -> pd.DataFrame:
+    """One row per ``pinn_puff`` run of the diffusivity grid (``runs/pinn_puff_k*``) and the default run
+    (``runs/pinn_puff``, kappa from its config or the default 1,500 m), sorted by kappa (m); empty when
+    there are none."""
+    default = runs_dir / "pinn_puff"
+    folders = sorted(p for p in runs_dir.glob(f"{KAPPA_PREFIX}*") if p.is_dir()) if runs_dir.is_dir() else []
+    table, _ = compare.collect([*folders, *([default] if default.is_dir() else [])])
+    kappas = []
+    for run in table["run"]:
+        config = runs_dir / run / "config.yaml"
+        params = yaml.safe_load(config.read_text())["model"].get("params", {}) if config.is_file() else {}
+        kappas.append(float(params.get("kappa", KAPPA_DEFAULT_M)))
+    keep = ["kappa_m", "run", "loo_rmse_ppb", "loo_bias_ppb", "sunday_ratio", "eligible", "fit_seconds"]
+    return table.assign(kappa_m=kappas)[keep].sort_values("kappa_m", kind="stable").reset_index(drop=True)
 
 
 def tuning_summary(runs_dir: Path, table: pd.DataFrame) -> pd.DataFrame:
