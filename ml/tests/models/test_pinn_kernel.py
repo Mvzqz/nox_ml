@@ -61,6 +61,28 @@ def test_the_residual_is_the_advection_diffusion_operator_minus_the_source():
     assert_allclose(r.detach().numpy(), (operator - source(a, c)).detach().numpy(), rtol=1e-5)
 
 
+def test_the_residual_uses_the_diffusion_it_is_given():
+    a, c, gamma = torch.tensor([0.3]), torch.tensor([0.2]), torch.tensor([0.1])
+
+    default, f = residual(Known(), a, c, gamma)  # type: ignore[arg-type]
+    wider, _ = residual(Known(), a, c, gamma, 0.3)  # type: ignore[arg-type]
+
+    # F_AA + F_CC = (1/4 F + 0.2 exp(A / 2)): the residual drops by (eps' - eps) times it
+    laplacian = 0.25 * f + 0.2 * torch.exp(0.5 * a)
+    assert_allclose((default - wider).detach().numpy(), ((0.3 - EPS) * laplacian).detach().numpy(), rtol=1e-5)
+
+
+def test_training_validates_against_the_exact_solution_of_its_own_diffusivity(tmp_path):
+    wide = PinnParams(**{**TINY.model_dump(), "kappa": 3000.0})
+
+    kernel = KernelCache(tmp_path).get(wide)
+
+    assert kernel.validation == validate(kernel.net, kappa=3000.0)
+    assert kernel.validation != validate(kernel.net)
+    assert wide.training_key() != TINY.training_key()
+    assert KernelCache(tmp_path).load(TINY) is None  # a different kappa is a different entry
+
+
 def test_the_source_has_unit_mass():
     grid = torch.linspace(-1.5, 1.5, 601)
     aa, cc = torch.meshgrid(grid, grid, indexing="ij")
