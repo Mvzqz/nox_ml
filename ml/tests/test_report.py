@@ -133,3 +133,18 @@ def test_the_kappa_grid_is_sorted_by_kappa_and_stays_out_of_the_comparison(tmp_p
     assert list(grid["kappa_m"]) == [500.0, 1500.0, 3000.0]
     assert list(grid["loo_rmse_ppb"]) == [12.9, 12.08, 12.4]
     assert list(comparison(tmp_path)["run"]) == ["pinn_puff"]
+
+
+def test_the_road_total_ratio_compares_the_weekday_road_emission_of_two_runs(tmp_path):
+    for name, total in [("baseline", 40_000), ("pinn_plume", 57_500)]:
+        (tmp_path / name).mkdir()
+        metrics = {"day_types": {"road_total": {"weekday": total}}}
+        (tmp_path / name / "metrics.json").write_text(json.dumps(metrics))
+
+    row = report.road_total_ratio(tmp_path, "pinn_plume").iloc[0]
+
+    assert row["ratio"] == pytest.approx(1.4375)
+
+
+def test_the_road_total_ratio_is_empty_when_a_run_is_missing(tmp_path):
+    assert report.road_total_ratio(tmp_path, "pinn_plume").empty
