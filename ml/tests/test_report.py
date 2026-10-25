@@ -78,6 +78,8 @@ def test_everything_tolerates_a_folder_without_runs(tmp_path):
     assert report.selection(table).empty
     assert report.read_trials(empty) == {}
     assert report.tuning_summary(empty, table).empty
+    assert report.kappa_grid(empty).empty
+    assert report.models(table, ["pinn_puff"]).empty
     assert report.plot_trials(empty, table) is None
 
 
@@ -86,3 +88,48 @@ def test_the_trial_curve_has_one_panel_per_search(runs):
 
     assert fig is not None
     assert len(fig.axes) == 1
+
+
+def test_models_keeps_the_requested_order_and_skips_the_ones_without_run(runs):
+    shown = report.models(comparison(runs), ["rf_deweather", "pinn_puff", "inversion_plume"])
+
+    assert list(shown["model"]) == ["rf_deweather", "inversion_plume"]
+
+
+def test_pinn_joint_is_not_expected_because_the_advance_leaves_it_out(tmp_path):
+    assert "pinn_joint" not in set(report.missing(comparison(tmp_path))["model"])
+
+
+def test_param_effects_ranks_the_params_by_how_much_they_move_the_error():
+    trials = pd.DataFrame(
+        {
+            "trial": range(5),
+            "u_min": [1.0, 1.5, 2.0, 1.0, 2.0],
+            "width": [32, 32, 32, 32, 32],  # one value: nothing to measure
+            "tau_h": [6.0, 12.0, 6.0, 12.0, 12.0],
+            "loo_rmse_ppb": [12.08, 12.0, 11.9, 12.08, 11.9],
+        }
+    )
+
+    effects = report.param_effects(trials).set_index("param")
+
+    assert list(effects.index) == ["u_min", "tau_h"]
+    assert effects.loc["u_min", "rank_corr"] < -0.9
+    assert effects.loc["u_min", "best_value"] == 2.0
+    assert effects.loc["u_min", "best_by_value_spread_ppb"] == pytest.approx(0.18)
+    assert abs(effects.loc["tau_h", "rank_corr"]) < abs(effects.loc["u_min", "rank_corr"])
+
+
+def test_the_kappa_grid_is_sorted_by_kappa_and_stays_out_of_the_comparison(tmp_path):
+    for name, kappa, rmse in [("pinn_puff_k3000", 3000, 12.4), ("pinn_puff_k500", 500, 12.9)]:
+        write_run(tmp_path / name, "pinn_puff", rmse)
+        (tmp_path / name / "config.yaml").write_text(
+            yaml.safe_dump({"model": {"name": "pinn_puff", "params": {"kappa": kappa}}})
+        )
+    write_run(tmp_path / "pinn_puff", "pinn_puff", 12.08)  # default kappa: not in its config
+
+    grid = report.kappa_grid(tmp_path)
+
+    assert list(grid["kappa_m"]) == [500.0, 1500.0, 3000.0]
+    assert list(grid["loo_rmse_ppb"]) == [12.9, 12.08, 12.4]
+    assert list(comparison(tmp_path)["run"]) == ["pinn_puff"]
