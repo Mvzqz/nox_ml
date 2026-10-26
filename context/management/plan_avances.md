@@ -112,7 +112,7 @@ Resultados del ajuste de `pinn_puff` (nov–dic 2023); la configuración final e
 - Una rama por modelo (`models/<nombre>`); un pull request con su fila de `compare` en la descripción.
 - No se toca el banco de evaluación ni el contrato sin acordarlo; si hace falta un campo nuevo en el `Dataset`, se pide en un pull request aparte.
 - Las pruebas de contrato (`ml/tests/models/test_contract.py`) corren solas para todo modelo registrado.
-- Los notebooks (`deliverables/Avance3.39.ipynb`, `deliverables/Avance4.39.ipynb`) solo llaman `nox_ml`. Se ejecutan de principio a fin antes de entregar (CI lo verifica).
+- Los notebooks (`notebooks/Avance3.39.ipynb`, `notebooks/Avance4.39.ipynb`) solo llaman `nox_ml`. Se ejecutan de principio a fin antes de entregar (CI lo verifica).
 - El notebook del avance 4 lleva al final la **declaración del uso de herramientas de IA**, obligatoria, en una celda de texto. El del avance 3 no la lleva.
 
 ## Orden

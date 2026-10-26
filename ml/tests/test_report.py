@@ -36,6 +36,27 @@ def test_the_comparison_leaves_out_the_tuned_runs_and_the_tuned_runs_are_listed_
     assert [p.name for p in report.run_dirs(runs, tuned=True)] == ["puff_tuned"]
 
 
+def test_the_ranking_has_one_row_per_planned_model_and_leaves_out_variants_and_references(runs):
+    write_run(runs / "pinn_puff", "pinn_puff", 11.9)
+    write_run(runs / "pinn_puff_oh", "pinn_puff", 11.9)  # a variant of the tuning, not a planned run
+    table = comparison(runs)
+
+    ranked = report.ranking(table)
+
+    assert list(ranked["run"]) == ["pinn_puff", "baseline"]
+    assert list(ranked["id"]) == ["E5b", "E1"]
+    assert list(report.references(table)["run"]) == ["idw"]
+
+
+def test_find_runs_looks_for_the_given_folder_in_the_repository(tmp_path, monkeypatch):
+    (tmp_path / "pyproject.toml").write_text("")
+    (tmp_path / "sub").mkdir()
+    monkeypatch.chdir(tmp_path / "sub")
+
+    assert report.find_runs("results/runs") == tmp_path.resolve() / "results" / "runs"
+    assert report.find_runs() == tmp_path.resolve() / "runs"
+
+
 def test_missing_lists_the_planned_models_without_a_run(runs):
     pending = report.missing(comparison(runs))
 
@@ -76,6 +97,8 @@ def test_everything_tolerates_a_folder_without_runs(tmp_path):
     assert table.empty
     assert len(report.missing(table)) == len(report.PLANNED)
     assert report.selection(table).empty
+    assert report.ranking(table).empty
+    assert report.references(table).empty
     assert report.read_trials(empty) == {}
     assert report.tuning_summary(empty, table).empty
     assert report.kappa_grid(empty).empty
