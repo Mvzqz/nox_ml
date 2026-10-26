@@ -20,7 +20,7 @@ Estimate how much the NOₓ emissions of each zone of a city change (for example
 |---|---|
 | README (description, objective, members, structure) | This file |
 | Data | [`data/`](data/) (versioned with DVC) and its catalog [`data/README.md`](data/README.md): origin, license and access of every source |
-| Notebooks | [`deliverables/`](deliverables/); executed HTML exports in [`docs/entregables/html/`](docs/entregables/html/) |
+| Notebooks | [`notebooks/`](notebooks/); executed HTML exports in [`docs/entregables/html/`](docs/entregables/html/) |
 | Documentation (including the deliverables of weeks 1, 2, 8 and 9) | [`docs/`](docs/) and [`docs/entregables/`](docs/entregables/README.md) |
 
 ## Getting started
@@ -43,7 +43,7 @@ Details in [`docs/installation.md`](docs/installation.md).
 | `configs/` | Per-city and per-experiment configuration |
 | `context/` | Technical knowledge, decisions (ADRs) and project management (in Spanish, except ADRs) |
 | `docs/` | How to install, use, test and contribute; model contracts in [`docs/models.md`](docs/models.md); course deliverables in [`docs/entregables/`](docs/entregables/README.md) |
-| `deliverables/` | Progress notebooks for the advisor and published documents (in Spanish) |
+| `notebooks/` | Progress notebooks for the advisor and published documents (in Spanish) |
 | `data/` | Data, versioned with DVC (DagsHub), never with git; catalog in [`data/README.md`](data/README.md) |
 | `bin/` | `uptodate`, `check`, `export-notebooks` and pipeline scripts |
 

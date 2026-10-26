@@ -1,7 +1,7 @@
 # pyright: reportArgumentType=false, reportAttributeAccessIssue=false, reportIndexIssue=false, reportCallIssue=false
 # pyright: reportOperatorIssue=false, reportReturnType=false, reportAssignmentType=false, reportGeneralTypeIssues=false
 # (pandas typing infers unions for `df[...]`; behavior is covered by the tests instead)
-"""What the experiment notebooks of ``deliverables/experimentos/`` show. Each section is one notebook:
+"""What the experiment notebooks of ``notebooks/experimentos/`` show. Each section is one notebook:
 
 1. transport: the Gaussian plume, the kernel of the PINN and the puffs of both, side by side;
 2. emission against weather: the normalized estimator and the random forest on a twin with a known answer, on

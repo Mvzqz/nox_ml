@@ -15,12 +15,12 @@ Cada archivo enlaza a los cuadernos y a los datos que usa. Al subir uno, cambiar
 
 ## Cuadernos
 
-Los cuadernos están en [`deliverables/`](../../deliverables/) sin salidas. Las exportaciones HTML, ya ejecutadas, van en [`html/`](html/): se generan al final, en la máquina del dueño donde están todas las corridas, con `bin/export-notebooks` (ver [`deliverables/README.md`](../../deliverables/README.md)).
+Los cuadernos están en [`notebooks/`](../../notebooks/) sin salidas. Las exportaciones HTML, ya ejecutadas, van en [`html/`](html/): se generan al final, en la máquina del dueño donde están todas las corridas, con `bin/export-notebooks` (ver [`notebooks/README.md`](../../notebooks/README.md)).
 
 | Cuaderno | Contenido | Código | HTML |
 |---|---|---|---|
-| Avance 3 | Reporte del baseline: inversión bayesiana lineal con pluma estacionaria, características, sub/sobreajuste, métrica y desempeño | [`Avance3.39.ipynb`](../../deliverables/Avance3.39.ipynb) | [`Avance3.39.html`](html/Avance3.39.html) |
-| Avance 4 | Modelos alternativos para estimar la emisión de NOₓ: tabla comparativa, ajuste de los dos mejores y modelo final | [`Avance4.39.ipynb`](../../deliverables/Avance4.39.ipynb) | [`Avance4.39.html`](html/Avance4.39.html) |
+| Avance 3 | Reporte del baseline: inversión bayesiana lineal con pluma estacionaria, características, sub/sobreajuste, métrica y desempeño | [`Avance3.39.ipynb`](../../notebooks/Avance3.39.ipynb) | [`Avance3.39.html`](html/Avance3.39.html) |
+| Avance 4 | Modelos alternativos para estimar la emisión de NOₓ: tabla comparativa, ajuste de los dos mejores y modelo final | [`Avance4.39.ipynb`](../../notebooks/Avance4.39.ipynb) | [`Avance4.39.html`](html/Avance4.39.html) |
 
 ## Datos
 

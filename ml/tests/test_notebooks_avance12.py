@@ -6,7 +6,7 @@ import pytest
 
 from nox_ml.validation import report_eda
 
-DELIVERABLES = Path(__file__).parents[2] / "deliverables"
+DELIVERABLES = Path(__file__).parents[2] / "notebooks"
 DATA = Path(__file__).parents[2] / "data"
 SECTIONS = {
     "Avance1.39.ipynb": [

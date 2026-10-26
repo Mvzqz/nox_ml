@@ -36,8 +36,8 @@ def test_find_root_locates_the_repository_from_a_subfolder(tmp_path):
     root = tmp_path / "repo"
     (root / "configs").mkdir(parents=True)
     (root / "pyproject.toml").write_text("")
-    (root / "deliverables").mkdir()
-    assert report_baseline.find_root(root / "deliverables") == root
+    (root / "notebooks").mkdir()
+    assert report_baseline.find_root(root / "notebooks") == root
 
 
 def test_find_root_fails_outside_a_repository(tmp_path):

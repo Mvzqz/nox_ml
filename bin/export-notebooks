@@ -1,5 +1,5 @@
 #!/bin/sh
-# Executes every notebook in deliverables/ (recursively) and exports it to HTML in
+# Executes every notebook in notebooks/ (recursively) and exports it to HTML in
 # docs/entregables/html/, keeping the relative names. Usage: bin/export-notebooks [notebook...]
 set -eu
 cd "$(dirname "$0")/.."
@@ -10,12 +10,12 @@ timeout=${NOTEBOOK_TIMEOUT:-3600}  # seconds per cell
 if [ "$#" -gt 0 ]; then
     list=$(printf '%s\n' "$@")
 else
-    list=$(find deliverables -name '*.ipynb' -not -path '*/.ipynb_checkpoints/*' | sort)
+    list=$(find notebooks -name '*.ipynb' -not -path '*/.ipynb_checkpoints/*' | sort)
 fi
-[ -n "$list" ] || { echo "No notebooks found in deliverables/" >&2; exit 1; }
+[ -n "$list" ] || { echo "No notebooks found in notebooks/" >&2; exit 1; }
 
 printf '%s\n' "$list" | while IFS= read -r nb; do
-    rel=${nb#deliverables/}
+    rel=${nb#notebooks/}
     dir=$(dirname "$rel")
     echo "==> $nb"
     mkdir -p "$out/$dir"
