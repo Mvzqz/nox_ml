@@ -1,7 +1,7 @@
 # pyright: reportArgumentType=false, reportAttributeAccessIssue=false, reportIndexIssue=false, reportCallIssue=false
 # pyright: reportOperatorIssue=false, reportReturnType=false, reportAssignmentType=false, reportGeneralTypeIssues=false
 # (pandas and matplotlib typing infer unions; behavior is covered by the tests instead)
-"""Tables and figures of the progress notebooks (``deliverables/``).
+"""Tables and figures of the progress notebooks (``notebooks/``).
 
 The notebooks only call functions of ``nox_ml``; whatever they show that is not a metric of the harness is
 computed here. Every figure function takes the data it draws (a run's ``metrics.json``, the inputs, the

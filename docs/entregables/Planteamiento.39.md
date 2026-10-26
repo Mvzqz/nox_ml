@@ -74,7 +74,7 @@ Tabla 2. Plan de entregables, semanas 1 a 11.
 | 10 | Presentación final | Presentación final | Presentación del proyecto completo |
 | 11 | Presentación final | Presentación final | Presentación del proyecto completo |
 
-Los cuadernos de las semanas 3 a 6 viven en la carpeta `deliverables/` del repositorio y solo llaman funciones del paquete `nox_ml`, de modo que cada resultado puede reproducirse. Las exportaciones en HTML, ya ejecutadas, van en `docs/entregables/html/`.
+Los cuadernos de las semanas 3 a 6 viven en la carpeta `notebooks/` del repositorio y solo llaman funciones del paquete `nox_ml`, de modo que cada resultado puede reproducirse. Las exportaciones en HTML, ya ejecutadas, van en `docs/entregables/html/`.
 
 # 3. Repositorio
 
@@ -86,7 +86,7 @@ Tabla 3. Estructura del repositorio.
 |---|---|
 | `README.md` | Descripción, objetivo, integrantes del equipo, requisitos del curso y estructura |
 | `data/` | Datos versionados con DVC en un remoto de DagsHub (privado), nunca con git. Catálogo en `data/README.md`: origen, periodo, formato, licencia y acceso de cada fuente |
-| `deliverables/` | Cuadernos de los avances (`Avance1.39` a `Avance4.39`), sin salidas |
+| `notebooks/` | Cuadernos de los avances (`Avance1.39` a `Avance4.39`), sin salidas |
 | `docs/` | Instalación, uso, pruebas y contratos de los modelos; los entregables del curso están en `docs/entregables/` (Markdown, PDF y exportaciones HTML) |
 | `ml/` | Paquete `nox_ml`: datos, física, inversión, modelos, validación y la línea de comandos `nox-ml` |
 | `app/` | Paquete `nox_app`: interfaz de usuario (Streamlit) que lee solo resultados exportados |

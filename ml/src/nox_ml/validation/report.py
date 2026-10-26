@@ -42,13 +42,14 @@ class NotebookFigure(Figure):
         return buffer.getvalue()
 
 
-def find_runs() -> Path:
-    """``runs/`` of the repository containing the working directory (``./runs`` outside a repository)."""
+def find_runs(subdir: str = "runs") -> Path:
+    """`subdir` (``runs`` or the committed copy ``results/runs``) of the repository containing the working
+    directory (relative to it outside a repository)."""
     here = Path.cwd().resolve()
     for folder in (here, *here.parents):
         if (folder / "pyproject.toml").is_file():
-            return folder / "runs"
-    return Path("runs")
+            return folder / subdir
+    return Path(subdir)
 
 
 def run_dirs(runs_dir: Path, *, tuned: bool = False) -> list[Path]:
@@ -70,6 +71,20 @@ def missing(table: pd.DataFrame) -> pd.DataFrame:
         if model not in done
     ]
     return pd.DataFrame(rows, columns=["id", "model", "run"])
+
+
+def ranking(table: pd.DataFrame) -> pd.DataFrame:
+    """The main comparison: one row per planned model (the run named after its experiment config, with its
+    ``id`` E1, E2, ...), sorted by ``loo_rmse_ppb``. The variants of the tuning (``pinn_puff_oh``, ...) and
+    the references are left out."""
+    ids = {config: i for i, _, config in PLANNED}
+    rows = table[(table["role"] == "model") & table["run"].isin(ids)]
+    return rows.assign(id=rows["run"].map(ids)).reset_index(drop=True)[["id", *table.columns]]
+
+
+def references(table: pd.DataFrame) -> pd.DataFrame:
+    """The concentration references (IDW, kriging): the floor, not candidates, sorted by error."""
+    return table[table["role"] == "reference"].reset_index(drop=True)
 
 
 def models(table: pd.DataFrame, names: list[str]) -> pd.DataFrame:
@@ -168,18 +183,19 @@ def road_total_ratio(runs_dir: Path, model: str, reference: str = "baseline") ->
 
 
 def tuning_summary(runs_dir: Path, table: pd.DataFrame) -> pd.DataFrame:
-    """One row per search: number of trials, best and worst RMSE, the untuned run of the same model and the
-    gain over it, and the refit of the best trial (RMSE, Sunday ratio, placebo gate).
+    """One row per search: number of trials, best and worst RMSE, the run of the same model in `table` (its
+    final configuration, which may already include other searches) and its difference with the best trial,
+    and the refit of the best trial (RMSE, Sunday ratio, placebo gate).
 
     The search scores with a simple split, not a nested one, so the tuned error is a little optimistic."""
     refits, _ = compare.collect(run_dirs(runs_dir, tuned=True))
     refits = refits.set_index("run")
-    untuned = table.drop_duplicates("model").set_index("model")["loo_rmse_ppb"]
+    final = table.drop_duplicates("model").set_index("model")["loo_rmse_ppb"]
     rows = []
     for run, trials in read_trials(runs_dir).items():
         model = _model_of(runs_dir / run)
         best = trials["loo_rmse_ppb"].min()
-        base = untuned.get(model)
+        base = final.get(model)
         refit = refits.loc[run] if run in refits.index else None
         rows.append(
             {
@@ -200,19 +216,19 @@ def tuning_summary(runs_dir: Path, table: pd.DataFrame) -> pd.DataFrame:
 
 
 def plot_trials(runs_dir: Path, table: pd.DataFrame) -> NotebookFigure | None:
-    """The trial curve of every search (RMSE of each trial and the best so far, against the untuned run);
-    ``None`` when there is no ``trials.csv``."""
+    """The trial curve of every search (RMSE of each trial and the best so far, against the final run of the
+    model); ``None`` when there is no ``trials.csv``."""
     trials = read_trials(runs_dir)
     if not trials:
         return None
-    untuned = table.drop_duplicates("model").set_index("model")["loo_rmse_ppb"]
+    final = table.drop_duplicates("model").set_index("model")["loo_rmse_ppb"]
     fig = NotebookFigure(figsize=(5.5 * len(trials), 3.8), layout="constrained")
     for ax, (run, frame) in zip(fig.subplots(1, len(trials), squeeze=False)[0], trials.items(), strict=True):
         ax.plot(frame["trial"], frame["loo_rmse_ppb"], "o", alpha=0.6, label="prueba")
         ax.step(frame["trial"], frame["loo_rmse_ppb"].cummin(), where="post", label="mejor hasta ahora")
-        base = untuned.get(_model_of(runs_dir / run))
+        base = final.get(_model_of(runs_dir / run))
         if base is not None:
-            ax.axhline(base, color="gray", linestyle="--", label="sin ajustar")
+            ax.axhline(base, color="gray", linestyle="--", label="corrida final del modelo")
         ax.set(title=run, xlabel="prueba", ylabel="RMSE con estación oculta (ppb)")
         ax.legend()
     return fig

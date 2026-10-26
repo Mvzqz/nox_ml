@@ -30,5 +30,5 @@ Credentials stay in `.dvc/config.local`, which git ignores.
 ## Notebooks
 
 ```sh
-uv run jupyter lab deliverables/
+uv run jupyter lab notebooks/
 ```

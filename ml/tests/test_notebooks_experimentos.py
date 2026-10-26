@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-FOLDER = Path(__file__).parents[2] / "deliverables" / "experimentos"
+FOLDER = Path(__file__).parents[2] / "notebooks" / "experimentos"
 NOTEBOOKS = sorted(FOLDER.glob("*.ipynb"))
 DATA = Path(__file__).parents[2] / "data" / "interim" / "simat_nox.parquet"
 
