@@ -142,7 +142,10 @@ class InversionPlume:
         """The pseudo-observations of the fit: none by default (the baseline), the traffic ratios when on."""
         p = self.params
         assert isinstance(p, PlumeInversionParams)
-        if not p.traffic_constraint:
+        # A placebo refit relabels weekdays as Sundays (`Inputs.with_day_kinds`). The traffic ratios describe
+        # the real calendar, so they are not imposed on those fake Sundays: otherwise the placebo finds a drop
+        # that is not there. The refit has no constraint, as in the baseline.
+        if not p.traffic_constraint or data.day_kinds:
             return []
         return traffic_constraints(self.road_prior(data), len(data.points), p.traffic_sd)
 
