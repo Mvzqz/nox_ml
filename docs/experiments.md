@@ -61,6 +61,46 @@ uv run nox-ml compare runs/*
 
 Every method change must be a config field whose default is the baseline behavior (ADR 0002), so that `baseline.yaml` keeps giving the same numbers. The `slow` test `ml/tests/test_baseline_run.py` checks it.
 
+
+### E7: Meteorology-normalized emission ratios
+
+The `normalized_ratio` model estimates relative changes in NOx emissions using meteorological normalization. Unlike the baseline, it does not estimate absolute emission tonnages.
+
+The experiment uses the same evaluation period (November–December 2023) and SIMAT hours (12 and 17) as `inversion_plume`.
+
+**Reproduction commands:**
+
+```sh
+uv run --no-sync nox-ml run configs/experiments/baseline.yaml
+uv run --no-sync nox-ml run configs/experiments/normalized_ratio.yaml
+uv run --no-sync nox-ml compare runs/baseline runs/normalized_ratio
+```
+
+**Real-data comparison:**
+
+| Metric | Baseline | E7 |
+|---|---:|---:|
+| LOO RMSE (ppb) | 13.59 | 16.75 |
+| LOO bias (ppb) | 6.83 | 7.30 |
+| Hourly LOO RMSE (ppb) | 11.75 | 15.08 |
+| Sunday/weekday ratio | 0.42 | 0.56 |
+| Sunday ratio reference gap | 0.23 | 0.09 |
+| Placebo center | 1.08 | 0.88 |
+| Placebo half-width | 0.35 | 0.22 |
+| Fit time (s) | 23.17 | 0.00 |
+| Prediction time (s) | 0.21 | 23.21 |
+| Number of parameters | 31 | 2 |
+
+Both models are eligible under the experiment's placebo criterion.
+
+The baseline achieves better predictive accuracy, while E7 uses fewer parameters, produces a narrower placebo interval, and estimates a Sunday/weekday emission ratio closer to the reference value.
+
+E7's fitting time is negligible at the displayed precision, but its prediction time is considerably longer. Therefore, it should not be described as faster overall.
+
+**Conclusion:** E7 provides an interpretable alternative for estimating relative emission changes, but it does not outperform the baseline in predictive accuracy.
+
+
+
 ## Inputs of the baseline
 
 - Station NOx rows (SIMAT hour labels 12-17 local) and the hourly wind of the stations; only hours with both are used, as in the research.
