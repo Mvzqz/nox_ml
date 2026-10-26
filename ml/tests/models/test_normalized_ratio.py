@@ -36,7 +36,7 @@ def test_predict_stations_respects_requested_stations(make_inputs):
     ]
     assert not predictions.empty
     assert set(predictions["station"]) == {"BBB"}
-    assert predictions["nox_ppb_pred"].notna().all()
+    assert predictions["nox_ppb_pred"].notna().to_numpy(dtype=bool).all()
 
 
 def test_excluded_station_does_not_affect_training(make_inputs):

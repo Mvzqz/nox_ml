@@ -1,7 +1,7 @@
 """Meteorology-normalized relative NOx emission estimator (E7)."""
 
 from collections.abc import Sequence
-from typing import Self
+from typing import ClassVar, Literal, Self
 
 import numpy as np
 import pandas as pd
@@ -29,9 +29,9 @@ from nox_ml.time import local_day
 class NormalizedRatio:
     """Estimate relative road-emission changes after weather normalization."""
 
-    name = "normalized_ratio"
-    role = "model"
-    Params = ModelParams
+    name: ClassVar[str] = "normalized_ratio"
+    role: ClassVar[Literal["model", "reference"]] = "model"
+    Params: ClassVar[type[ModelParams]] = ModelParams
 
     def __init__(self, params: ModelParams | None = None):
         self.params = params if params is not None else self.Params()
@@ -162,7 +162,7 @@ class NormalizedRatio:
                 day,
                 int(day_type(pd.DatetimeIndex([day]), HOLIDAYS)[0]),
             )
-            factor = float(factors[DAY_TYPE_NAMES[kind]])
+            factor = float(factors.loc[DAY_TYPE_NAMES[kind]])
 
             point = jac.stations[:, :n_points] @ point_prior
             road = jac.stations[:, n_points:].sum(axis=1) * factor
