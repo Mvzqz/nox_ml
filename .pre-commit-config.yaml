@@ -16,7 +16,8 @@ repos:
   - repo: https://github.com/kynan/nbstripout
     rev: 0.7.1
     hooks:
-      - id: nbstripout  # notebooks are stored without outputs
+      - id: nbstripout  # notebooks are stored without outputs, except the Avance 4 deliverable
+        exclude: ^notebooks/Avance4\.39\.ipynb$
 
   - repo: local
     hooks:
