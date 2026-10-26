@@ -9694,13 +9694,50 @@ loo_rmse_ppb        11.842324
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="7.-Declaraci%C3%B3n-del-uso-de-herramientas-de-IA">7. Declaración del uso de herramientas de IA<a class="anchor-link" href="#7.-Declaraci%C3%B3n-del-uso-de-herramientas-de-IA">¶</a></h2><blockquote>
-<p><strong>[POR ESCRIBIR — equipo; esta celda es un marcador, no la declaración]</strong> Declaración obligatoria. Indicar qué herramientas de IA se usaron, para qué partes del trabajo (código, pruebas, redacción, revisión), cómo se verificó lo que produjeron y qué decisiones de método tomó el equipo por su cuenta. Debe escribirla y firmarla el equipo antes de entregar.</p>
-</blockquote>
+<h2 id="7.-Declaraci%C3%B3n-del-uso-de-herramientas-de-IA">7. Declaración del uso de herramientas de IA<a class="anchor-link" href="#7.-Declaraci%C3%B3n-del-uso-de-herramientas-de-IA">¶</a></h2><h3 id="1.-Uso-de-inteligencia-artificial">1. Uso de inteligencia artificial<a class="anchor-link" href="#1.-Uso-de-inteligencia-artificial">¶</a></h3><ul>
+<li><p><strong>Herramientas:</strong></p>
+<ul>
+<li>Claude Code (Anthropic), modelos Claude Opus 5.5 y Claude Sonnet 5.5.</li>
+<li>ChatGPT (OpenAI), modelo GPT-6.</li>
+</ul>
+</li>
+<li><p><strong>Finalidad:</strong> apoyo, no autoría. Se usaron para:</p>
+<ul>
+<li>explicar conceptos y algoritmos (inversión bayesiana lineal, puffs, normalización meteorológica) y métricas de evaluación;</li>
+<li>consultar sintaxis de Python, pandas, NumPy y pytest, resolver dudas de programación y depurar errores puntuales;</li>
+<li>generar código de utilidades, que nos permite experimentar y enfocarnos en el código de los modelos y revisar código de los modelos</li>
+<li>refactorización de parte del código de notebooks de investigación a módulos</li>
+<li>generar pruebas de los modelos una vez que un humano decidió qué aspectos importa probar;</li>
+<li>revisar los pull requests</li>
+<li>mejorar la claridad y organización de la documentación técnica;</li>
+</ul>
+<p>Cada fragmento de código fue revisado, adaptado y probado por el equipo.</p>
+</li>
+<li><p><strong>Lo que no se delegó:</strong></p>
+<ul>
+<li>La selección de métodos, las decisiones técnicas, la interpretación de resultados y las conclusiones son del equipo.</li>
+<li>Las sugerencias de código se contrastaron con pruebas automatizadas (pruebas de contrato, de física y de reproducción de la investigación), con la revisión de cada pull request y con corridas con datos reales. La interpretación de resultados corresponde al equipo.</li>
+</ul>
+</li>
+<li><p><strong>Referencias:</strong></p>
+<ul>
+<li>Anthropic. (2026, 16 de octubre). Exploración de proyectos prácticos usando PINNs [Chat de IA generativa]. Claude Haiku 5.5. <a href="https://claude.ai/chat/208deba4-35ed-452e-a7ae-97a18dea8932">https://claude.ai/chat/208deba4-35ed-452e-a7ae-97a18dea8932</a></li>
+</ul>
+</li>
+</ul>
+<h3 id="2.-Contribuci%C3%B3n-de-los-integrantes">2. Contribución de los integrantes<a class="anchor-link" href="#2.-Contribuci%C3%B3n-de-los-integrantes">¶</a></h3><ul>
+<li><strong>Isabella Arango Restrepo:</strong> frente A del avance 4. Implementó el modelo <code>inversion_puff</code> (E2), con su transporte de puffs sobre <code>jacobian_hour_puff</code>, sus pruebas y su configuración de experimento. Corrió E2 con datos de nov–dic 2023 y comparó sus métricas con E1 (baseline). Diseñó la grilla de ajuste de 16 combinaciones y corrió <code>nox-ml tune</code>; la mejor combinación fue la configuración por defecto (12.50 ppb en estación oculta). Además implementó M1: el peso de TEMPO (<code>tempo_sigma_mult</code>) y la restricción opcional del cociente domingo/hábil con el tráfico, heredados por los modelos de inversión.</li>
+<li><strong>Isaí Ambrocio:</strong> revisó y validó el estimador normalizado (E7, <code>normalized_ratio</code>) con datos de nov–dic 2023, comparándolo con el baseline. En la corrida oficial, E7 obtuvo un error en estación oculta (LOO RMSE) de 16.75 ppb frente a 13.59 del baseline, un cociente domingo/hábil de 0.56 (0.46–0.71) y un placebo de 0.88 ± 0.22. El cociente puede estar sesgado hacia 1 por el fondo de las observaciones.</li>
+<li><strong>Manuel Alejandro Vázquez Meza:</strong> coordinación técnica y frente C del avance 4. Diseñó la estructura del repositorio (workspace con uv, DVC en DagsHub, pre-commit, integración continua) y el contrato de modelos, y migró la fase de investigación al repositorio. Implementó y evaluó los modelos con PINN (<code>pinn_plume</code>, E5a, y <code>pinn_puff</code>, E5b) y la normalización meteorológica (<code>rf_deweather</code>, E6). Hizo el ajuste fino de E5b (transporte, red, difusión κ, peso de TEMPO y vida química por OH) y compiló las corridas finales de todos los modelos con datos de nov–dic 2023.</li>
+</ul>
+<h3 id="3.-Decisiones-t%C3%A9cnicas">3. Decisiones técnicas<a class="anchor-link" href="#3.-Decisiones-t%C3%A9cnicas">¶</a></h3><ol>
+<li><strong>Transporte de puffs con la configuración estándar de la investigación.</strong> E2 usa <code>jacobian_hour_puff</code> con σθ de 30° y viento mínimo de 2 m/s, sin exponer esos parámetros. <em>Alternativa descartada:</em> exponerlos como parámetros de ajuste; <code>jacobian_hour_puff</code> no los recibe, así que el ajuste daría resultados idénticos sin aviso. <em>Justificación:</em> la matriz coincide con la de la investigación con diferencia relativa de 3e-15.</li>
+<li><strong>Vida química de los puffs.</strong> Por defecto es fija (<code>tau_h</code>), y la configuración de E2 usa la pérdida por OH de la investigación. <em>Alternativa descartada:</em> OH por defecto; el fixture de pruebas de contrato no tiene <code>loss_rate</code>, así que el modelo no pasaría esa prueba.</li>
+<li><strong>Restricción de tráfico fuera de los reajustes del placebo.</strong> <em>Alternativa descartada:</em> aplicarla también a los domingos falsos del placebo; con ella el centro bajaba a 0.70 y el modelo dejaba de ser elegible. <em>Justificación:</em> el placebo debe medir cambios que no existen, no imponerles el cociente del tráfico.</li>
+</ol>
 </div>
 </div>
 </div>
-</div>
-</main>
+</div></main>
 </body>
 </html>
