@@ -1,0 +1,11 @@
+# Nov-Dec 2023, afternoons (the tuning period; feb-may 2024 is the test period and is never used here).
+# Run: uv run nox-ml run configs/experiments/kriging.yaml  ->  runs/kriging/
+name: kriging
+period:
+  start: 2023-11-01
+  end: 2023-12-31
+simat_hours: [12, 17]
+model:
+  name: kriging
+  params: {length_scale_km: 12, nugget: 0.3, seed: 7}  # reference; range and nugget chosen on nov-dec 2023 LOO
+placebo: {n: 2000, seed: 3, level: 0.90, refits: 8}
