@@ -19,8 +19,9 @@ model:
     kappa: 1500.0      # turbulent diffusivity over wind speed (m); each value trains its own network
     seed: 0            # network and bootstrap
     tau_h: 12.0        # NOx lifetime (h); does not retrain
-    u_min: 1.0         # transport speed floor (m/s), as the baseline
+    u_min: 2.0         # transport speed floor (m/s), tuned (the baseline uses 1.0)
     max_age_h: 24      # hours a puff is followed; does not retrain
+    lifetime: oh       # puffs survive by the OH-based loss rate of the inputs (tau_h only in the last hour)
     bootstrap_n: 200
     bootstrap_level: 0.90
     kernel_dir: .cache/pinn
