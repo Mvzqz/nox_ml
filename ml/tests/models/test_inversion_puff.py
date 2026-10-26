@@ -53,6 +53,7 @@ def test_the_oh_matrix_is_the_standard_puff_matrix_of_the_research(make_inputs):
     history = hourly_history(make_inputs, 1 / (TAU_H * 3600))
     sources = road_sources(inputs.zones, inputs.points, inputs.n_regions)
     hour = inputs.hours[40]
+    assert history.wind is not None and history.loss_rate is not None
     transport = standard_transport(history.wind, history.loss_rate, local_hour_profile())
 
     own = hour_matrix(make_inputs, PuffTransport(24, "oh", TAU_H), history)
