@@ -20,6 +20,8 @@ from numpy.typing import NDArray
 from scipy.optimize import minimize
 
 Array = NDArray[np.float64]
+CONVERGED_STEP = 1e-6  # largest Newton step (log scale) left at the MAP
+NEWTON_STEPS = 50
 HESSIAN_FLOOR = 1e-12  # eigenvalues of the Hessian below this fraction of the largest are lifted to it
 
 
@@ -77,6 +79,41 @@ def laplace_covariance(hess: Array) -> Array:
     return (vectors / values) @ vectors.T
 
 
+def newton_step(eta: Array, info: Array, gradient: Array, prior: LogPrior) -> Array | None:
+    """Newton step from `eta`, or None if the Hessian is not positive definite there."""
+    hess = hessian(eta, info, gradient, prior)
+    try:
+        np.linalg.cholesky(hess)
+    except np.linalg.LinAlgError:
+        return None
+    return -np.linalg.solve(hess, objective(eta, info, gradient, prior)[1])
+
+
+def newton_polish(
+    eta: Array, info: Array, gradient: Array, prior: LogPrior, tol: float, max_steps: int
+) -> tuple[Array, bool]:
+    """Newton steps from `eta` until the step is at most `tol` in every unknown (a relative error of `tol` in
+    the emissions). The step is halved until the next Newton step is smaller than the current one: near the
+    optimum the objective itself is flat to the precision of a double (it is a difference of large terms), so
+    it cannot judge a step, the Newton step size can. Returns the point and whether it got there; it stops,
+    unconverged, if the Hessian is not positive definite or no step shrinks the next one."""
+    step = newton_step(eta, info, gradient, prior)
+    for _ in range(max_steps):
+        if step is None:
+            return eta, False
+        size = np.abs(step).max()
+        if size <= tol:
+            return eta + step, True
+        for t in 0.5 ** np.arange(30):
+            next_step = newton_step(eta + t * step, info, gradient, prior)
+            if next_step is not None and np.abs(next_step).max() < size:
+                eta, step = eta + t * step, next_step
+                break
+        else:
+            return eta, False
+    return eta, False
+
+
 def map_estimate(
     info: Array,
     gradient: Array,
@@ -86,16 +123,26 @@ def map_estimate(
     max_iter: int = 1000,
 ) -> LogNormalMap:
     """MAP of the log-normal emissions from the data term ``(info, gradient)``, started at the prior mean
-    of ``eta``, and its Laplace covariance."""
+    of ``eta``, and its Laplace covariance.
+
+    L-BFGS-B runs on the objective divided by its value at the start, so its tolerances do not depend on
+    the units of the data (the objective is of order 1e4 on real data and 1e10 on a strong synthetic one,
+    where an absolute tolerance on it is below what a double can resolve and the line search gives up);
+    a few Newton steps then finish the job, and `converged` says the last step changed no emission by more
+    than `CONVERGED_STEP` in relative terms. The covariance is the one at that final point."""
     prior = log_prior(prior_mean, prior_sd, sd_mult)
+    scale = max(abs(objective(prior.mu, info, gradient, prior)[0]), 1.0)
+
+    def scaled(eta: Array) -> tuple[float, Array]:
+        value, grad = objective(eta, info, gradient, prior)
+        return value / scale, grad / scale
+
     result = minimize(
-        objective,
+        scaled,
         prior.mu,
-        args=(info, gradient, prior),
         jac=True,
         method="L-BFGS-B",
-        options={"maxiter": max_iter, "ftol": 1e-14, "gtol": 1e-9},
+        options={"maxiter": max_iter, "ftol": 1e-12, "gtol": 1e-8},
     )
-    return LogNormalMap(
-        result.x, laplace_covariance(hessian(result.x, info, gradient, prior)), bool(result.success)
-    )
+    eta, converged = newton_polish(result.x, info, gradient, prior, CONVERGED_STEP, NEWTON_STEPS)
+    return LogNormalMap(eta, laplace_covariance(hessian(eta, info, gradient, prior)), converged)
