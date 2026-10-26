@@ -97,6 +97,16 @@ Todo ensamble debe seguir **estimando emisión**. Como la concentración es line
 2. Feb–may 2024 queda reservado como periodo de prueba (sección 5). No se usa para ajustar en el avance 4.
 3. Migrar los datos y el cálculo del confinamiento 2020 y de las contingencias 2024 (tarea nueva).
 
+## Notas para el notebook del avance 4
+
+Resultados del ajuste de `pinn_puff` (nov–dic 2023); la configuración final está en `configs/experiments/pinn_puff.yaml`.
+
+- **Configuración final:** `u_min` 2.0, `lifetime: oh`, `kappa` 1500, `tau_h` 12, `max_age_h` 24. Error de validación cruzada (LOO) 11.87 ppb; placebo 1.01 ± 0.12.
+- **Robustez:** las búsquedas de transporte, de red, de `kappa` y del peso de TEMPO quedan todas dentro del ruido de ±0.5 ppb; el modelo es robusto a esas elecciones.
+- **`kappa` 3000** es claramente peor (12.60).
+- **Vida media del NOx por OH:** estrecha el placebo de ±0.20 a ±0.12.
+- Las corridas se hicieron en local; `inversion_puff.yaml` (E2) ya usa `lifetime: oh`, por lo que no hace falta otra configuración.
+
 ## Reglas de integración
 
 - Una rama por modelo (`models/<nombre>`); un pull request con su fila de `compare` en la descripción.
