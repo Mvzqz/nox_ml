@@ -122,3 +122,21 @@ def test_the_cli_refuses_the_test_period_without_loading_data(tmp_path):
     assert result.exit_code == 2
     assert "test period" in result.output
     assert not (tmp_path / "runs").exists()
+
+
+def test_the_cli_refits_the_best_trial_with_a_text_param(tmp_path, monkeypatch, make_inputs):
+    """A categorical param (text, e.g. `lifetime`) is not a numpy number: the best trial must still be refit
+    (the first E2 tuning crashed here after writing its trials)."""
+    monkeypatch.setattr(experiment, "load_inputs", lambda *args: make_inputs())
+    monkeypatch.setattr(cli, "load_inputs", lambda *args: make_inputs())
+    path = write(
+        tmp_path,
+        {"model": "inversion_puff", "search": "grid", "space": {"lifetime": ["fixed"]}},
+        model="inversion_puff",
+    )
+
+    result = CliRunner().invoke(cli.app, ["tune", str(path), "--runs-dir", str(tmp_path / "runs")])
+
+    assert result.exit_code == 0, result.output
+    stored = yaml.safe_load((tmp_path / "runs" / "search" / "config.yaml").read_text())
+    assert stored["model"]["params"]["lifetime"] == "fixed"

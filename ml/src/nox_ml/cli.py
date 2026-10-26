@@ -144,7 +144,10 @@ def tune(
     out.mkdir(parents=True, exist_ok=True)
     table.to_csv(out / "trials.csv", index=False)
     best = table.loc[table["loo_rmse_ppb"].idxmin()]
-    params = base.model.params | {k: best[k].item() for k in space.space}
+    # numbers come out of pandas as numpy scalars (`.item()` makes them plain), text as is
+    params = base.model.params | {
+        k: best[k].item() if hasattr(best[k], "item") else best[k] for k in space.space
+    }
     typer.echo(table.to_string(index=False))
     typer.echo(f"Best trial {int(best['trial'])}: {best['loo_rmse_ppb']:.2f} ppb with {params}")
     config = base.model_copy(update={"name": name, "model": base.model.model_copy(update={"params": params})})
