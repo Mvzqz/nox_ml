@@ -1,0 +1,19 @@
+
+name: normalized_ratio
+
+period:
+  start: 2023-11-01
+  end: 2023-12-31
+
+simat_hours: [12, 17]
+
+model:
+  name: normalized_ratio
+  params:
+    seed: 7
+
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.90
+  refits: 8
