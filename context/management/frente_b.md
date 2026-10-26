@@ -10,10 +10,10 @@ Resolver la misma pregunta (cuánto emite cada zona) con algoritmos **distintos*
 
 | # | Nombre | Qué es | Estado |
 |---|---|---|---|
-| E3 | `regularized_ls` | Mínimos cuadrados regularizados y no negativos (ridge o NNLS) sobre la misma tabla de transporte, sin supuesto bayesiano | **Por hacer** |
-| E4 | `lognormal_map` | Inversión no lineal: emisiones log-normales (siempre positivas), máximo a posteriori con L-BFGS-B; incertidumbre por aproximación de Laplace (inversa de la hessiana) | **Por hacer** |
-| R1 | `idw` | Interpolación por distancia inversa, como referencia (`role: reference`) | **Por hacer** (envolver lo existente) |
-| R2 | `kriging` | Proceso gaussiano **solo espacial, hora por hora**, como referencia | **Por hacer** |
+| E3 | `regularized_ls` | Mínimos cuadrados regularizados y no negativos (ridge o NNLS) sobre la misma tabla de transporte, sin supuesto bayesiano | **Hecho** (`models/regularized_ls.py`) |
+| E4 | `lognormal_map` | Inversión no lineal: emisiones log-normales (siempre positivas), máximo a posteriori con L-BFGS-B; incertidumbre por aproximación de Laplace (inversa de la hessiana) | **Hecho** (`models/lognormal_map.py`) |
+| R1 | `idw` | Interpolación por distancia inversa, como referencia (`role: reference`) | **Hecho** (`models/references.py`) |
+| R2 | `kriging` | Proceso gaussiano **solo espacial, hora por hora**, como referencia | **Hecho** (`models/references.py`) |
 | M1 | Peso de TEMPO y restricción de tráfico | Dos hiperparámetros nuevos del modelo físico base (`PlumeInversionParams`), heredados por E1, E2, E5a y E5b: `tempo_sigma_mult` (multiplica el error de los píxeles; la investigación usó 3, es decir, un tercio de peso) y una restricción opcional del cociente sábado/domingo frente a hábil con el tráfico de Infovial (día completo ponderado por emisión: sábado ~0.87, domingo ~0.65–0.73, con su σ). Valores por defecto = comportamiento actual, para que el baseline no cambie | **Por hacer, prioridad alta** |
 
 ## Código relevante
