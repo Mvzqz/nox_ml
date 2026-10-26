@@ -88,3 +88,19 @@ def test_laplace_covariance_is_symmetric_positive_definite_and_shrinks_with_more
         assert np.linalg.eigvalsh(fit.cov_eta).min() > 0
     assert np.diag(many.cov_x).sum() < np.diag(few.cov_x).sum()
     assert fit.cov_x == pytest.approx(fit.cov_eta * np.outer(fit.x, fit.x))
+
+
+@pytest.mark.parametrize("seed", range(6))
+@pytest.mark.parametrize("scale", [1.0, 1e4, 1e8])
+def test_the_map_converges_whatever_the_scale_and_conditioning_of_the_data(scale, seed):
+    truth = np.array([400.0, 1.4, 0.6, 1.1])
+    info, gradient = term(truth, seed)
+
+    fit = map_estimate(info * scale, gradient * scale, MEAN, SD)
+
+    assert fit.converged
+    step = np.linalg.solve(
+        hessian(fit.eta, info * scale, gradient * scale, log_prior(MEAN, SD)),
+        objective(fit.eta, info * scale, gradient * scale, log_prior(MEAN, SD))[1],
+    )
+    assert np.abs(step).max() < 1e-5  # the log-emissions are exact to 1e-5
