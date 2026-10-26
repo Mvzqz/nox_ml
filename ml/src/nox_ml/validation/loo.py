@@ -26,6 +26,7 @@ from nox_ml.models.base import Model
 Array = NDArray[np.float64]
 
 MIN_DISTANCE_KM = 0.5  # floor of the distance in the IDW weights
+IDW_POWER = 2.0  # exponent of the distance in the IDW weights
 PREDICTORS = ("model", "idw", "hybrid")
 
 
@@ -50,6 +51,13 @@ def predict_pixels(inputs: Inputs, systems: Sequence[HourSystem], post: Posterio
     return np.concatenate(model), np.concatenate(observed)
 
 
+def idw_weights(
+    distance_m: Array | pd.Series, power: float = IDW_POWER, min_distance_km: float = MIN_DISTANCE_KM
+) -> Array | pd.Series:
+    """IDW weight ``1 / distance^power`` for distances in m, floored at `min_distance_km`."""
+    return 1 / np.maximum(distance_m / 1000, min_distance_km) ** power
+
+
 def idw_and_hybrid(rows: pd.DataFrame, model: Array, station: str, station_xy: pd.DataFrame) -> pd.DataFrame:
     """Predictions of the rows of `station` from the other stations of the same hour.
 
@@ -57,11 +65,10 @@ def idw_and_hybrid(rows: pd.DataFrame, model: Array, station: str, station_xy: p
     the held-out rows that have at least one other station in their hour.
     """
     is_held = (rows["station"] == station).to_numpy()
-    others = rows[~is_held].assign(residual=(rows["obs"] - model)[~is_held])
     dx = station_xy["x"] - station_xy.loc[station, "x"]
     dy = station_xy["y"] - station_xy.loc[station, "y"]
-    km = np.maximum(np.hypot(dx, dy) / 1000, MIN_DISTANCE_KM)
-    w = 1 / others["station"].map(km) ** 2
+    others = rows[~is_held].assign(residual=(rows["obs"] - model)[~is_held])
+    w = idw_weights(others["station"].map(np.hypot(dx, dy)))
     hourly = (
         pd.DataFrame({"w": w, "wo": w * others["obs"], "wr": w * others["residual"], "h": others["h"]})
         .groupby("h")

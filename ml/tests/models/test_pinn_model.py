@@ -231,7 +231,10 @@ def test_without_torch_the_other_models_still_register_and_the_pinn_does_not():
 
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
 
-    assert out.stdout.strip() == "['inversion_plume', 'inversion_puff', 'normalized_ratio', 'rf_deweather']"
+    assert out.stdout.strip() == (
+        "['idw', 'inversion_plume', 'inversion_puff', 'kriging', 'lognormal_map', 'normalized_ratio', "
+        "'regularized_ls', 'rf_deweather']"
+    )
 
 
 def test_pinn_and_plume_jacobians_never_share_a_cache_entry(make_inputs):
