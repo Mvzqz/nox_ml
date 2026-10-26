@@ -1,0 +1,26 @@
+name: lognormal_map
+period:
+  start: '2023-11-01'
+  end: '2023-12-31'
+simat_hours:
+- 12
+- 17
+data_dir: data
+model:
+  name: lognormal_map
+  params:
+    seed: 7
+    bootstrap_n: 1
+    bootstrap_level: 0.9
+    tempo_sigma_mult: 1.0
+    traffic_constraint: false
+    traffic_sd: 0.04
+    sigma_theta_deg: 15.0
+    u_min_ms: 1.0
+    prior_sd_mult: 1.0
+    max_iter: 1000
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.9
+  refits: 8
