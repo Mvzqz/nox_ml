@@ -1,0 +1,26 @@
+name: regularized_ls
+period:
+  start: '2023-11-01'
+  end: '2023-12-31'
+simat_hours:
+- 12
+- 17
+data_dir: data
+model:
+  name: regularized_ls
+  params:
+    seed: 7
+    bootstrap_n: 200
+    bootstrap_level: 0.9
+    tempo_sigma_mult: 1.0
+    traffic_constraint: false
+    traffic_sd: 0.04
+    sigma_theta_deg: 15.0
+    u_min_ms: 1.0
+    alpha: 0.01
+    penalty: prior
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.9
+  refits: 8

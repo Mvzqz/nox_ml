@@ -1,0 +1,7 @@
+config: pinn_puff.yaml
+model: pinn_puff
+search: grid
+space:
+  tau_h: [6.0, 12.0, 24.0]
+  u_min: [1.0, 2.0]
+  max_age_h: [12, 24]
