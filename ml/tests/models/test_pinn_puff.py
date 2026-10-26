@@ -214,7 +214,9 @@ def test_the_puff_yaml_is_the_pinn_plume_one_with_the_puff_model():
     plume, puff = read_config(CONFIGS / "pinn_plume.yaml"), read_config(CONFIGS / "pinn_puff.yaml")
 
     assert puff.model.name == "pinn_puff"
-    assert PinnPuffParams.model_validate(puff.model.params) == PinnPuffParams(kernel_dir=".cache/pinn")
+    assert PinnPuffParams.model_validate(puff.model.params) == PinnPuffParams(
+        kernel_dir=".cache/pinn", u_min=2.0, lifetime="oh"
+    )
     assert puff.model_copy(update={"name": "pinn_plume", "model": plume.model}) == plume
 
 
