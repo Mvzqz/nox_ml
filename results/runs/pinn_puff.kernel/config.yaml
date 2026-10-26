@@ -1,0 +1,29 @@
+name: pinn_puff.kernel
+period:
+  start: '2023-11-01'
+  end: '2023-12-31'
+simat_hours:
+- 12
+- 17
+data_dir: data
+model:
+  name: pinn_puff
+  params:
+    seed: 0
+    bootstrap_n: 200
+    bootstrap_level: 0.9
+    layers: 3.0
+    width: 96.0
+    learning_rate: 0.0011318260238841501
+    physics_weight: 1.4188094064095462
+    adam_steps: 3000
+    lbfgs_rounds: 15
+    tau_h: 12.0
+    u_min: 1.0
+    kernel_dir: .cache/pinn
+    max_age_h: 24
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.9
+  refits: 8

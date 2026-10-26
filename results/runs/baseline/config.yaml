@@ -1,0 +1,21 @@
+name: baseline
+period:
+  start: '2023-11-01'
+  end: '2023-12-31'
+simat_hours:
+- 12
+- 17
+data_dir: data
+model:
+  name: inversion_plume
+  params:
+    seed: 7
+    bootstrap_n: 200
+    bootstrap_level: 0.9
+    sigma_theta_deg: 15.0
+    u_min_ms: 1.0
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.9
+  refits: 8
