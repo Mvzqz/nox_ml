@@ -2,11 +2,13 @@ from dataclasses import replace
 
 import numpy as np
 import pandas as pd
+import pytest
 from numpy.testing import assert_allclose
 
 from nox_ml.inversion.jacobian import Receptors
 from nox_ml.inversion.linear import hour_systems, solve, traffic_constraints
 from nox_ml.models.inversion_plume import InversionPlume, InversionPlumeParams
+from nox_ml.validation.experiment import Placebo, model_placebo
 
 N_REGIONS = 2
 
@@ -67,3 +69,33 @@ def test_a_model_with_the_traffic_constraint_gives_the_sunday_ratio_of_the_traff
 
     assert_allclose(day_total(table, "sunday_holiday") / weekday, 0.69, rtol=1e-2)
     assert_allclose(day_total(table, "saturday") / weekday, 0.87, rtol=1e-2)
+
+
+def test_the_placebo_refits_do_not_hold_their_fake_sundays_to_the_traffic_ratio(make_inputs):
+    """A placebo relabels weekdays as Sundays (`Inputs.with_day_kinds`). The traffic ratios describe the real
+    calendar, so the refit must not impose them on those days: with a tight constraint, the placebo would
+    otherwise find a drop that does not exist (review of PR #30)."""
+    inputs = make_inputs()
+    params = InversionPlumeParams.model_validate({"traffic_constraint": True, "traffic_sd": 2e-3})
+    model = InversionPlume(params)
+    weekdays = inputs.on_days([d for d in pd.date_range("2023-11-06", periods=14) if d.dayofweek < 5])
+    relabeled = weekdays.with_day_kinds({pd.Timestamp("2023-11-06"): 2})  # a Monday taken as a Sunday
+
+    assert model.constraints(relabeled) == []
+    assert model.constraints(inputs) != []  # the real calendar keeps it
+
+
+def test_the_placebo_is_the_same_with_or_without_the_traffic_constraint(make_inputs):
+    """The refits of the placebo never see the constraint, so its center cannot depend on it. (The small
+    fixture is not informative enough to center the placebo on 1 with or without it.)"""
+    inputs = make_inputs()
+    plain = InversionPlumeParams.model_validate({"bootstrap_n": 2})
+    held = InversionPlumeParams.model_validate(
+        {"bootstrap_n": 2, "traffic_constraint": True, "traffic_sd": 2e-3}
+    )
+    config = Placebo(refits=4, n=200, seed=3)
+
+    center = model_placebo(inputs, lambda: InversionPlume(plain), config)["center"]
+    center_held = model_placebo(inputs, lambda: InversionPlume(held), config)["center"]
+
+    assert center_held == pytest.approx(center, abs=1e-12)
