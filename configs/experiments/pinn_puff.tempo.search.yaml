@@ -1,0 +1,5 @@
+config: pinn_puff.yaml
+model: pinn_puff
+search: grid
+space:
+  tempo_sigma_mult: [1.0, 2.0, 3.0, 5.0, 10.0]

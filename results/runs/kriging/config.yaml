@@ -1,0 +1,19 @@
+name: kriging
+period:
+  start: '2023-11-01'
+  end: '2023-12-31'
+simat_hours:
+- 12
+- 17
+data_dir: data
+model:
+  name: kriging
+  params:
+    seed: 7
+    length_scale_km: 12.0
+    nugget: 0.3
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.9
+  refits: 8

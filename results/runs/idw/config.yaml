@@ -1,0 +1,19 @@
+name: idw
+period:
+  start: '2023-11-01'
+  end: '2023-12-31'
+simat_hours:
+- 12
+- 17
+data_dir: data
+model:
+  name: idw
+  params:
+    seed: 7
+    power: 2.0
+    min_distance_km: 0.5
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.9
+  refits: 8
