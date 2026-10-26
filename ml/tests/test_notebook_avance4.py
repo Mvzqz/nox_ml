@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
-NOTEBOOK = Path(__file__).parents[2] / "deliverables" / "Avance4.39.ipynb"
+NOTEBOOK = Path(__file__).parents[2] / "notebooks" / "Avance4.39.ipynb"
 
 
 def run_code_cells(monkeypatch, folder):
@@ -50,7 +50,7 @@ def test_the_notebook_code_only_calls_nox_ml():
 
 def test_the_front_c_cells_read_the_searches_and_the_kappa_grid_when_they_exist(tmp_path, monkeypatch):
     (tmp_path / "pyproject.toml").write_text("")
-    runs = tmp_path / "runs"
+    runs = tmp_path / "results" / "runs"
     config = {"model": {"name": "pinn_puff", "params": {"kappa": 1500.0}}}
     summary = {"model": "pinn_puff", "role": "model", "loo_rmse_ppb": 12.08, "eligible": True}
 
@@ -77,5 +77,6 @@ def test_the_front_c_cells_read_the_searches_and_the_kappa_grid_when_they_exist(
     scope = run_code_cells(monkeypatch, tmp_path)
 
     assert list(scope["table"]["run"]) == ["pinn_puff"]  # the kappa run is not a competitor
+    assert list(scope["ranked"]["id"]) == ["E5b"]
     assert list(scope["grid"]["kappa_m"]) == [500.0, 1500.0]
     assert set(scope["trials"]) == {"pinn_puff.transport", "pinn_puff.kernel"}

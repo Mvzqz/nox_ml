@@ -62,4 +62,4 @@ Cada frente tiene su guía con objetivo, tareas, código relevante, pruebas, tra
 
 ## Integración
 
-Cada pull request trae su fila de `compare`. Quien coordina corre al final `nox-ml compare runs/*` con todos los modelos, ajusta los dos mejores con `nox-ml tune` y arma `deliverables/Avance4.39.ipynb`.
+Cada pull request trae su fila de `compare`. Quien coordina corre al final `nox-ml compare runs/*` con todos los modelos, ajusta los dos mejores con `nox-ml tune` y arma `notebooks/Avance4.39.ipynb`.
