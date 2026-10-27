@@ -1,6 +1,6 @@
 # Tareas
 
-Tareas abiertas para las siguientes sesiones (nube o local). Al terminar una, se marca con la fecha y el PR.
+Tareas abiertas. Al terminar una, se marca con la fecha y el PR.
 
 ## Seguimiento de la migración (revisión de los PR #1–#3, 2026-10-24)
 
@@ -37,7 +37,9 @@ Tareas abiertas para las siguientes sesiones (nube o local). Al terminar una, se
 
 - [x] **Artefactos de corrida para ensambles.** `nox-ml run` guarda `oof.parquet` (predicciones fuera de muestra de la estación oculta) y `emissions.parquet` (`docs/models.md`, sección 4) (2026-10-25, PR #12).
 - [x] **Periodo de prueba reservado.** Feb–may 2024 solo se usa para evaluar el modelo final; `nox-ml tune` rechaza configuraciones que lo incluyan (2026-10-25, PR #12).
-- [ ] **Eventos con respuesta conocida.** Migrar desde `research-archive` los datos y el cálculo del confinamiento 2020 frente a 2019 (`val2020_data.py`, `val2020_ratio.py`) y de las contingencias 2024 con CO (`contingencias_2024.py`, `contingencias_co.py`).
+- [ ] **Contingencias 2024.** Migrar desde `research-archive` los datos y el cálculo de las contingencias 2024 con CO (`contingencias_2024.py`, `contingencias_co.py`); caen dentro del periodo de prueba y se usan para evaluar el modelo final en el avance 5.
+- [ ] **Contrato de ensambles y evaluación en el periodo de prueba.** Un ensamble es un `Model` del registro que envuelve a sus modelos base (stacking anidado por estación sobre `oof.parquet`); modo de `nox-ml` para correr una configuración congelada en feb–may 2024.
+- [ ] **Ensambles X1–X6** (`plan_avances.md`, avance 5). Mínimo para la rúbrica: X1, X4, X5 y X6.
 
 - [x] **Cuadernos de experimentos.** `notebooks/experimentos/` (01 transporte, 02 emisión frente a clima, 03 ajuste de `pinn_puff`, 04 ablación, 05 viento y objetivo), con las funciones en `nox_ml.validation.report_experiments`. Ejecutados con los datos reales; el 03 tolera las corridas que solo existen en la máquina del dueño (2026-10-25, PR #31). **Falta** correr en local `pinn_puff`, sus búsquedas y la rejilla de `kappa` para que el 03 muestre resultados.
 
@@ -49,6 +51,8 @@ Tareas abiertas para las siguientes sesiones (nube o local). Al terminar una, se
 - [ ] **Sensibilidad del periodo de prueba a la capa límite.** La capa límite de 2024 es MERRA-2 corregido y su corrección no mejora el error mediano fuera de muestra (376 m frente a 338 m sin corregir; Avance 1, 4.4). Junto con la tarea del desfase de MERRA-2, medir cuánto cambian los resultados de feb–may 2024 con otra capa límite (por ejemplo los topes de 1000 y 1500 m de la investigación).
 - [ ] **Corrección de mph por año de la etiqueta.** `simat.fix_wind_speed` decide por el año de `local`: la hora 24 del 31 de diciembre de 2024 (etiqueta 2025-01-01 00:00, 19 filas) queda sin corregir. Fuera de los periodos de estudio; corregir por archivo de origen.
 - [x] **Características de E6 justificadas.** Se hacen en la sesión de E6 (hora y día cíclicos, ventilación y su acumulado, dirección del viento con seno y coseno, tipo de día), con la justificación de cada transformación y codificación (2026-10-25, PR #20).
+
+- [ ] **Confinamiento 2020 frente a 2019 (fuera del avance 5).** Migrar `val2020_data.py` y `val2020_ratio.py` de `research-archive` y correr E7 y E6, que no necesitan TEMPO. El modelo final no aplica: necesita TEMPO (desde 2023) y MERRA-2 (no descargado para 2019–2020), y sin TEMPO la inversión no pasa el placebo de 2019 (`reports/validacion_2020.md`).
 
 ## Ventajas del proyecto
 
