@@ -8,7 +8,7 @@ Dos ensambles **homogéneos** de los modelos de inversión. X1 promedia el mismo
 
 ## Tareas
 
-| # | Nombre sugerido | Qué es | Base | Prioridad |
+| # | Nombre (obligatorio) | Qué es | Base | Prioridad |
 |---|---|---|---|---|
 | X1 | `bagged_inversion` | Bagging: `n_bags` inversiones, cada una sobre un remuestreo con reemplazo de días completos (bloques de días); predicción y emisión = promedio de los miembros | E5b `pinn_puff` (configuración de `configs/experiments/pinn_puff.yaml`) | Mínimo para la rúbrica |
 | X2 | `wind_ensemble` | Ensamble de vientos: `n_members` inversiones, cada una con el viento horario perturbado (dirección y velocidad) y la capa límite perturbada; predicción y emisión = promedio | E2 `inversion_puff` (más barato de rearmar que E5b) | Recomendado |
@@ -49,6 +49,7 @@ Entregar según [avance5_arranque.md](avance5_arranque.md): fila de `compare`, t
 
 ## Cuándo está listo
 
+0. `uv run pytest -m acceptance -k front_a` pasa (ver [avance5_arranque.md](avance5_arranque.md), pruebas de aceptación).
 1. X1 y X2 registrados, con su configuración y, si se ajustaron, su búsqueda.
 2. `bin/check` pasa.
 3. Corridas en nov–dic 2023 con su fila de `compare` en el pull request y la comparación con su base (E5b para X1, E2 para X2): error, domingo/hábil, placebo y tiempo.

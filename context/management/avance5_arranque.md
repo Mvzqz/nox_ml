@@ -50,6 +50,21 @@ Lo implementa coordinación; al fusionarse queda descrito en `docs/models.md` (s
 4. Copia la carpeta a `results/runs/<nombre>/` en el mismo pull request (son unos KB; `results/` sí está versionado).
 5. Corridas pesadas (más de ~30 min): en una máquina local, con `systemd-inhibit` o equivalente para que no se suspenda.
 
+## Pruebas de aceptación
+
+`ml/tests/acceptance/test_avance5.py` comprueba que cada parte está completa: el ensamble registrado como modelo, su configuración en nov–dic 2023 con el mismo placebo que los demás, su búsqueda válida y corrida (`trials.csv` con al menos 4 pruebas), y su corrida guardada en `results/runs/<nombre>/` con métricas de emisión, tiempos, predicciones fuera de muestra (al menos 20 estaciones) y emisiones. No revisan la ciencia; eso lo hacen las pruebas de contrato y la revisión del pull request.
+
+No corren en `bin/check` ni en CI: fallan a propósito hasta que la parte está hecha. Cada frente corre las suyas antes de pedir revisión, y deben pasar todas:
+
+```sh
+uv run pytest -m acceptance -k front_a
+uv run pytest -m acceptance -k front_b
+uv run pytest -m acceptance -k front_c
+uv run pytest -m acceptance -k delivery   # la entrega completa (coordinación)
+```
+
+Los nombres de los ensambles son los que esperan las pruebas: `bagged_inversion`, `wind_ensemble`, `stacking`, `bayes_average`, `gb_deweather` y, opcional, `pinn_seeds`. Si hace falta otro nombre, se cambia también en la prueba.
+
 ## Cómo se leen los resultados
 
 - El ruido del error con estación oculta es de ~±0.5 ppb: una mejora menor no es una mejora. Un ensamble que no mejora el error pero estrecha el placebo o acerca el domingo/hábil al tráfico (0.65–0.73) sí aporta, y hay que decirlo.

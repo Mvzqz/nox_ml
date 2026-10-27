@@ -8,7 +8,7 @@ Los dos ensambles **heterogéneos**, que combinan modelos distintos del avance 4
 
 ## Tareas
 
-| # | Nombre sugerido | Qué es | Bases | Prioridad |
+| # | Nombre (obligatorio) | Qué es | Bases | Prioridad |
 |---|---|---|---|---|
 | X5 | `stacking` | Stacking convexo: pesos ≥ 0 que suman 1, aprendidos minimizando el error de las predicciones fuera de muestra, anidado por estación | E5b, E2, E5a | Mínimo para la rúbrica |
 | X6 | `bayes_average` | Promedio bayesiano de modelos: pesos proporcionales a la verosimilitud de cada modelo en estación oculta | Modelos elegibles del avance 4 (E5b, E2, E5a, E3, E1, E4) | Mínimo para la rúbrica |
@@ -52,6 +52,7 @@ Si no hay máquina local disponible, avisar a coordinación para que corra la co
 
 ## Cuándo está listo
 
+0. `uv run pytest -m acceptance -k front_b` pasa (ver [avance5_arranque.md](avance5_arranque.md), pruebas de aceptación).
 1. X5 y X6 registrados, con configuración y búsqueda.
 2. `bin/check` pasa.
 3. Filas de `compare` en el pull request, con los pesos aprendidos (globales y su variación entre pliegues) y la comparación con E5b.

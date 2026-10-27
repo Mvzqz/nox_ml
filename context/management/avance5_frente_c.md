@@ -56,6 +56,7 @@ Un ensamble homogéneo de boosting (X4), opcionalmente el de semillas de la PINN
 
 ## Cuándo está listo
 
+0. `uv run pytest -m acceptance -k front_c` pasa (ver [avance5_arranque.md](avance5_arranque.md), pruebas de aceptación). Los nombres `gb_deweather` y `pinn_seeds` son obligatorios.
 1. X4 registrado, con configuración, búsqueda y su fila de `compare` en nov–dic 2023.
 2. C1: código y pruebas fusionados; resultado de prueba con E2 o E7 comparado con la investigación.
 3. C2 y C1 con el modelo final, en `results/runs/`, con un resumen en el pull request.

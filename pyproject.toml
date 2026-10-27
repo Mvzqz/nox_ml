@@ -58,10 +58,11 @@ typeCheckingMode = "standard"
 # --- Tests -------------------------------------------------------------------
 [tool.pytest.ini_options]
 testpaths = ["ml/tests", "app/tests", "tests"]
-addopts = "-ra --strict-markers -m 'not slow'"
+addopts = "-ra --strict-markers -m 'not slow and not acceptance'"
 markers = [
     "slow: real-data or long-running tests (scheduled CI or `-m slow`)",
     "regression: reproduce key scientific figures on a fixed sample",
+    "acceptance: Avance 5 delivery checks of each front, failing until its part is done (`-m acceptance`)",
 ]
 
 [tool.coverage.run]
