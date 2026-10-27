@@ -2,4 +2,4 @@
     remote = origin
     autostage = true
 ['remote "origin"']
-    url = https://dagshub.com/Mvzqz/nox_ml.dvc
+    url = https://dagshub.com/Mvzqz/nox_ml_data.dvc
