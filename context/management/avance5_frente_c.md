@@ -35,7 +35,7 @@ Un ensamble homogéneo de boosting (X4), opcionalmente el de semillas de la PINN
 
 - **Cuándo.** Después de la tabla de nov–dic y de elegir el modelo final (29–30 de octubre). Una sola vez, con la configuración congelada; no se vuelve a elegir con estos resultados.
 - **Periodo.** `2024-02-15` a `2024-05-31` (es el archivo de píxeles de TEMPO que existe: `data/interim/tempo_pixels_2024-02-15_2024-05-31.parquet`). Los festivos del periodo ya están en `HOLIDAYS` (`ml/src/nox_ml/inversion/linear.py`). El viento de 2024 ya trae la corrección de mph.
-- **Qué se corre.** `uv run nox-ml evaluate configs/experiments/<final>.yaml --period test` para el modelo final y uno o dos finalistas (por ejemplo, el mejor individual E5b si el final es un ensamble). Mide error con estación oculta, domingo/hábil frente al tráfico, placebo y tiempos. Después, C1 con el modelo final.
+- **Qué se corre.** `uv run nox-ml evaluate runs/<final>/config.yaml --period test` para el modelo final y uno o dos finalistas (por ejemplo, el mejor individual E5b si el final es un ensamble). Mide error con estación oculta, domingo/hábil frente al tráfico, placebo y tiempos. Después, C1 con el modelo final.
 - **Costo.** Feb–may es ~2 veces nov–dic en horas: las matrices de E5b tardan ~25 min y la corrida completa puede pasar de 2 h. Local, con `systemd-inhibit`.
 - **Para el notebook.** Guardar en `results/runs/<final>.test/` las predicciones fuera de muestra (`oof.parquet`), que alimentan los gráficos de observado frente a predicho, residuos y series de tiempo.
 

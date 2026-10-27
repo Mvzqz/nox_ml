@@ -1,7 +1,7 @@
 """Acceptance checks of Avance 5: each front runs its own when its part is done.
 
     uv run pytest -m acceptance -k front_a     # X1 bagged_inversion, X2 wind_ensemble
-    uv run pytest -m acceptance -k front_b     # X5 stacking, X6 bayes_average
+    uv run pytest -m acceptance -k front_b     # X5 stacking, X6 bayes_average (configs of convex_ensemble)
     uv run pytest -m acceptance -k front_c     # X4 gb_deweather (X3 pinn_seeds, if registered)
     uv run pytest -m acceptance -k delivery    # the whole delivery (coordination)
 
@@ -33,11 +33,14 @@ TUNING_PERIOD = (date(2023, 11, 1), date(2023, 12, 31))
 BEST_INDIVIDUAL = ("pinn_puff", "inversion_puff", "pinn_plume")  # E5b, E2, E5a: the stacking bases
 MIN_STATIONS = 20  # held-out stations an out-of-fold file must cover
 
-# name -> (front, kind, tuned)
+ENSEMBLE_MODEL = "convex_ensemble"  # the contract's ensemble (docs/models.md, section 10)
+
+# config and run name -> (front, kind, tuned with `nox-ml tune`). Front B learns its weights with
+# `nox_ml.validation.stacking` instead, and stores the nested evaluation in its run folder.
 ENSEMBLES = {
     "bagged_inversion": ("front_a", "homogeneous", True),
     "wind_ensemble": ("front_a", "homogeneous", True),
-    "stacking": ("front_b", "heterogeneous", True),
+    "stacking": ("front_b", "heterogeneous", False),
     "bayes_average": ("front_b", "heterogeneous", False),
     "gb_deweather": ("front_c", "homogeneous", True),
 }
@@ -52,8 +55,17 @@ def cases(table: dict[str, tuple[str, str, bool]], tuned_only: bool = False) -> 
     ]
 
 
+def issubclass_of_ensemble(model: str) -> bool:
+    """True for the contract's ensemble and its subclasses (no import of the class: it may not exist yet)."""
+    return any(getattr(cls, "name", None) == ENSEMBLE_MODEL for cls in REGISTRY[model].__mro__)
+
+
 def summary(run: Path) -> RunMetrics:
     return RunMetrics.model_validate(json.loads((run / "metrics.json").read_text())["summary"])
+
+
+def config_model(name: str) -> str:
+    return read_config(CONFIGS / f"{name}.yaml").model.name
 
 
 def run_model(run: Path) -> str | None:
@@ -66,8 +78,12 @@ def run_model(run: Path) -> str | None:
 
 @pytest.mark.parametrize("name", cases(ENSEMBLES))
 def test_the_ensemble_is_registered_as_a_model(name):
-    assert name in REGISTRY, f"{name} is not in nox_ml.models.REGISTRY"
-    assert REGISTRY[name].role == "model", "an ensemble estimates emissions: role must be 'model'"
+    """Registered under its own name (a subclass of ConvexEnsemble, or a model such as gb_deweather), or a
+    config of the contract's convex_ensemble."""
+    model = config_model(name)
+    assert model in (name, ENSEMBLE_MODEL), f"{name}.yaml must use model {name} or {ENSEMBLE_MODEL}"
+    assert model in REGISTRY, f"{model} is not in nox_ml.models.REGISTRY"
+    assert REGISTRY[model].role == "model", "an ensemble estimates emissions: role must be 'model'"
 
 
 @pytest.mark.parametrize("name", cases(ENSEMBLES))
@@ -75,7 +91,7 @@ def test_its_config_runs_on_the_tuning_period_like_the_other_models(name):
     config = read_config(CONFIGS / f"{name}.yaml")
     baseline = read_config(CONFIGS / "baseline.yaml")
 
-    assert config.model.name == name
+    assert config.name == name, "the run folder is named after the config: results/runs/<name>/"
     period = (config.period.start, config.period.end)
     assert period == TUNING_PERIOD, "nov-dec 2023 only: feb-may 2024 is the test period"
     assert config.simat_hours == baseline.simat_hours
@@ -100,7 +116,7 @@ def test_its_run_is_stored_with_metrics_predictions_and_emissions(name):
     run = RUNS / name
     for file in ("config.yaml", "metrics.json", "oof.parquet", "emissions.parquet", "code_version.json"):
         assert (run / file).exists(), f"results/runs/{name}/{file} is missing: run `nox-ml run` and copy it"
-    assert run_model(run) == name
+    assert run_model(run) == config_model(name)
 
     s = summary(run)
     assert s.role == "model"
@@ -120,6 +136,22 @@ def test_front_b_the_heterogeneous_ensembles_combine_the_best_individual_models(
     text = (CONFIGS / f"{name}.yaml").read_text()
     missing = [m for m in BEST_INDIVIDUAL if m not in text]
     assert not missing, f"{name} must combine the best models of Avance 4; missing {missing}"
+    assert config_model(name) == ENSEMBLE_MODEL or issubclass_of_ensemble(config_model(name))
+
+
+@pytest.mark.parametrize("name", [n for n, (front, *_) in ENSEMBLES.items() if front == "front_b"])
+def test_front_b_the_nested_evaluation_is_stored_with_its_weights(name):
+    """`stacking.nested_oof` gives the honest error for the table (each station with weights learned without
+    it); the run itself uses the weights frozen on all stations."""
+    run = RUNS / name
+    nested = pd.read_parquet(run / "nested_oof.parquet")
+    assert {"station", "utc", "nox_ppb_pred"} <= set(nested.columns)
+    assert len(set(nested["station"])) >= MIN_STATIONS
+
+    weights = pd.read_csv(run / "nested_weights.csv", index_col="station")
+    assert set(weights.index) == set(nested["station"]), "one weight row per evaluated station"
+    assert bool((weights >= 0).all().all()), "convex weights"
+    assert bool(((weights.sum(axis=1) - 1).abs() < 1e-6).all()), "convex weights sum to 1"
 
 
 @pytest.mark.parametrize("name", cases(OPTIONAL))
@@ -152,8 +184,8 @@ def test_delivery_the_final_model_was_evaluated_once_on_the_test_period():
     runs = [p for p in RUNS.glob("*.test") if (p / "metrics.json").exists()]
     assert runs, "no results/runs/<final>.test/: run `nox-ml evaluate <config> --period test`"
     for run in runs:
-        config = yaml.safe_load((run / "config.yaml").read_text())
-        assert str(config["period"]["start"]) >= "2024-02-01", f"{run.name} is not on feb-may 2024"
+        evaluation = json.loads((run / "metrics.json").read_text()).get("evaluation") or {}
+        assert evaluation.get("period") == "test", f"{run.name} was not written by `nox-ml evaluate`"
         assert (run / "oof.parquet").exists(), "the plots of the final model need its out-of-fold predictions"
 
 

@@ -21,16 +21,17 @@ Guías por frente: [A](avance5_frente_a.md), [B](avance5_frente_b.md), [C](avanc
 | 4 | Elección del modelo final; corrida única en feb–may 2024 y contingencias | Coordinación y C | 29–30 oct |
 | 5 | Notebook, gráficos, declaración de IA y HTML | Coordinación | 30–31 oct |
 
-Nadie empieza el paso 2 sobre `main` sin el contrato fusionado. Mientras tanto se puede leer el código y preparar las pruebas.
+El contrato ya está en el pull request #49; el paso 2 empieza sobre `main` cuando se fusione.
 
 ## El contrato de ensambles (paso 1)
 
-Lo implementa coordinación; al fusionarse queda descrito en `docs/models.md` (sección de ensambles) y en un ADR nuevo. **Si esta guía y `docs/models.md` no coinciden, manda `docs/models.md`.** Lo que se espera:
+Está en `docs/models.md`, sección 10, y en el ADR 0007. **Si esta guía y `docs/models.md` no coinciden, manda `docs/models.md`.** En resumen:
 
-- Un ensamble es un `Model` del registro (`role: model`) que envuelve a sus modelos base, declarados en sus parámetros como configuraciones de experimento. Pasa la prueba de contrato como cualquier modelo.
-- Debe estimar emisión: una combinación convexa (pesos ≥ 0 que suman 1) de las emisiones de sus bases. Si mezcla modelos con transportes distintos (E5b, E2 y E5a difieren hasta en un factor de 2 en emisión absoluta), se reporta como relativo (cocientes por tipo de día).
-- Una utilidad de stacking convexo anidado por estación sobre los `oof.parquet` de las corridas: los pesos con que se evalúa la estación `s` se aprenden sin `s`.
-- `nox-ml evaluate <config> --period test`: corre una configuración congelada en el periodo de prueba y guarda en `runs/<name>.test/`. `nox-ml tune` sigue rechazando ese periodo.
+- `convex_ensemble` (`ml/src/nox_ml/models/ensemble.py`) es el ensamble registrado: un `Model` que envuelve a sus modelos base, declarados en `params.members` como `{name, params}`, con pesos convexos en `params.weights` (`null`: promedio simple). Pasa la prueba de contrato como cualquier modelo. Los ensambles con lógica propia heredan de `ConvexEnsemble`.
+- Emisión: absoluta (t/año) solo si todos los miembros son absolutos y comparten `transport_key()`; si no, relativa (índice por tipo de día sobre el hábil, sin zonas).
+- `nox_ml.validation.stacking`: aprende pesos a partir de los `oof.parquet` de las corridas sin reajustar los modelos base. `nested_oof` da el error honesto (los pesos con que se evalúa la estación `s` se aprenden sin `s`) y `fit_weights` da los pesos con todas las estaciones, que se congelan en la configuración. Reglas: `stack` (X5) y `likelihood` (X6).
+- `uv run nox-ml evaluate runs/<nombre>/config.yaml --period test` corre una configuración congelada en el periodo de prueba y escribe `runs/<nombre>.test/`. `nox-ml compare` muestra la columna `period`. `tune` sigue rechazando ese periodo.
+- Un ensamble cuesta la suma de sus miembros: la validación con estación oculta y el placebo reajustan a cada uno.
 
 ## Reglas (las mismas del avance 4)
 
@@ -63,7 +64,7 @@ uv run pytest -m acceptance -k front_c
 uv run pytest -m acceptance -k delivery   # la entrega completa (coordinación)
 ```
 
-Los nombres de los ensambles son los que esperan las pruebas: `bagged_inversion`, `wind_ensemble`, `stacking`, `bayes_average`, `gb_deweather` y, opcional, `pinn_seeds`. Si hace falta otro nombre, se cambia también en la prueba.
+Los nombres de las configuraciones (y de sus carpetas en `results/runs/`) son los que esperan las pruebas: `bagged_inversion`, `wind_ensemble`, `stacking`, `bayes_average`, `gb_deweather` y, opcional, `pinn_seeds`. La configuración usa un modelo registrado con ese mismo nombre o `convex_ensemble`. Si hace falta otro nombre, se cambia también en la prueba.
 
 ## Cómo se leen los resultados
 
