@@ -45,7 +45,7 @@ def test_tempo_reproduces_the_research_qc_figures(simat_checks):
 def test_pbl_reproduces_the_merra2_vs_era5_agreement(tmp_path):
     messages = [c.message for c in pbl.run_fill(RAW / "merra2", RAW / "era5_openmeteo", tmp_path)]
 
-    assert any(m.startswith("Afternoon: r = 0.68, median bias MERRA-2 - ERA5 = 224 m") for m in messages)
+    assert any(m.startswith("Afternoon: r = 0.76, median bias MERRA-2 - ERA5 = 337 m") for m in messages)
     assert "MERRA-2 corrected: 4368 hours" in messages
     filled = pd.read_parquet(tmp_path / "pbl_2023_2024.parquet")
     assert bool((filled["source"] != "missing").all())

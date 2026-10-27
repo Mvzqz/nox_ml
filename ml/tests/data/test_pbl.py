@@ -34,10 +34,20 @@ def test_merra_to_hourly_averages_each_reading_with_the_previous_one():
 
     on_hour = pbl.merra_to_hourly(m2)
 
-    # Stamped one hour after the pair's midpoint (see the NOTE in `merra_to_hourly`): the research convention.
-    assert on_hour.loc["2023-01-01 02:00"] == 150.0
-    assert on_hour.loc["2023-01-01 03:00"] == 300.0
-    assert np.isnan(on_hour.loc["2023-01-01 01:00"])
+    assert on_hour.loc["2023-01-01 01:00"] == 150.0
+    assert on_hour.loc["2023-01-01 02:00"] == 300.0
+    assert np.isnan(on_hour.loc["2023-01-01 00:00"])
+
+
+def test_merra_to_hourly_stamps_a_linear_ramp_at_its_own_time():
+    # A reading stamped hh:30 is the mean over [hh:00, hh+1:00]; for a ramp equal to the hour of the day
+    # that mean is hh + 0.5, and the value at hh:00 must come out as hh (no lag against an on-the-hour one).
+    readings = pd.date_range("2023-01-01 00:30", periods=6, freq="h")
+    m2 = pd.Series(np.arange(6) + 0.5, index=readings)
+
+    on_hour = pbl.merra_to_hourly(m2).dropna()
+
+    np.testing.assert_allclose(on_hour.to_numpy(), on_hour.index.hour.to_numpy())
 
 
 def test_merra_to_hourly_drops_duplicate_hours_when_days_overlap():

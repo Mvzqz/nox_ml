@@ -66,13 +66,13 @@ def parse_era5(payload: dict) -> pd.Series:
 def merra_to_hourly(m2: pd.Series) -> pd.Series:
     """MERRA-2 hour averages (stamped hh:30) -> on-the-hour values, the ERA5 convention.
 
-    Averages each reading with the previous one, as the research script did. NOTE: that value belongs at
-    hh:00 of the reading's own hour, but it is stamped one hour later (hh+1:00), so MERRA-2 lags ERA5 by
-    an hour (correlation with ERA5 0.85, vs 0.89 with the stamp one hour earlier). Kept to reproduce the
-    research numbers; see the PR.
+    A tavg1 reading stamped hh:30 is the mean over [hh:00, hh+1:00]. The mean of two consecutive readings
+    (hh-1 and hh) is therefore centred on hh:00 and is stamped there. Stamping it one hour later, as the
+    research did, made MERRA-2 lag ERA5 by an hour (2023 hourly correlation 0.84 vs 0.87 with this stamp,
+    and the maximum over lags of -2 to +2 h; see context/knowledge/desfase_merra2.md).
     """
     on_hour = (m2 + m2.shift(1)) / 2
-    on_hour.index = on_hour.index.floor("h") + pd.Timedelta(hours=1)
+    on_hour.index = on_hour.index.floor("h")
     return on_hour[~on_hour.index.duplicated()]
 
 
