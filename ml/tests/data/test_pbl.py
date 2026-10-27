@@ -1,7 +1,9 @@
 # pyright: reportArgumentType=false, reportAttributeAccessIssue=false, reportIndexIssue=false, reportCallIssue=false
 # pyright: reportOperatorIssue=false, reportReturnType=false, reportAssignmentType=false, reportGeneralTypeIssues=false
 import json
+import warnings
 
+import netCDF4
 import numpy as np
 import pandas as pd
 import pytest
@@ -201,6 +203,21 @@ def test_read_merra_file_returns_the_chosen_cell_stamped_at_half_hours(tmp_path,
     assert m2.index[0] == pd.Timestamp("2023-01-01 00:30")
     assert m2.index[-1] == pd.Timestamp("2023-01-01 23:30")
     assert m2.iloc[5] == 500.0
+
+
+def test_read_merra_file_reads_the_time_of_real_files_without_warnings(tmp_path, write_merra_file):
+    """Real MERRA-2 files declare a valid_range of +-1e15 on their int32 time, which netCDF4 cannot cast."""
+    path = write_merra_file(tmp_path / "day.nc4", "2023-01-01", np.arange(24) * 100.0)
+    with netCDF4.Dataset(path, "a") as ds, warnings.catch_warnings():
+        warnings.simplefilter("ignore")  # writing the uncastable range warns too
+        ds["time"].valid_range = np.array([-1e15, 1e15])
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        m2 = pbl.read_merra_file(path)
+
+    assert m2.index[0] == pd.Timestamp("2023-01-01 00:30")
+    assert m2.index[-1] == pd.Timestamp("2023-01-01 23:30")
 
 
 def test_read_merra2_fails_clearly_when_nothing_was_downloaded(tmp_path):
