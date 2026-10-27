@@ -46,6 +46,11 @@ from nox_ml.validation import loo
 from nox_ml.validation.metrics import PLACEBO_TOLERANCE, RunMetrics, gap_to_range
 from nox_ml.validation.placebo import daily_table, split_placebo
 
+TEST_PERIOD = (date(2024, 2, 1), date(2024, 5, 31))  # feb-may 2024, reserved for the final model
+# What `nox-ml evaluate` runs on: the TEMPO pixels of the test period start on 15 February
+# (data/interim/tempo_pixels_2024-02-15_2024-05-31.parquet), and `load_inputs` reads them by these dates.
+EVALUATION_PERIOD = (date(2024, 2, 15), TEST_PERIOD[1])
+
 
 class Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -312,14 +317,19 @@ def code_version() -> dict[str, Any]:
         return {"git_hash": "unknown", "dirty": None}
 
 
-def run_experiment(config: ExperimentConfig, runs_dir: Path = Path("runs")) -> Path:
+def run_experiment(
+    config: ExperimentConfig, runs_dir: Path = Path("runs"), evaluation: dict[str, Any] | None = None
+) -> Path:
     """Run the experiment and write ``runs_dir/<name>/``: ``config.yaml`` (as validated, defaults included),
     ``metrics.json``, ``code_version.json``, ``oof.parquet`` (leave-one-station-out predictions) and, for
-    models, ``emissions.parquet``. Returns the folder."""
+    models, ``emissions.parquet``. `evaluation` is stored in ``metrics.json`` (see `run_on_test_period`).
+    Returns the folder."""
     inputs = load_inputs(
         config.data_dir, config.period.start.isoformat(), config.period.end.isoformat(), config.simat_hours
     )
     result = evaluate(inputs, config)
+    if evaluation is not None:
+        result.metrics["evaluation"] = evaluation
     out = runs_dir / config.name
     out.mkdir(parents=True, exist_ok=True)
     (out / "config.yaml").write_text(yaml.safe_dump(config.model_dump(mode="json"), sort_keys=False))
@@ -329,6 +339,31 @@ def run_experiment(config: ExperimentConfig, runs_dir: Path = Path("runs")) -> P
         result.emissions.to_frame().to_parquet(out / "emissions.parquet", index=False)
     (out / "code_version.json").write_text(json.dumps(code_version(), indent=2) + "\n")
     return out
+
+
+def run_on_test_period(config: ExperimentConfig, runs_dir: Path = Path("runs")) -> Path:
+    """Run a frozen config on the test period (`EVALUATION_PERIOD`, the days of feb-may 2024 with TEMPO) and
+    write ``runs_dir/<name>.test/``.
+
+    Only the period and the name change: model, params, hours and placebo are the config's, so the numbers
+    are those of `run_experiment` on another period. ``metrics.json`` records the evaluation (``period:
+    test``, its dates and the period the config was frozen on), which `nox-ml compare` shows. Only
+    `nox-ml evaluate` calls this; `nox-ml tune` has no way to reach the test period.
+    """
+    frozen_on = {"start": config.period.start.isoformat(), "end": config.period.end.isoformat()}
+    test = config.model_copy(
+        update={
+            "name": f"{config.name.removesuffix('.test')}.test",
+            "period": Period(start=EVALUATION_PERIOD[0], end=EVALUATION_PERIOD[1]),
+        }
+    )
+    evaluation = {
+        "period": "test",
+        "start": EVALUATION_PERIOD[0].isoformat(),
+        "end": EVALUATION_PERIOD[1].isoformat(),
+        "frozen_on": frozen_on,
+    }
+    return run_experiment(test, runs_dir, evaluation)
 
 
 def headline(metrics: dict[str, Any]) -> str:

@@ -25,7 +25,8 @@ Un ensamble homogéneo de boosting (X4), opcionalmente el de semillas de la PINN
 
 ## C1: contingencias 2024
 
-- **Datos.** `data/raw/contingencias/contingencias_ozono_2024.csv`: 23 fechas del 22 de febrero al 31 de mayo (de notas de prensa; verificar con los comunicados de la CAMe si hay tiempo). Caen dentro del periodo de prueba: **nada de esto se usa para ajustar ni elegir.**
+- **Datos.** `data/raw/contingencias/contingencias_ozono_2024_episodios.csv`: los 11 episodios del 22 de febrero al 31 de mayo, con fecha y hora de activación y de suspensión (verificados con reportes de la CAMe y prensa; ver `data/raw/MANIFEST.md`). Caen dentro del periodo de prueba: **nada de esto se usa para ajustar ni elegir.** El archivo anterior, `contingencias_ozono_2024.csv`, se conserva solo para reproducir la investigación: le faltan 4 días con contingencia (7 de marzo, 23, 24 y 26 de mayo) y mezcla días de activación con días de medidas.
+- **Qué días cuentan.** La activación se anuncia hacia las 15:00 y el Doble Hoy No Circula empieza a las 05:00 del día siguiente, así que la tarde del día de activación (12–17 h, la que usan los modelos) casi no tiene restricciones. Los **días con medidas** van del día siguiente a la activación hasta el día de suspensión inclusive (que suele ser a las 15:00): 16 días en 11 episodios. Son los que se reetiquetan; los días de activación no entran ni como contingencia ni como referencia. Como análisis de sensibilidad, repetir con todos los días con contingencia activa (activación incluida).
 - **Referencia de la investigación** (`reports/contingencias_2024.md` y `scripts/contingencias_2024.py`, `scripts/contingencias_co.py` en la rama `research-archive`): con el estimador normalizado, contingencia ÷ referencia = 1.13 (1.05–1.22) en todos los días y 1.07 (0.97–1.18) en días hábiles; los placebos de días falsos dan 0.9–1.0. Conclusión: no se detecta una reducción de la emisión vial de la tarde mayor a ~10 %.
 - **Con el modelo final.** Usar el mismo mecanismo que el placebo (`placebo_ratios` en `ml/src/nox_ml/validation/experiment.py`): en el periodo de prueba, quedarse con los días hábiles (`Inputs.on_days`) y reetiquetar como "domingo" los días de contingencia (`Inputs.with_day_kinds`); el cociente domingo ÷ hábil del modelo ajustado es contingencia ÷ normal. Compararlo con el placebo del mismo periodo (días falsos al azar y días poco ventilados, como en la investigación) y con el estimador normalizado (E7).
 - **Implementación.** Funciones en `nox_ml.validation` (por ejemplo `events.py`) y un subcomando o una opción de `nox-ml evaluate` que solo funcione en el periodo de prueba. Lectura del CSV en `nox_ml.data`. Pruebas con datos sintéticos: sin cambio en los días marcados, el cociente queda en 1; con una caída impuesta, la recupera.
@@ -35,7 +36,7 @@ Un ensamble homogéneo de boosting (X4), opcionalmente el de semillas de la PINN
 
 - **Cuándo.** Después de la tabla de nov–dic y de elegir el modelo final (29–30 de octubre). Una sola vez, con la configuración congelada; no se vuelve a elegir con estos resultados.
 - **Periodo.** `2024-02-15` a `2024-05-31` (es el archivo de píxeles de TEMPO que existe: `data/interim/tempo_pixels_2024-02-15_2024-05-31.parquet`). Los festivos del periodo ya están en `HOLIDAYS` (`ml/src/nox_ml/inversion/linear.py`). El viento de 2024 ya trae la corrección de mph.
-- **Qué se corre.** `uv run nox-ml evaluate configs/experiments/<final>.yaml --period test` para el modelo final y uno o dos finalistas (por ejemplo, el mejor individual E5b si el final es un ensamble). Mide error con estación oculta, domingo/hábil frente al tráfico, placebo y tiempos. Después, C1 con el modelo final.
+- **Qué se corre.** `uv run nox-ml evaluate runs/<final>/config.yaml --period test` para el modelo final y uno o dos finalistas (por ejemplo, el mejor individual E5b si el final es un ensamble). Mide error con estación oculta, domingo/hábil frente al tráfico, placebo y tiempos. Después, C1 con el modelo final.
 - **Costo.** Feb–may es ~2 veces nov–dic en horas: las matrices de E5b tardan ~25 min y la corrida completa puede pasar de 2 h. Local, con `systemd-inhibit`.
 - **Para el notebook.** Guardar en `results/runs/<final>.test/` las predicciones fuera de muestra (`oof.parquet`), que alimentan los gráficos de observado frente a predicho, residuos y series de tiempo.
 
@@ -56,6 +57,7 @@ Un ensamble homogéneo de boosting (X4), opcionalmente el de semillas de la PINN
 
 ## Cuándo está listo
 
+0. `uv run pytest -m acceptance -k front_c` pasa (ver [avance5_arranque.md](avance5_arranque.md), pruebas de aceptación). Los nombres `gb_deweather` y `pinn_seeds` son obligatorios.
 1. X4 registrado, con configuración, búsqueda y su fila de `compare` en nov–dic 2023.
 2. C1: código y pruebas fusionados; resultado de prueba con E2 o E7 comparado con la investigación.
 3. C2 y C1 con el modelo final, en `results/runs/`, con un resumen en el pull request.

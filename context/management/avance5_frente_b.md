@@ -8,7 +8,7 @@ Los dos ensambles **heterogéneos**, que combinan modelos distintos del avance 4
 
 ## Tareas
 
-| # | Nombre sugerido | Qué es | Bases | Prioridad |
+| # | Configuración (obligatoria) | Qué es | Bases | Prioridad |
 |---|---|---|---|---|
 | X5 | `stacking` | Stacking convexo: pesos ≥ 0 que suman 1, aprendidos minimizando el error de las predicciones fuera de muestra, anidado por estación | E5b, E2, E5a | Mínimo para la rúbrica |
 | X6 | `bayes_average` | Promedio bayesiano de modelos: pesos proporcionales a la verosimilitud de cada modelo en estación oculta | Modelos elegibles del avance 4 (E5b, E2, E5a, E3, E1, E4) | Mínimo para la rúbrica |
@@ -16,6 +16,21 @@ Los dos ensambles **heterogéneos**, que combinan modelos distintos del avance 4
 ## Datos de entrada: ya existen
 
 Cada corrida del avance 4 guardó `results/runs/<modelo>/oof.parquet`: la predicción de cada estación hecha por el modelo ajustado **sin** esa estación (`station`, `utc`, `nox_ppb_pred`). Las observaciones están en los datos de entrada (`Inputs`, o `nox_ml.validation.loo.station_rows`). Con eso se aprenden los pesos sin volver a correr los modelos base.
+
+## Cómo se implementan con el contrato
+
+No hace falta una clase nueva: X5 y X6 son configuraciones de `convex_ensemble` (`docs/models.md`, sección 10) con los tres modelos base como `members` y los pesos congelados en `weights`.
+
+1. Pesos con `nox_ml.validation.stacking`, a partir de `results/runs/{pinn_puff,inversion_puff,pinn_plume}/oof.parquet` y de las observaciones (`nox_ml.validation.loo.station_rows`):
+   - `nested_oof(observed, oof, rule)` → el error honesto para la tabla (`stacking.loo_rmse`) y los pesos de cada estación;
+   - `fit_weights(observed, oof, rule)` → los pesos con todas las estaciones, que van a `weights` de la configuración.
+   `rule="stack"` para X5 y `rule="likelihood"` para X6.
+2. `configs/experiments/stacking.yaml` y `bayes_average.yaml`: `model: convex_ensemble`, `members` con la configuración final de cada base (copiar los `params` de su `configs/experiments/<base>.yaml`) y `weights` congelados.
+3. `uv run nox-ml run` de cada configuración (placebo, domingo/hábil, tiempos y emisión con los pesos congelados).
+4. Guardar en la misma carpeta `results/runs/<nombre>/` el resultado anidado: `nested_oof.parquet` (lo que devuelve `nested_oof`) y `nested_weights.csv` (sus pesos, una fila por estación, índice `station`). En la tabla, el error del ensamble es el anidado; el de `metrics.json` usa los pesos congelados, que ya vieron a la estación oculta.
+5. Las bases tienen transportes distintos, así que la regla del contrato da emisión relativa (domingo/hábil), no toneladas.
+
+La "optimización" de X5 y X6 es elegir las bases y la regla con `nested_oof` (segundos por prueba); no usan `nox-ml tune`. Reportar la tabla de combinaciones probadas.
 
 ## X5: stacking anidado por estación
 
@@ -52,6 +67,7 @@ Si no hay máquina local disponible, avisar a coordinación para que corra la co
 
 ## Cuándo está listo
 
+0. `uv run pytest -m acceptance -k front_b` pasa (ver [avance5_arranque.md](avance5_arranque.md), pruebas de aceptación).
 1. X5 y X6 registrados, con configuración y búsqueda.
 2. `bin/check` pasa.
 3. Filas de `compare` en el pull request, con los pesos aprendidos (globales y su variación entre pliegues) y la comparación con E5b.

@@ -8,7 +8,7 @@ Dos ensambles **homogéneos** de los modelos de inversión. X1 promedia el mismo
 
 ## Tareas
 
-| # | Nombre sugerido | Qué es | Base | Prioridad |
+| # | Nombre (obligatorio) | Qué es | Base | Prioridad |
 |---|---|---|---|---|
 | X1 | `bagged_inversion` | Bagging: `n_bags` inversiones, cada una sobre un remuestreo con reemplazo de días completos (bloques de días); predicción y emisión = promedio de los miembros | E5b `pinn_puff` (configuración de `configs/experiments/pinn_puff.yaml`) | Mínimo para la rúbrica |
 | X2 | `wind_ensemble` | Ensamble de vientos: `n_members` inversiones, cada una con el viento horario perturbado (dirección y velocidad) y la capa límite perturbada; predicción y emisión = promedio | E2 `inversion_puff` (más barato de rearmar que E5b) | Recomendado |
@@ -19,12 +19,14 @@ Dos ensambles **homogéneos** de los modelos de inversión. X1 promedia el mismo
 - **Por qué es barato.** El transporte no depende de qué días se usan: las matrices se arman una vez (caché de `Inputs.jacobians`) y cada miembro solo vuelve a resolver el sistema. Ver cómo lo hace el bootstrap de intervalos: `ratio_intervals` en `ml/src/nox_ml/models/inversion_plume.py`, y `hour_systems` / `solve` en `ml/src/nox_ml/inversion/linear.py`.
 - **Qué esperar.** La inversión es lineal y gaussiana: el promedio de los bags se parece mucho al posterior completo. Lo probable es que el error no cambie (dentro de ±0.5 ppb) y que la dispersión entre bags dé una incertidumbre más honesta. Es un resultado válido; documentarlo así.
 - **Hiperparámetros.** `n_bags` (10–50), tamaño del bloque (1 día; opcional 2–3 días), `seed`. Ajuste: una grilla chica de `n_bags` basta para mostrar que se estabiliza.
-- **Implementación sugerida.** Una clase que envuelve a un modelo de la familia de `InversionPlume` (por composición, no copiando código) o el mecanismo de ensamble del contrato si ya lo resuelve. Los días remuestreados con reemplazo necesitan pesos (un día que sale dos veces cuenta doble); revisar si `solve` acepta pesos por hora o si hay que repetir los sistemas de esas horas.
+- **Implementación.** Una subclase de `ConvexEnsemble` (`ml/src/nox_ml/models/ensemble.py`) registrada como `bagged_inversion`, con parámetros propios (`base`: la configuración `{name, params}` de E5b, `n_bags`, `block_days`, `seed`) que arma sus miembros: cada uno es la misma inversión con su propio remuestreo de días. Así `nox-ml tune` puede variar `n_bags`. Como todos los miembros comparten `transport_key()`, la regla del contrato da emisión absoluta (media ponderada y varianza de la mezcla). Los días remuestreados con reemplazo necesitan pesos (un día que sale dos veces cuenta doble); revisar si `solve` acepta pesos por hora o si hay que repetir los sistemas de esas horas.
 
 ## X2: ensamble de vientos
 
 - **Cómo funciona.** Cada miembro `m` perturba, con su propia semilla, la dirección del viento de cada hora (ruido normal con desviación `sigma_dir_deg`; el error medido de la dirección es de 28–32°), la velocidad (factor log-normal, `sigma_speed`) y la capa límite (factor log-normal, `sigma_pbl`). Con esas entradas arma su propia matriz de transporte y ajusta la inversión. Predicción y emisión: promedio de los miembros.
 - **Dónde se perturba.** El viento horario está en `Inputs.hours` (cada `HourData` lleva el viento y la capa límite de su hora) y, para los puffs, en `Inputs.wind` (la historia horaria que usa `HistoryTransport`). Hay que perturbar los dos de forma coherente (la misma perturbación para la misma hora). Ver `ml/src/nox_ml/data/inputs.py` y `ml/src/nox_ml/inversion/linear.py` (`HourData`, `History`, `hour_jacobians`).
+- **Implementación.** Una subclase de `ConvexEnsemble` registrada como `wind_ensemble`, con `base` (la configuración de E2), `n_members`, las sigmas y `seed`. Cada miembro es E2 con una perturbación distinta del viento.
+- **Emisión absoluta.** Los miembros tienen `transport_key()` distintas (otro viento), así que la regla del contrato daría emisión relativa y se perderían las toneladas y las zonas. Pero es la misma física con entradas perturbadas: sus niveles sí son comparables. Sobrescribir `shares_absolute_level` para que devuelva verdadero cuando todos los miembros son el mismo modelo base y solo cambia la perturbación, y documentarlo.
 - **Caché.** Cada miembro es un transporte distinto: su `transport_key()` debe incluir la semilla y las sigmas del miembro, o la caché devolverá la matriz del viento sin perturbar. Ojo: `Inputs` guarda solo `MAX_CACHED_TRANSPORTS = 4` transportes; con más miembros, la caché se vacía en cada pliegue de la validación y todo se recalcula. Resolverlo antes de correr (por ejemplo, armar las matrices de los miembros una vez por corrida y conservarlas en el ensamble).
 - **Por qué E2 y no E5b.** Rearmar las matrices de E2 tarda ~5 min por miembro; las de E5b, ~11 min. Con 8 miembros, E2 cuesta ~40 min solo en matrices. Si sobra tiempo, la misma clase sirve para E5b.
 - **Qué esperar.** Promediar sobre la incertidumbre del viento suaviza las plumas mal orientadas: puede bajar el error horario y acercar el domingo/hábil al tráfico. También puede ensanchar el placebo. Las dos cosas se reportan.
@@ -49,6 +51,7 @@ Entregar según [avance5_arranque.md](avance5_arranque.md): fila de `compare`, t
 
 ## Cuándo está listo
 
+0. `uv run pytest -m acceptance -k front_a` pasa (ver [avance5_arranque.md](avance5_arranque.md), pruebas de aceptación).
 1. X1 y X2 registrados, con su configuración y, si se ajustaron, su búsqueda.
 2. `bin/check` pasa.
 3. Corridas en nov–dic 2023 con su fila de `compare` en el pull request y la comparación con su base (E5b para X1, E2 para X2): error, domingo/hábil, placebo y tiempo.

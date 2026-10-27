@@ -80,7 +80,7 @@ Every run also writes, under `runs/<name>/`:
 ## 5. Data reserved for testing
 
 - **Spatial:** leave-one-station-out (every run).
-- **Temporal:** feb–may 2024 is the **test period**. Tuning and model selection use nov–dec 2023 only; `nox-ml tune` refuses a config whose period overlaps the test period.
+- **Temporal:** feb–may 2024 is the **test period**. Tuning and model selection use nov–dec 2023 only; `nox-ml tune` refuses a config whose period overlaps the test period. The test period is reached only with `nox-ml evaluate` (section 6).
 - **Events with a known answer:** 2020 lockdown (against 2019) and the 2024 contingencies. Used only to evaluate the final model.
 
 ## 6. Comparison
@@ -90,7 +90,15 @@ uv run nox-ml run configs/experiments/<name>.yaml      # one run → runs/<name>
 uv run nox-ml compare runs/*                           # table sorted by the main metric
 ```
 
-`compare` writes `runs/comparison.csv` and a Markdown table that notebooks display as is.
+`compare` writes `runs/comparison.csv` and a Markdown table that notebooks display as is. Its `period` column says whether a run is `tuning` (nov–dec 2023) or `test`.
+
+### Test period
+
+```sh
+uv run nox-ml evaluate runs/<name>/config.yaml --period test   # frozen config → runs/<name>.test/
+```
+
+`evaluate` takes a finished config, changes only its period (15 feb–31 may 2024: the test period from the first day with TEMPO pixels) and name (`<name>.test`), and runs it like `run`: same metrics, same artifacts. `metrics.json` records the look under `evaluation` (`period: test`, its dates and the period the config was frozen on). `--period test` is the only value and it is required. `tune` has no such option and rejects any config on the test period, including a `runs/<name>.test/config.yaml`, so the test period cannot guide a search. Each evaluation is a look at the test data: decide the final configuration before running it.
 
 ## 7. Tuning
 
@@ -131,3 +139,53 @@ Model-specific tests (physics properties, reproduction of research numbers) go i
 3. Register it; add `configs/experiments/<name>.yaml` and, if tuned, `<name>.search.yaml`.
 4. `bin/check` (contract tests run automatically).
 5. `nox-ml run` on nov–dec 2023 and paste the `compare` row in the PR description.
+
+## 10. Ensembles
+
+An ensemble is a `Model` of the registry (`role: model`) that wraps its base models, so it runs, tunes and compares like any other and must pass section 8. It is registered as `convex_ensemble` (ADR 0007). The base models are declared in its `params` as experiment configs:
+
+```yaml
+model:
+  name: convex_ensemble
+  params:
+    members:                      # two or more base models (role "model", not ensembles)
+      - {name: inversion_plume, params: {bootstrap_n: 200}}
+      - {name: regularized_ls}
+    weights: [0.5, 0.5]           # convex (>= 0, sum 1) or null: equal weights, the simple average
+```
+
+Each member's `params` is stored with every default filled in, so `config.yaml` records exactly what was combined. `fit(exclude_stations=...)` passes the exclusion to every member.
+
+**Predictions** are the weighted mean of the members' predictions. Concentration is linear in emission, so this is the same combination of their emissions.
+
+**Emissions** follow one rule (`nox_ml.models.ensemble`):
+
+| Members | Estimate | How |
+|---|---|---|
+| All absolute and the same `transport_key()` | `absolute` (t/yr) | weighted mean of the means; sd of the mixture (disagreement between members adds to the sd) |
+| Anything else: another transport, or a relative member | `relative`, pooled over zones | each member reduced to its index over the weekday, then weighted mean of index, `lo` and `hi` |
+
+Members with different transports differ by 25–40 % in absolute level, and that difference is not an error of one of them, so averaging their tonnes would invent a level. The index over the weekday is what they share. Zones are not resolved in the relative case (ADR 0006).
+
+### Learning the weights without refitting
+
+`nox_ml.validation.stacking` learns the weights from the `oof.parquet` of the base runs and the observed station NOx (`loo.station_rows`). The weights used to evaluate station *s* are learned on the other stations only, and are >= 0 and sum to 1:
+
+```python
+from nox_ml.validation import stacking
+
+oof = {name: pd.read_parquet(f"runs/{name}/oof.parquet") for name in ("inversion_puff", "rf_deweather")}
+combined, weights = stacking.nested_oof(
+    observed, oof, rule="stack"
+)  # out-of-fold ensemble, one weight row per station
+frozen = stacking.fit_weights(observed, oof, rule="stack")  # weights on all stations, for the final config
+```
+
+- `rule="stack"`: least squares on the simplex (stacking, X5).
+- `rule="likelihood"`: weights proportional to the Gaussian likelihood of the held-out rows (Bayesian model averaging, X6). Hours of one station are correlated, so it concentrates on the best model faster than the data justify.
+
+`nested_oof` gives the ensemble's out-of-fold RMSE (`stacking.loo_rmse`) for the nov–dec 2023 table without refitting any base model. The weights of the final ensemble (`frozen`) go into the `weights` of its config before `evaluate`. One leak remains and is documented in ADR 0007.
+
+### Tests
+
+`convex_ensemble` is in `REGISTRY`, so `test_contract` runs on it. `tests/models/test_ensemble.py` covers members, convex weights and the emission rule; `tests/test_stacking.py` covers convex weights and that a station never sets its own; `tests/test_evaluate.py` covers the test-period mode.

@@ -4,6 +4,7 @@ Commands are added as research scripts are migrated.
 """
 
 import json
+from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
 
@@ -21,6 +22,11 @@ from nox_ml.validation import tune as tuning
 
 RAW = Path("data/raw")
 INTERIM = Path("data/interim")
+
+
+class Period(StrEnum):
+    test = "test"
+
 
 app = typer.Typer(help="nox-ml pipelines.", no_args_is_help=True)
 
@@ -98,6 +104,23 @@ def run(
         typer.echo(f"Invalid config {config}:\n{error}", err=True)
         raise typer.Exit(2) from error
     out = experiment.run_experiment(cfg, runs_dir)
+    typer.echo(experiment.headline(json.loads((out / "metrics.json").read_text())))
+    typer.echo(f"Written to {out}/")
+
+
+@app.command()
+def evaluate(
+    config: Annotated[Path, typer.Argument(help="Frozen experiment YAML, e.g. runs/<name>/config.yaml.")],
+    period: Annotated[Period, typer.Option(help="The only period is the test period (feb-may 2024).")],
+    runs_dir: Annotated[Path, typer.Option(help="Where runs/<name>.test/ is written.")] = Path("runs"),
+) -> None:
+    """Run a frozen config on the test period (the same metrics as `run`) and write runs/<name>.test/."""
+    try:
+        cfg = experiment.read_config(config)
+    except ValidationError as error:
+        typer.echo(f"Invalid config {config}:\n{error}", err=True)
+        raise typer.Exit(2) from error
+    out = experiment.run_on_test_period(cfg, runs_dir)
     typer.echo(experiment.headline(json.loads((out / "metrics.json").read_text())))
     typer.echo(f"Written to {out}/")
 
