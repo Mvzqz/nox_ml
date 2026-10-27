@@ -11,6 +11,7 @@ import pandas as pd
 
 COLUMNS = [
     "run",
+    "period",
     "model",
     "role",
     "loo_rmse_ppb",
@@ -40,7 +41,8 @@ def collect(run_dirs: Iterable[Path]) -> tuple[pd.DataFrame, list[Path]]:
         if summary is None:
             skipped.append(path)
         else:
-            rows.append({"run": path.name} | summary)
+            evaluation = json.loads(metrics.read_text()).get("evaluation")
+            rows.append({"run": path.name, "period": "test" if evaluation else "tuning"} | summary)
     table = pd.DataFrame(rows, columns=COLUMNS).sort_values("loo_rmse_ppb", kind="stable")
     return table.reset_index(drop=True), skipped
 

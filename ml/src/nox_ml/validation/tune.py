@@ -7,7 +7,6 @@ Only the tuning period (nov-dec 2023) may be used: the test period is reserved f
 """
 
 import itertools
-from datetime import date
 from pathlib import Path
 from typing import Any, Literal
 
@@ -19,9 +18,7 @@ from pydantic import Field, model_validator
 from nox_ml.data.inputs import Inputs
 from nox_ml.models import REGISTRY
 from nox_ml.validation import loo
-from nox_ml.validation.experiment import ExperimentConfig, Strict
-
-TEST_PERIOD = (date(2024, 2, 1), date(2024, 5, 31))  # feb-may 2024, reserved for the final model
+from nox_ml.validation.experiment import TEST_PERIOD, ExperimentConfig, Strict
 
 
 class SearchConfig(Strict):
