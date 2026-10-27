@@ -98,7 +98,7 @@ uv run nox-ml compare runs/*                           # table sorted by the mai
 uv run nox-ml evaluate runs/<name>/config.yaml --period test   # frozen config → runs/<name>.test/
 ```
 
-`evaluate` takes a finished config, changes only its period (feb–may 2024) and name (`<name>.test`), and runs it like `run`: same metrics, same artifacts. `metrics.json` records the look under `evaluation` (`period: test`, its dates and the period the config was frozen on). `--period test` is the only value and it is required. `tune` has no such option and rejects any config on the test period, including a `runs/<name>.test/config.yaml`, so the test period cannot guide a search. Each evaluation is a look at the test data: decide the final configuration before running it.
+`evaluate` takes a finished config, changes only its period (15 feb–31 may 2024: the test period from the first day with TEMPO pixels) and name (`<name>.test`), and runs it like `run`: same metrics, same artifacts. `metrics.json` records the look under `evaluation` (`period: test`, its dates and the period the config was frozen on). `--period test` is the only value and it is required. `tune` has no such option and rejects any config on the test period, including a `runs/<name>.test/config.yaml`, so the test period cannot guide a search. Each evaluation is a look at the test data: decide the final configuration before running it.
 
 ## 7. Tuning
 

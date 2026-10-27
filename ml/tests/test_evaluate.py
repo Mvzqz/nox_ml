@@ -10,7 +10,7 @@ from typer.testing import CliRunner
 from nox_ml import cli
 from nox_ml.validation import experiment
 from nox_ml.validation.compare import collect
-from nox_ml.validation.experiment import TEST_PERIOD
+from nox_ml.validation.experiment import EVALUATION_PERIOD, TEST_PERIOD
 
 TUNING = {"start": "2023-11-06", "end": "2023-11-19"}
 
@@ -54,12 +54,15 @@ def test_evaluate_runs_the_config_on_the_test_period_and_writes_name_dot_test(co
     result = evaluate(config, tmp_path, "--period", "test")
 
     assert result.exit_code == 0, result.output
-    assert loaded == [(TEST_PERIOD[0].isoformat(), TEST_PERIOD[1].isoformat())]
+    assert loaded == [(EVALUATION_PERIOD[0].isoformat(), EVALUATION_PERIOD[1].isoformat())]
     out = tmp_path / "runs" / "frozen.test"
     for name in ("config.yaml", "metrics.json", "oof.parquet", "emissions.parquet", "code_version.json"):
         assert (out / name).exists()
     stored = yaml.safe_load((out / "config.yaml").read_text())
-    assert stored["period"] == {"start": TEST_PERIOD[0].isoformat(), "end": TEST_PERIOD[1].isoformat()}
+    assert stored["period"] == {
+        "start": EVALUATION_PERIOD[0].isoformat(),
+        "end": EVALUATION_PERIOD[1].isoformat(),
+    }
     assert stored["model"]["params"]["bootstrap_n"] == 5  # the rest of the config is the frozen one
 
 
@@ -70,8 +73,8 @@ def test_evaluate_leaves_a_record_in_metrics_json_with_the_same_metrics_as_run(c
 
     assert metrics["evaluation"] == {
         "period": "test",
-        "start": TEST_PERIOD[0].isoformat(),
-        "end": TEST_PERIOD[1].isoformat(),
+        "start": EVALUATION_PERIOD[0].isoformat(),
+        "end": EVALUATION_PERIOD[1].isoformat(),
         "frozen_on": TUNING,
     }
     reference = experiment.run_experiment(experiment.read_config(config), tmp_path / "reference")
@@ -154,3 +157,5 @@ def test_tune_has_no_way_to_ask_for_the_test_period():
 
 def test_the_test_period_is_feb_to_may_2024():
     assert (date(2024, 2, 1), date(2024, 5, 31)) == TEST_PERIOD
+    assert (date(2024, 2, 15), date(2024, 5, 31)) == EVALUATION_PERIOD, "the days with TEMPO pixels"
+    assert TEST_PERIOD[0] <= EVALUATION_PERIOD[0] and EVALUATION_PERIOD[1] <= TEST_PERIOD[1]

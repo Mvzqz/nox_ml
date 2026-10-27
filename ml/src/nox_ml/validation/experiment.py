@@ -47,6 +47,9 @@ from nox_ml.validation.metrics import PLACEBO_TOLERANCE, RunMetrics, gap_to_rang
 from nox_ml.validation.placebo import daily_table, split_placebo
 
 TEST_PERIOD = (date(2024, 2, 1), date(2024, 5, 31))  # feb-may 2024, reserved for the final model
+# What `nox-ml evaluate` runs on: the TEMPO pixels of the test period start on 15 February
+# (data/interim/tempo_pixels_2024-02-15_2024-05-31.parquet), and `load_inputs` reads them by these dates.
+EVALUATION_PERIOD = (date(2024, 2, 15), TEST_PERIOD[1])
 
 
 class Strict(BaseModel):
@@ -339,7 +342,8 @@ def run_experiment(
 
 
 def run_on_test_period(config: ExperimentConfig, runs_dir: Path = Path("runs")) -> Path:
-    """Run a frozen config on the test period (feb-may 2024) and write ``runs_dir/<name>.test/``.
+    """Run a frozen config on the test period (`EVALUATION_PERIOD`, the days of feb-may 2024 with TEMPO) and
+    write ``runs_dir/<name>.test/``.
 
     Only the period and the name change: model, params, hours and placebo are the config's, so the numbers
     are those of `run_experiment` on another period. ``metrics.json`` records the evaluation (``period:
@@ -350,13 +354,13 @@ def run_on_test_period(config: ExperimentConfig, runs_dir: Path = Path("runs")) 
     test = config.model_copy(
         update={
             "name": f"{config.name.removesuffix('.test')}.test",
-            "period": Period(start=TEST_PERIOD[0], end=TEST_PERIOD[1]),
+            "period": Period(start=EVALUATION_PERIOD[0], end=EVALUATION_PERIOD[1]),
         }
     )
     evaluation = {
         "period": "test",
-        "start": TEST_PERIOD[0].isoformat(),
-        "end": TEST_PERIOD[1].isoformat(),
+        "start": EVALUATION_PERIOD[0].isoformat(),
+        "end": EVALUATION_PERIOD[1].isoformat(),
         "frozen_on": frozen_on,
     }
     return run_experiment(test, runs_dir, evaluation)
