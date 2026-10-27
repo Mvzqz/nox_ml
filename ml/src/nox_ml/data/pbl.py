@@ -187,8 +187,12 @@ def read_merra_file(path: Path) -> pd.Series:
     import netCDF4
 
     with netCDF4.Dataset(path) as d:
-        t0 = pd.Timestamp(d["time"].units.split("since ")[1])
-        t = t0 + pd.to_timedelta(d["time"][:], unit="min")
+        time = d["time"]
+        # The int32 time declares a valid_range of +-1e15, which netCDF4 cannot cast to int32 when it masks
+        # the values: it warns and masks nothing. The minutes are read as stored, without the mask.
+        time.set_auto_mask(False)
+        t0 = pd.Timestamp(time.units.split("since ")[1])
+        t = t0 + pd.to_timedelta(time[:], unit="min")
         return pd.Series(d["PBLH"][:, CELL[0], CELL[1]].filled(np.nan), index=t)
 
 
