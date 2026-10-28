@@ -1,0 +1,129 @@
+# Casos de uso y experiencia de usuario
+
+Fecha: 2026-10-28. Para diseñar la experiencia de usuario y la interfaz. Qué puede hacer el sistema y con qué precisión: [capacidades.md](capacidades.md).
+
+## Decisión: el caso de uso se replantea
+
+La investigación proponía evaluar si cada contingencia ambiental redujo la emisión (`reports/caso_de_uso.md` de la investigación). Los resultados del avance 5 cambian el enfoque:
+
+- Con las 9 jornadas hábiles con medidas de 2024, el sistema detecta bajas de ~20 % o más y no detecta 10 % (prueba de inyección). El efecto esperado del Doble Hoy No Circula (5–10 %) queda por debajo: **una contingencia no se puede evaluar por sí sola.**
+- Lo que sí puede: separar el clima de la emisión en cada episodio y evaluar cambios **sostenidos**, donde el límite de detección baja con el número de días. Esa es también la escala que importa para la salud (exposición de largo plazo).
+
+| Antes | Ahora |
+|---|---|
+| "Evaluar si cada contingencia redujo la emisión" | "Diagnosticar cada episodio (¿fue clima o emisión?) y evaluar medidas sostenidas" |
+| Emisión en toneladas | Cambios relativos, con su intervalo |
+| Un número | Un número con su límite de detección y su placebo |
+
+Documentos por actualizar con este enfoque: el notebook del avance 5 (contingencias y limitaciones), el planteamiento y el resumen ejecutivo del proyecto, y el diseño de la app.
+
+## Usuarios
+
+| Usuario | Quién es | Qué necesita | Frecuencia |
+|---|---|---|---|
+| Analista de calidad del aire | Personal técnico de SEDEMA (Dirección de Calidad del Aire) | Explicar episodios, preparar evaluaciones, revisar datos | Semanal |
+| Responsable de política | Dirección de SEDEMA o de la CAMe | Saber si una medida funciona y cuánto tiempo darle | Mensual o por decisión |
+| Equipo del inventario de emisiones | SEDEMA | Contrastar los patrones del inventario con lo que miden el aire y el satélite | Por edición del inventario |
+| Investigador | Academia (UNAM, Tec) | Datos y resultados reproducibles, con su incertidumbre | Ocasional |
+
+## Principios de la experiencia
+
+1. **Toda cifra con su incertidumbre.** Ningún cociente sin intervalo; ningún resultado de evento sin placebo ni límite de detección.
+2. **Veredicto en lenguaje llano, con tres estados:** "detectado", "no detectado (menor a X %)" y "no evaluable (pocos días o pocos datos)". Nunca "no tuvo efecto".
+3. **Cocientes antes que toneladas.** Las toneladas, si aparecen, van como orden de magnitud y con la advertencia de la capacidad 8.
+4. **La cobertura de datos a la vista:** cuántas estaciones, cuántas horas de TEMPO y qué días se usaron, y por qué se descartaron otros (fines de semana, días sin datos).
+5. **Lento en segundo plano, rápido en primer plano:** el estimador normalizado responde en minutos; la inversión completa se precalcula por periodo o corre como tarea.
+6. **Todo exportable:** cada resultado se descarga como reporte (PDF) y como datos (CSV), con la versión del código y de los datos.
+
+## Casos de uso
+
+### CU1. Diagnosticar un episodio: ¿fue el clima o la emisión?
+
+- **Usuario:** analista de calidad del aire.
+- **Pregunta:** "Ayer y antier la concentración de NOₓ fue muy alta. ¿Se emitió más o el aire estuvo estancado?"
+- **Entrada:**
+  - rango de fechas del episodio (o elegir una contingencia de la lista);
+  - opcional: región de interés.
+- **Qué hace el sistema:** compara el episodio con días comparables (mismo día de la semana, ±4 semanas, sin el evento) y descompone el cambio: concentración = clima × emisión, más el fondo regional. Calibra con placebos.
+- **Salida:**
+  - veredicto: "fue el clima", "fue la emisión", "ambos" o "fondo o acumulación";
+  - gráfica de cascada: cambio de concentración repartido entre clima, emisión y fondo, con la banda del placebo;
+  - serie horaria de NOₓ observado y del esperado con emisión fija, del episodio y de sus días de referencia;
+  - mapa de ventilación (viento × capa de mezcla) del episodio;
+  - días usados y descartados.
+- **Acciones:** exportar el reporte; comparar con otro episodio; anotar el episodio (causa conocida, medidas activas).
+
+### CU2. Evaluar una medida sostenida
+
+- **Usuario:** responsable de política, con el analista.
+- **Pregunta:** "Desde marzo restringimos la circulación en el centro los sábados. ¿Bajó la emisión?"
+- **Entrada:**
+  - fecha de inicio (y fin, si ya terminó);
+  - días de la semana en que aplica;
+  - regiones afectadas;
+  - periodo de comparación (por defecto, el mismo número de semanas antes).
+- **Qué hace el sistema:** estima el cociente de emisión de los días con la medida frente a los comparables, con placebo y prueba de inyección para dar el límite de detección con esos días.
+- **Salida:**
+  - cambio de emisión (%) con intervalo y veredicto en tres estados;
+  - límite de detección con los días acumulados (texto de ejemplo: "con 34 días, este análisis detecta bajas de X % o más");
+  - serie del índice de emisión normalizado por semana, antes y después del inicio;
+  - si no es evaluable todavía: cuántos días faltan para alcanzar el efecto esperado (ver CU3).
+- **Acciones:** decidir si se mantiene, se amplía o se termina la medida; programar una revisión automática cuando se acumulen los días necesarios; exportar.
+
+### CU3. Planear la evaluación de un piloto
+
+- **Usuario:** responsable de política, antes de lanzar una medida.
+- **Pregunta:** "Si la medida reduce la emisión 8 %, ¿cuánto tiempo hay que mantenerla para poder demostrarlo?"
+- **Entrada:** efecto esperado (%); días de la semana en que aplica; regiones; temporada.
+- **Qué hace el sistema:** inyecta el efecto en datos históricos de la misma temporada con distintos números de días y mide cuándo se detecta.
+- **Salida:** curva de "probabilidad de detectar frente a días de duración" y el número mínimo de días recomendado.
+- **Acciones:** fijar la duración del piloto; registrar la medida para que CU2 la evalúe al terminar.
+
+### CU4. Seguimiento de la emisión
+
+- **Usuario:** analista y responsable de política.
+- **Pregunta:** "¿Cómo va la emisión este mes frente al anterior y frente al mismo mes del año pasado?"
+- **Entrada:** ninguna (tablero); opcional: periodo y región.
+- **Salida:**
+  - índice de emisión normalizado por mes, por región y por tipo de día, con intervalos;
+  - cambios sostenidos que superan el límite de detección, marcados;
+  - cobertura de datos del periodo.
+- **Acciones:** abrir un cambio marcado como episodio (CU1) o como medida (CU2); exportar el resumen mensual.
+
+### CU5. Contrastar el inventario
+
+- **Usuario:** equipo del inventario de emisiones.
+- **Pregunta:** "¿El reparto por región y el ciclo semanal del inventario coinciden con lo que mide el aire?"
+- **Entrada:** edición del inventario (por defecto, la vigente).
+- **Salida:**
+  - reparto relativo de la emisión vial por región: inventario frente a estimado, con intervalos;
+  - cocientes sábado ÷ hábil y domingo ÷ hábil: perfil del inventario frente al estimado;
+  - regiones donde la diferencia supera la incertidumbre.
+- **Acciones:** priorizar regiones o supuestos de actividad para revisar en la siguiente edición; exportar.
+
+### CU6. Concentración donde no hay estación (secundario)
+
+- **Usuario:** analista o investigador.
+- **Pregunta:** "¿Qué NOₓ hubo en esta colonia, que no tiene estación?"
+- **Entrada:** punto o zona en el mapa; fechas.
+- **Salida:** serie estimada con su error típico (~12 ppb) y la parte atribuible a la emisión vial frente al fondo.
+- **Acciones:** exportar. Advertencia en la interfaz: para concentración sola, interpolar estaciones es más exacto; el valor del modelo es explicar de dónde viene.
+
+## Mapa de pantallas propuesto
+
+| Pantalla | Casos de uso | Elementos principales |
+|---|---|---|
+| Inicio / seguimiento | CU4 | Índice de emisión por mes y región, cambios marcados, cobertura de datos |
+| Episodio | CU1 | Selector de fechas o contingencia, veredicto, cascada, series, mapa de ventilación |
+| Evaluar medida | CU2 | Formulario de la medida, veredicto con límite de detección, serie antes y después |
+| Planear piloto | CU3 | Efecto esperado y duración, curva de detección |
+| Inventario | CU5 | Reparto por región y perfil semanal, inventario frente a estimado |
+| Mapa | CU6, apoyo de CU1 y CU5 | Regiones, estaciones, píxeles de TEMPO, concentración estimada |
+| Datos y método | Todos | Cobertura, fuentes, versión, limitaciones (de [capacidades.md](capacidades.md)) |
+
+## Pendiente para construirlo
+
+- El comando de diagnóstico de episodios (CU1): `diagnose_episode` y `nox-ml diagnose` (ver `tareas.md`).
+- La curva de detección por número de días (CU3) generaliza la prueba de inyección (`--inject`).
+- Más años de datos (temporadas 2025 y 2026) para afinar los límites de detección (`tareas.md`).
+- Validar el flujo con usuarios reales de SEDEMA antes de construir la interfaz completa.

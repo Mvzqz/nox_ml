@@ -46,6 +46,10 @@ Tareas abiertas. Al terminar una, se marca con la fecha y el PR.
 
 ## Después del avance 5 (1 de noviembre)
 
+- [ ] **Aplicar el replanteamiento del caso de uso** ([`casos_de_uso.md`](../knowledge/casos_de_uso.md)): de "evaluar cada contingencia" a "diagnosticar cada episodio (clima o emisión) y evaluar medidas sostenidas". En el notebook del avance 5 (contingencias y limitaciones) antes de entregar; después, en el planteamiento, el resumen ejecutivo y el diseño de la app.
+- [ ] **Diagnóstico de episodios (CU1).** `diagnose_episode(inputs, días)` en `nox_ml.validation` y `nox-ml diagnose --start --end`: descomposición concentración = clima × emisión más el fondo regional, contra días de referencia, con placebos y veredicto (clima, emisión, ambos, fondo o acumulación). Reutiliza `normalized_days`, `placebo.reference_days`, `stagnation.relative_index` y el fondo horario de la inversión. ~Medio día.
+- [ ] **Curva de detección por número de días (CU3).** Generalizar la prueba de inyección (`--inject`) a duraciones distintas para responder "cuántos días necesita una medida".
+
 - [x] **Avance 1 con la capa límite corregida.** Celdas 33 y 77 de `notebooks/Avance1.39.ipynb` con las cifras tras el PR #52 (340 frente a 383 m fuera de muestra, sin desfase) y una nota de corrección posterior a la entrega; HTML exportado de nuevo (2026-10-27, PR #54). El avance 4 no cambia: nov–dic 2023 usa ERA5 en todas las horas de los modelos.
 
 - [x] **Notebook "Exploración y preparación de datos".** Entregado como los dos cuadernos del curso: `notebooks/Avance1.39.ipynb` (estructura y tipos, estadísticos, faltantes y sus patrones, atípicos, univariadas, bivariado y multivariado, tendencias y decisiones de preprocesamiento: viento 2024 en mph, sensores atascados, capa límite con MERRA-2, filtros de TEMPO) y `notebooks/Avance2.39.ipynb` (características con justificación de dominio, transformaciones, selección y extracción, información por tipo de observación y conclusiones CRISP-ML(Q)). Solo llaman a `nox_ml.validation.report_eda`, con pruebas; ninguna decisión de modelado sale de feb–may 2024, que aparece solo en revisiones de calidad (2026-10-25, PR #29).
