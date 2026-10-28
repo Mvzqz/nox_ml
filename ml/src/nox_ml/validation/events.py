@@ -87,10 +87,12 @@ def split_days(inputs: Inputs, requested: pd.DatetimeIndex, active: pd.DatetimeI
 
 
 def _fit_ratio(
-    inputs: Inputs, make_model: Callable[[], Model], days: pd.DatetimeIndex, relabeled: pd.DatetimeIndex
+    days_inputs: Inputs, make_model: Callable[[], Model], relabeled: pd.DatetimeIndex
 ) -> tuple[float, tuple[float, float] | None]:
-    """Sunday over weekday of the model fitted on `days` with `relabeled` as Sundays, and its interval."""
-    data = inputs.on_days(days).with_day_kinds(dict.fromkeys(relabeled, SUNDAY_HOLIDAY))
+    """Sunday over weekday of the model fitted on `days_inputs` (the inputs of the days of the fit, from
+    `Inputs.on_days`) with `relabeled` as Sundays, and its interval. The relabeling shares the Jacobian cache
+    of `days_inputs`, so draws over the same days build the matrices once."""
+    data = days_inputs.with_day_kinds(dict.fromkeys(relabeled, SUNDAY_HOLIDAY))
     estimate = make_model().fit(data).estimate_emissions()
     return estimate.day_type_ratio("sunday_holiday"), estimate.day_type_interval("sunday_holiday")
 
@@ -113,11 +115,10 @@ def fake_event_ratios(
             f"with more than {n_fake} normal days left (has {len(groups.normal)})"
         )
     rng = np.random.default_rng(seed)
+    normal = inputs.on_days(groups.normal)  # once: `on_days` starts an empty Jacobian cache
     return np.array(
         [
-            _fit_ratio(inputs, make_model, groups.normal, pool[rng.choice(len(pool), n_fake, replace=False)])[
-                0
-            ]
+            _fit_ratio(normal, make_model, pool[rng.choice(len(pool), n_fake, replace=False)])[0]
             for _ in range(refits)
         ]
     )
@@ -161,7 +162,7 @@ def analyze(
     poorly ventilated fake days; ``None`` for the second if no event day has ventilation data)."""
     if groups.event.empty:
         raise ValueError("no event day is a business day with data")
-    ratio, bounds = _fit_ratio(inputs, make_model, groups.event.union(groups.normal), groups.event)
+    ratio, bounds = _fit_ratio(inputs.on_days(groups.event.union(groups.normal)), make_model, groups.event)
     placebos: dict[str, Any] = {}
     for name, pool in (
         ("random", groups.normal),

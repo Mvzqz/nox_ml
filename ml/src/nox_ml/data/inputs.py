@@ -80,7 +80,7 @@ class Inputs:
     loss_rate: pd.Series | None = field(default=None, compare=False, repr=False)
     # Jacobians of all the hours by transport key (`InversionPlume.transport_key`: the kernel and its params).
     # They depend on the hours, zones, points and ratio: whoever replaces those must pass a new cache
-    # (`on_days` does).
+    # (`on_days` passes the matrices of the hours it keeps; see there).
     jacobian_cache: dict[Hashable, list[HourJacobian]] = field(
         default_factory=dict, compare=False, repr=False
     )
@@ -133,13 +133,25 @@ class Inputs:
         return self.without_stations([station])
 
     def on_days(self, days: Collection[pd.Timestamp]) -> "Inputs":
-        """Only the hours whose local day is in `days`."""
-        keep = [i for i, h in enumerate(self.hours) if local_day(h.hour) in set(days)]
+        """Only the hours whose local day is in `days`.
+
+        The cached Jacobians of the kept hours carry over (the same arrays, not copies), so a placebo, a
+        contingency analysis or a bagging member does not rebuild them. That is exact when `wind` is given:
+        an hour's matrix depends on that hour and on the wind history of the whole period, not on which other
+        hours are fitted. Without `wind`, a transport with memory takes its history from the hours
+        themselves, so dropping hours changes it, and the cache starts empty."""
+        selected = set(days)
+        keep = [i for i, h in enumerate(self.hours) if local_day(h.hour) in selected]
+        cache = (
+            {key: [jacobians[i] for i in keep] for key, jacobians in self.jacobian_cache.items()}
+            if self.wind is not None
+            else {}
+        )
         return replace(
             self,
             hours=[self.hours[i] for i in keep],
             station_ids=[self.station_ids[i] for i in keep],
-            jacobian_cache={},
+            jacobian_cache=cache,
         )
 
     def with_day_kinds(self, kinds: Mapping[pd.Timestamp, int]) -> "Inputs":

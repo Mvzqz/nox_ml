@@ -1,6 +1,7 @@
 from dataclasses import replace
 
 import numpy as np
+import pandas as pd
 import pytest
 from numpy.testing import assert_allclose
 
@@ -9,6 +10,8 @@ from nox_ml.data.inputs import MAX_CACHED_TRANSPORTS
 from nox_ml.inversion.jacobian import plume_transport
 from nox_ml.inversion.linear import hour_systems, solve
 from nox_ml.models.inversion_plume import InversionPlume, InversionPlumeParams
+from nox_ml.models.inversion_puff import InversionPuff, InversionPuffParams
+from nox_ml.time import local_day
 from nox_ml.validation.loo import leave_one_out
 
 N_REGIONS = 2
@@ -118,3 +121,51 @@ def test_relabeling_days_shares_the_cache_and_selecting_days_does_not(make_input
 
     assert inputs.with_day_kinds({}).jacobian_cache is inputs.jacobian_cache
     assert inputs.on_days([inputs.hours[0].hour.normalize()]).jacobian_cache == {}
+
+
+def with_wind_history(inputs):
+    """The inputs with the hourly wind of the whole period, as `load_inputs` gives them: every hour of the
+    days and the day before, so the puffs of the first afternoon have a history."""
+    rng = np.random.default_rng(3)
+    index = pd.date_range(
+        inputs.hours[0].hour.normalize() - pd.Timedelta(days=1), inputs.hours[-1].hour, freq="h"
+    )
+    wind = pd.DataFrame(
+        {"u": rng.uniform(-3, 3, len(index)), "v": rng.uniform(-3, 3, len(index))}, index=index
+    )
+    for h in inputs.hours:
+        wind.loc[h.hour] = h.wind
+    return replace(inputs, wind=wind)
+
+
+TRANSPORTS = {
+    "plume": lambda: plume_transport(SIGMA_THETA, 1.0),
+    "puff": lambda: (lambda m: (m.transport_key(), m.transport()))(
+        InversionPuff(InversionPuffParams(lifetime="fixed"))
+    ),
+}
+
+
+@pytest.mark.parametrize("transport", sorted(TRANSPORTS))
+def test_a_subset_of_days_keeps_the_cached_matrices_of_its_hours_and_they_are_exact(make_inputs, transport):
+    inputs = with_wind_history(make_inputs())
+    key, fn = TRANSPORTS[transport]()
+    full = inputs.jacobians(key, fn)
+    days = pd.DatetimeIndex(sorted({local_day(h.hour) for h in inputs.hours}))[::3]
+
+    subset = inputs.on_days(days)
+    rebuilt = replace(subset, jacobian_cache={}).jacobians(key, fn)
+
+    assert key in subset.jacobian_cache  # nothing rebuilt
+    kept = subset.jacobian_cache[key]
+    assert len(kept) == len(subset.hours) < len(full)
+    for a, b in zip(kept, rebuilt, strict=True):
+        assert_allclose(a.stations, b.stations, rtol=1e-12)
+        assert_allclose(a.pixels, b.pixels, rtol=1e-12)
+
+
+def test_without_the_wind_history_a_subset_of_days_starts_an_empty_cache(make_inputs):
+    inputs = make_inputs()
+    inputs.jacobians(*plume_transport(SIGMA_THETA, 1.0))
+
+    assert inputs.on_days([local_day(inputs.hours[0].hour)]).jacobian_cache == {}
