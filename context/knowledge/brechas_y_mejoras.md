@@ -54,6 +54,45 @@ Factibilidad: alta (técnica conocida y datos disponibles), media (hay que proba
 
 Ruta sugerida: la mejora 14 es la ancla del nivel absoluto más barata y conviene adelantarla a la 7. Las mejoras 1 a 3 son baratas y convierten capacidades que ya existen en herramientas (una semana de trabajo en total con la 4). Con la 6 llegan a usuarios. La 5 y la 8 son las que más amplían el valor después; la 11 y la 12 son investigación.
 
+## Otras palancas de valor (además de mejorar el modelo)
+
+Reutilizan lo que ya existe o responden preguntas nuevas con los mismos datos.
+
+**Publicar lo que ya existe**
+- **Conjunto de datos limpio y citable** (por ejemplo, Zenodo con DOI): SIMAT con el viento de 2024 corregido (mph) y los sensores atascados marcados, la capa de mezcla sin el desfase de MERRA-2, las contingencias verificadas y los recortes de TEMPO.
+- **Reporte de calidad de datos para quien los publica:** el error de unidades del viento de 2024 en la red de meteorología y el desfase de una hora de MERRA-2. Bien público, bajo costo, abre colaboración con quien opera la red.
+- **Guía para correrlo en otra ciudad** (el código ya es público).
+
+**Credibilidad académica**
+- **Artículo científico:** no encontramos una inversión de NOₓ con TEMPO para la Ciudad de México; el marco de validación (estación oculta, placebo, inyección, límite de detección) y la comparación de modelos son publicables.
+- **Colaboraciones:** el Instituto de Ciencias de la Atmósfera y Cambio Climático de la UNAM (viento de 3 km sobre el valle) y el equipo científico de TEMPO (validación en latitudes del sur).
+
+**Preguntas nuevas con los mismos datos**
+- **Régimen del ozono:** TEMPO mide formaldehído; el cociente formaldehído/NO₂ indica si el ozono depende más del NOₓ o de los compuestos orgánicos, es decir, qué reducir en las contingencias.
+- **Traducción a salud:** cambio de emisión → cambio de concentración → efectos evitados con funciones de riesgo publicadas ([capacidades.md](capacidades.md)).
+- **Equidad:** emisión y exposición por zona cruzadas con el censo (INEGI): quién emite y quién respira.
+- **Clima:** el NOₓ sale de la misma combustión que el CO₂; sus cambios indican cambios de combustión del tráfico y abren fondos climáticos.
+- **Separar tráfico e industria con CO:** el cociente CO/NOₓ de las estaciones distingue tipos de fuente; más barato que la mejora 11.
+
+**Productos**
+- **Boletín mensual automático:** índice de emisión normalizado, episodios explicados y límite de detección (requiere la mejora 5).
+- **Calculadora de límite de detección:** "¿cuántos días necesita mi medida?" con la regla de la sección anterior (CU3), útil sin el resto de la interfaz.
+- **Fichas para medios:** el diagnóstico de un episodio en una página citable (CU1, CU7).
+
+**Orden recomendado**
+
+| Prioridad | Qué | Costo | Valor |
+|---|---|---|---|
+| 1 | Conjunto de datos con DOI y reporte de calidad para la red | 1–2 días | Alto: inmediato, abre colaboraciones |
+| 2 | Calculadora de límite de detección | 1 día | Medio–alto: útil sola |
+| 3 | Régimen del ozono con formaldehído de TEMPO | 3–5 días | Alto: la pregunta pública más fuerte |
+| 4 | Artículo científico | 2–4 semanas | Alto en credibilidad |
+| 5 | Traducción a salud y equidad | 3–5 días | Alto para decisión y comunicación |
+| 6 | Separar fuentes con CO | 2–3 días | Medio–alto |
+| 7 | Boletín mensual | Tras los datos continuos | Alto y continuo |
+
+Antes de publicar el conjunto de datos, revisar la licencia de cada fuente en `data/README.md` (los datos de movilidad de Google y Apple no se pueden redistribuir sin verificar sus términos).
+
 ## Riesgos de la ruta
 
 - La mejora 8 (más regiones) puede no ser identificable con ~24 estaciones: hay que medirlo con la validación con estación oculta y el placebo antes de prometer detalle espacial.
