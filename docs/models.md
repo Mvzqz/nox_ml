@@ -100,6 +100,19 @@ uv run nox-ml evaluate runs/<name>/config.yaml --period test   # frozen config �
 
 `evaluate` takes a finished config, changes only its period (15 feb–31 may 2024: the test period from the first day with TEMPO pixels) and name (`<name>.test`), and runs it like `run`: same metrics, same artifacts. `metrics.json` records the look under `evaluation` (`period: test`, its dates and the period the config was frozen on). `--period test` is the only value and it is required. `tune` has no such option and rejects any config on the test period, including a `runs/<name>.test/config.yaml`, so the test period cannot guide a search. Each evaluation is a look at the test data: decide the final configuration before running it.
 
+### Contingencies
+
+```sh
+uv run nox-ml contingencies runs/<name>/config.yaml --period test [--sensitivity]   # → runs/<name>.contingencies/
+```
+
+Like `evaluate`, it takes a frozen config, runs only on the test period and cannot be used by `tune` (the `config.yaml` it writes is on the test period, which `tune` refuses). For any model with `role: model` it reports whether the emission fell on the days with measures of the 2024 ozone contingencies (`nox_ml.validation.events`, episodes read by `nox_ml.data.contingencies`):
+
+- **Days.** Measure days run from the day after the activation to the suspension day, inclusive. Activation days belong to neither group; `--sensitivity` adds the scenario `all_active`, which counts them as contingency days.
+- **Ratio.** As in the model's placebo: business days only, the measure days relabeled as Sundays, and the model's Sunday / weekday ratio is contingency / normal, with the model's interval. Normal days are business days with no active contingency.
+- **Weekends and holidays.** Measure days on a Saturday, Sunday or holiday are listed (`not_business`) and not used: a Sunday cannot be told from a relabeled day, and a relabeled Saturday would mix the contingency with its traffic pattern.
+- **Placebos.** As many fake days as real ones, drawn from the normal days (never a real event or activation day): at random and among poorly ventilated days (`stagnation.poorly_ventilated_mask`). One refit per `placebo.refits`, so a scenario fits the model `1 + 2 * refits` times. `contingencies.json` has the ratio, its interval, the days and both placebos with their central interval at `placebo.level`.
+
 ## 7. Tuning
 
 A search space is a YAML file next to the experiment config:

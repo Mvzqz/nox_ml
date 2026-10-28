@@ -17,7 +17,7 @@ from nox_ml.data import pbl, simat, tempo
 from nox_ml.data.inputs import load_inputs
 from nox_ml.data.qc import render
 from nox_ml.validation import compare as comparison
-from nox_ml.validation import diagnostics, experiment
+from nox_ml.validation import diagnostics, events, experiment
 from nox_ml.validation import tune as tuning
 
 RAW = Path("data/raw")
@@ -122,6 +122,30 @@ def evaluate(
         raise typer.Exit(2) from error
     out = experiment.run_on_test_period(cfg, runs_dir)
     typer.echo(experiment.headline(json.loads((out / "metrics.json").read_text())))
+    typer.echo(f"Written to {out}/")
+
+
+@app.command()
+def contingencies(
+    config: Annotated[Path, typer.Argument(help="Frozen experiment YAML, e.g. runs/<name>/config.yaml.")],
+    period: Annotated[Period, typer.Option(help="The only period is the test period (feb-may 2024).")],
+    runs_dir: Annotated[Path, typer.Option(help="Where runs/<name>.contingencies/ is written.")] = Path(
+        "runs"
+    ),
+    sensitivity: Annotated[
+        bool, typer.Option(help="Also count every day with an active contingency (activation included).")
+    ] = False,
+) -> None:
+    """Emission on 2024 contingency days over normal days, with placebos (test period only).
+
+    Fits the model 1 + 2 * placebo.refits times per scenario. Writes runs/<name>.contingencies/."""
+    try:
+        cfg = experiment.read_config(config)
+    except ValidationError as error:
+        typer.echo(f"Invalid config {config}:\n{error}", err=True)
+        raise typer.Exit(2) from error
+    out = events.run_contingencies(cfg, runs_dir, sensitivity)
+    typer.echo(events.headline(json.loads((out / "contingencies.json").read_text())))
     typer.echo(f"Written to {out}/")
 
 

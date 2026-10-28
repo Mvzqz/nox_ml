@@ -1,0 +1,320 @@
+# pyright: reportArgumentType=false, reportAttributeAccessIssue=false, reportIndexIssue=false, reportCallIssue=false
+# pyright: reportOperatorIssue=false, reportReturnType=false, reportAssignmentType=false, reportGeneralTypeIssues=false
+# (pandas typing infers unions for `df[...]`; behavior is covered by the tests instead)
+"""Contingency days against normal days with a model of the registry: known answers on synthetic stations."""
+
+import ast
+import json
+from dataclasses import replace
+from pathlib import Path
+
+import pandas as pd
+import pytest
+import yaml
+from typer.testing import CliRunner
+from ventilation_synthetic import ventilation_inputs
+
+from nox_ml import cli
+from nox_ml.data.inputs import Inputs
+from nox_ml.inversion.linear import BACKGROUND_STATION
+from nox_ml.models import REGISTRY
+from nox_ml.models.rf_deweather import RfDeweather, RfDeweatherParams
+from nox_ml.time import local_day
+from nox_ml.validation import events, tune
+from nox_ml.validation.experiment import EVALUATION_PERIOD, Placebo, normalized_days
+
+FAST = RfDeweatherParams(n_estimators=30, bootstrap_n=3)
+PLACEBO = Placebo(refits=3, seed=2)
+
+# From Monday 2023-11-06 (the ventilation fixture), holiday on 11-20. Measure days 15-16, 22-26 and 12-06;
+# 25 and 26 are a weekend: 6 business measure days.
+EPISODES = pd.DataFrame(
+    {
+        "episode": [1, 2, 3],
+        "activation": pd.to_datetime(["2023-11-14", "2023-11-21", "2023-12-05"]),
+        "suspension": pd.to_datetime(["2023-11-16", "2023-11-26", "2023-12-06"]),
+    }
+)
+BUSINESS_MEASURES = pd.to_datetime(
+    ["2023-11-15", "2023-11-16", "2023-11-22", "2023-11-23", "2023-11-24", "2023-12-06"]
+)
+ACTIVATIONS = pd.to_datetime(EPISODES["activation"])
+
+
+def make_model():
+    return RfDeweather(FAST)
+
+
+def scaled(inputs: Inputs, factors: dict[pd.Timestamp, float]) -> Inputs:
+    """The same stations with the NOx above the background multiplied by a factor on some days."""
+    background = BACKGROUND_STATION[0]
+    hours = [
+        replace(h, nox=background + (h.nox - background) * factors.get(local_day(h.hour), 1.0))
+        for h in inputs.hours
+    ]
+    return replace(inputs, hours=hours, jacobian_cache={})
+
+
+@pytest.fixture(scope="module")
+def base() -> Inputs:
+    return ventilation_inputs(n_days=56, sunday=1.0, noise=0.1)
+
+
+def effect(inputs: Inputs, **kwargs):
+    return events.contingency_effect(inputs, make_model, EPISODES, PLACEBO, **kwargs)
+
+
+def test_split_days_keeps_business_measure_days_and_leaves_the_activation_days_out(base):
+    active = pd.DatetimeIndex(
+        sorted(set(BUSINESS_MEASURES) | set(ACTIVATIONS) | {pd.Timestamp("2023-11-25")})
+    )
+
+    groups = events.split_days(
+        base, BUSINESS_MEASURES.union(pd.to_datetime(["2023-11-25", "2023-11-26"])), active
+    )
+
+    assert list(groups.event) == list(BUSINESS_MEASURES)
+    assert list(groups.left_out) == list(ACTIVATIONS)
+    assert groups.not_business.strftime("%m-%d").tolist() == ["11-25", "11-26"]
+    assert groups.normal.intersection(active).empty
+    assert groups.normal.intersection(pd.to_datetime(["2023-11-18", "2023-11-20"])).empty  # weekend, holiday
+    assert groups.without_data.empty
+
+
+def test_days_without_data_are_reported(base):
+    active = pd.DatetimeIndex(["2024-03-07"])
+
+    groups = events.split_days(base, active, active)
+
+    assert list(groups.without_data) == list(active) and groups.event.empty
+
+
+@pytest.fixture(scope="module")
+def unchanged(base):
+    return effect(base)["measures"]
+
+
+def test_without_a_change_the_ratio_is_one_and_so_are_the_placebos(unchanged):
+    result = unchanged
+
+    assert result["ratio"] == pytest.approx(1.0, abs=0.12)
+    assert result["lo"] <= result["ratio"] <= result["hi"]
+    for placebo in result["placebos"].values():
+        assert placebo["center"] == pytest.approx(1.0, abs=0.12)
+        assert placebo["lo"] <= placebo["center"] <= placebo["hi"]
+        assert placebo["n_fake_days"] == 6 and len(placebo["ratios"]) == PLACEBO.refits
+
+
+def test_an_imposed_drop_on_the_measure_days_is_recovered_and_the_placebos_stay_at_one(base):
+    # the activation days and the weekend measure days are made wild: they must not move the ratio
+    wild = {d: 3.0 for d in [*ACTIVATIONS, pd.Timestamp("2023-11-25"), pd.Timestamp("2023-11-26")]}
+    data = scaled(base, wild | dict.fromkeys(BUSINESS_MEASURES, 0.7))
+
+    result = effect(data)["measures"]
+
+    assert result["ratio"] == pytest.approx(0.7, abs=0.1)
+    assert result["hi"] < 0.95
+    for placebo in result["placebos"].values():
+        assert placebo["center"] == pytest.approx(1.0, abs=0.12)
+        assert result["ratio"] < placebo["lo"]
+
+
+def test_activation_days_enter_neither_group_but_the_sensitivity_counts_them(base):
+    data = scaled(base, dict.fromkeys(ACTIVATIONS, 0.5))
+
+    both = effect(data, sensitivity=True)
+
+    measures, active = both["measures"], both["all_active"]
+    assert measures["ratio"] == pytest.approx(1.0, abs=0.12)
+    assert measures["days"]["left_out"] == [d.date().isoformat() for d in ACTIVATIONS]
+    assert set(active["days"]["event"]) == set(measures["days"]["event"]) | set(measures["days"]["left_out"])
+    assert active["days"]["left_out"] == []
+    assert active["ratio"] < measures["ratio"] - 0.03  # the halved activation days pull it down
+    assert active["days"]["n_normal"] == measures["days"]["n_normal"]
+
+
+def test_weekend_and_holiday_measure_days_are_listed_not_used(unchanged):
+    result = unchanged["days"]
+
+    assert result["not_business"] == ["2023-11-25", "2023-11-26"]
+    assert set(result["event"]).isdisjoint(result["not_business"])
+
+
+def test_no_real_event_day_is_a_fake_day_or_a_reference(base):
+    seen = []
+
+    def spy():
+        model = make_model()
+        fit = model.fit
+        model.fit = lambda data, **kw: (
+            seen.append(set(map(local_day, (h.hour for h in data.hours)))) or fit(data, **kw)
+        )
+        return model
+
+    events.contingency_effect(base, spy, EPISODES, PLACEBO)
+
+    active = set(ACTIVATIONS) | set(BUSINESS_MEASURES)
+    assert set(BUSINESS_MEASURES) <= seen[0] and not seen[0] & set(ACTIVATIONS)  # the real fit
+    assert len(seen) == 1 + 2 * PLACEBO.refits
+    assert all(not days & active for days in seen[1:])  # the placebo fits see no event or activation day
+
+
+def test_the_poorly_ventilated_pool_is_normal_and_at_least_as_stagnant_as_the_events(base):
+    daily = normalized_days(base, base.jacobians(*events.plume_transport(events.SIGMA_THETA, events.U_MIN)))
+    active = pd.DatetimeIndex(sorted(set(BUSINESS_MEASURES) | set(ACTIVATIONS)))
+    groups = events.split_days(base, BUSINESS_MEASURES, active)
+
+    pool = events.poorly_ventilated_pool(daily, groups)
+
+    threshold = daily.loc[groups.event, "stagnation"].quantile(0.25)
+    assert 0 < len(pool) <= len(groups.normal) and set(pool) <= set(groups.normal)
+    assert (daily.loc[pool, "stagnation"] >= threshold).all()
+
+
+def test_a_reference_is_refused(base):
+    with pytest.raises(ValueError, match="estimates emissions"):
+        events.contingency_effect(base, lambda: REGISTRY["idw"](), EPISODES, PLACEBO)
+
+
+def test_without_business_measure_days_there_is_nothing_to_measure(base):
+    weekend = pd.DataFrame(
+        {
+            "episode": [1],
+            "activation": [pd.Timestamp("2023-11-24")],
+            "suspension": [pd.Timestamp("2023-11-26")],
+        }
+    )
+
+    with pytest.raises(ValueError, match="no event day"):
+        events.contingency_effect(base, make_model, weekend, PLACEBO)
+
+
+def test_the_placebo_needs_more_normal_days_than_fake_days(base):
+    groups = events.split_days(base, BUSINESS_MEASURES, BUSINESS_MEASURES)
+    small = replace(groups, normal=groups.normal[:5])
+
+    with pytest.raises(ValueError, match="placebo needs"):
+        events.fake_event_ratios(base, make_model, small, small.normal, 2, 1)
+
+
+# --- The command -------------------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def config(tmp_path):
+    episodes = tmp_path / "data" / "raw" / "contingencias"
+    episodes.mkdir(parents=True)
+    lines = [f"{i},{r.activation:%Y-%m-%d},,{r.suspension:%Y-%m-%d},,test" for i, r in EPISODES.iterrows()]
+    (episodes / "contingencias_ozono_2024_episodios.csv").write_text(
+        "episodio,activacion_fecha,activacion_hora,suspension_fecha,suspension_hora,fuente\n"
+        + "\n".join(lines)
+        + "\n"
+    )
+    path = tmp_path / "frozen.yaml"
+    path.write_text(
+        yaml.safe_dump(
+            {
+                "name": "frozen.test",
+                "period": {"start": "2023-11-06", "end": "2023-12-31"},
+                "data_dir": str(tmp_path / "data"),
+                "model": {"name": "rf_deweather", "params": FAST.model_dump()},
+                "placebo": {"refits": 2},
+            }
+        )
+    )
+    return path
+
+
+@pytest.fixture
+def loaded(monkeypatch, base):
+    asked = []
+
+    def load(data_dir, start, end, hours):
+        asked.append((start, end))
+        return scaled(base, dict.fromkeys(BUSINESS_MEASURES, 0.7))
+
+    monkeypatch.setattr(events, "load_inputs", load)
+    return asked
+
+
+def contingencies(config, tmp_path, *extra):
+    return CliRunner().invoke(
+        cli.app, ["contingencies", str(config), "--runs-dir", str(tmp_path / "runs"), *extra]
+    )
+
+
+def test_the_command_writes_the_ratio_its_interval_and_the_placebos_for_the_test_period(
+    config, tmp_path, loaded
+):
+    result = contingencies(config, tmp_path, "--period", "test")
+
+    assert result.exit_code == 0, result.output
+    assert loaded == [(EVALUATION_PERIOD[0].isoformat(), EVALUATION_PERIOD[1].isoformat())]
+    out = tmp_path / "runs" / "frozen.contingencies"
+    assert sorted(p.name for p in out.iterdir()) == ["code_version.json", "config.yaml", "contingencies.json"]
+    saved = json.loads((out / "contingencies.json").read_text())
+    measures = saved["scenarios"]["measures"]
+    assert saved["model"] == "rf_deweather" and list(saved["scenarios"]) == ["measures"]
+    assert saved["period"] == {"start": "2024-02-15", "end": "2024-05-31"}
+    assert measures["ratio"] == pytest.approx(0.7, abs=0.12)
+    assert set(measures) >= {"lo", "hi", "days", "placebos"}
+    assert set(measures["placebos"]) == {"random", "poorly_ventilated"}
+    assert "contingency / normal" in result.output
+
+
+def test_the_sensitivity_option_adds_the_scenario_with_every_active_day(config, tmp_path, loaded):
+    result = contingencies(config, tmp_path, "--period", "test", "--sensitivity")
+
+    saved = json.loads((tmp_path / "runs" / "frozen.contingencies" / "contingencies.json").read_text())
+    assert result.exit_code == 0 and list(saved["scenarios"]) == ["measures", "all_active"]
+
+
+def test_the_command_needs_the_test_period_and_a_valid_config(config, tmp_path, loaded):
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        yaml.safe_dump(
+            {"name": "bad", "period": {"start": "2023-11-06", "end": "2023-11-19"}, "model": {"name": "nope"}}
+        )
+    )
+
+    assert contingencies(config, tmp_path).exit_code == 2
+    assert contingencies(config, tmp_path, "--period", "tuning").exit_code == 2
+    assert contingencies(bad, tmp_path, "--period", "test").exit_code == 2
+    assert loaded == []
+
+
+def test_tune_cannot_reach_the_contingencies(config, tmp_path, loaded):
+    contingencies(config, tmp_path, "--period", "test")
+    stored = tmp_path / "runs" / "frozen.contingencies" / "config.yaml"
+    search = tmp_path / "runs" / "frozen.contingencies" / "search.yaml"
+    search.write_text(
+        yaml.safe_dump(
+            {
+                "model": "rf_deweather",
+                "config": stored.name,
+                "search": "grid",
+                "space": {"n_estimators": [10]},
+            }
+        )
+    )
+
+    with pytest.raises(ValueError, match="test period"):
+        tune.read_search(search)
+    tuning_imports = {
+        n.module if isinstance(n, ast.ImportFrom) else a.name
+        for n in ast.walk(ast.parse(Path(tune.__file__).read_text()))
+        if isinstance(n, ast.Import | ast.ImportFrom)
+        for a in (n.names if isinstance(n, ast.Import) else [n])
+    }
+    assert not any("events" in name or "contingencies" in name for name in tuning_imports)
+    assert "contingencies" not in CliRunner().invoke(cli.app, ["tune", "--help"]).output
+
+
+def test_running_it_again_on_its_own_output_keeps_one_folder(config, tmp_path, loaded):
+    contingencies(config, tmp_path, "--period", "test")
+    again = contingencies(
+        tmp_path / "runs" / "frozen.contingencies" / "config.yaml", tmp_path, "--period", "test"
+    )
+
+    assert again.exit_code == 0
+    assert [p.name for p in (tmp_path / "runs").iterdir()] == ["frozen.contingencies"]
