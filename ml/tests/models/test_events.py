@@ -197,6 +197,23 @@ def test_the_placebo_needs_more_normal_days_than_fake_days(base):
         events.fake_event_ratios(base, make_model, small, small.normal, 2, 1)
 
 
+def test_the_draws_of_a_placebo_share_one_set_of_days_and_its_matrices(base, monkeypatch):
+    """`on_days` starts an empty Jacobian cache: calling it once per draw rebuilt the matrices every time."""
+    calls = []
+    on_days = Inputs.on_days
+
+    def counted(self, days):
+        calls.append(len(days))
+        return on_days(self, days)
+
+    monkeypatch.setattr(Inputs, "on_days", counted)
+    groups = events.split_days(base, BUSINESS_MEASURES, BUSINESS_MEASURES)
+
+    events.fake_event_ratios(base, make_model, groups, groups.normal, 4, 1)
+
+    assert calls == [len(groups.normal)]
+
+
 # --- The command -------------------------------------------------------------------------------------------
 
 
