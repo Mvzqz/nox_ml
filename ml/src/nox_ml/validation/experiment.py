@@ -36,6 +36,7 @@ import pandas as pd
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
+from nox_ml.data import calendar
 from nox_ml.data.inputs import Inputs, load_inputs
 from nox_ml.inversion.jacobian import HourJacobian, plume_transport
 from nox_ml.inversion.linear import HOLIDAYS, SIGMA_THETA, U_MIN, HourSystem, hour_systems
@@ -112,6 +113,9 @@ class ExperimentConfig(Strict):
     data_dir: Path = Path("data")
     model: ModelConfig = Field(default_factory=ModelConfig, validate_default=True)
     placebo: Placebo = Placebo()
+    # leave the atypical periods (`data.calendar`: year-end, Easter) out of the fit, so the weekday is a
+    # normal one
+    exclude_atypical: bool = False
 
     @model_validator(mode="after")
     def hours_ordered(self) -> "ExperimentConfig":
@@ -327,6 +331,9 @@ def run_experiment(
     inputs = load_inputs(
         config.data_dir, config.period.start.isoformat(), config.period.end.isoformat(), config.simat_hours
     )
+    if config.exclude_atypical:
+        days = pd.DatetimeIndex(sorted({local_day(h.hour) for h in inputs.hours}))
+        inputs = inputs.on_days(days.difference(calendar.atypical_days(days.min(), days.max())))
     result = evaluate(inputs, config)
     if evaluation is not None:
         result.metrics["evaluation"] = evaluation

@@ -40,7 +40,7 @@ import pandas as pd
 import yaml
 from scipy.stats import norm
 
-from nox_ml.data import contingencies
+from nox_ml.data import calendar, contingencies
 from nox_ml.data.inputs import Inputs, load_inputs
 from nox_ml.inversion.jacobian import plume_transport
 from nox_ml.inversion.linear import BACKGROUND_STATION, HOLIDAYS, SIGMA_THETA, U_MIN
@@ -320,15 +320,18 @@ def run_contingencies(
     inputs = load_inputs(
         test.data_dir, test.period.start.isoformat(), test.period.end.isoformat(), test.simat_hours
     )
+    left_out = calendar.atypical_days(test.period.start, test.period.end).union(
+        pd.DatetimeIndex([]) if atypical is None else atypical
+    )
     result = {
         "model": test.model.name,
         "frozen_on": {"start": config.period.start.isoformat(), "end": config.period.end.isoformat()},
         "period": {"start": test.period.start.isoformat(), "end": test.period.end.isoformat()},
         "level": test.placebo.level,
         "scenarios": contingency_effect(
-            inputs, test.model.build, episodes, test.placebo, sensitivity, inject, atypical
+            inputs, test.model.build, episodes, test.placebo, sensitivity, inject, left_out
         ),
-        "atypical": [] if atypical is None else day_list(atypical),
+        "atypical": day_list(left_out),
     }
     out = runs_dir / name
     out.mkdir(parents=True, exist_ok=True)
@@ -384,7 +387,12 @@ def run_calendar(
         "level": run.placebo.level,
         "scenarios": {
             label: calendar_effect(
-                inputs, run.model.build, days, contingencies.active_days(episodes), run.placebo, inject
+                inputs,
+                run.model.build,
+                days,
+                contingencies.active_days(episodes).union(calendar.atypical_days(period.start, period.end)),
+                run.placebo,
+                inject,
             )
         },
     }
@@ -461,7 +469,8 @@ def run_detection(
     inputs = load_inputs(
         run.data_dir, run.period.start.isoformat(), run.period.end.isoformat(), run.simat_hours
     )
-    left_out = contingencies.active_days(episodes).union(exclude)
+    atypical = calendar.atypical_days(run.period.start, run.period.end)
+    left_out = contingencies.active_days(episodes).union(exclude).union(atypical)
     normal = split_days(inputs, pd.DatetimeIndex([]), left_out).normal
     result = {
         "model": run.model.name,

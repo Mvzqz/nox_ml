@@ -102,7 +102,7 @@ def pinn_puffs(
         dx, dy, dist = traj.between(t_rel, t_target)
         mass = weights(t_rel) * dt * survival(t_rel, t_target, age)
         radius = np.hypot(xr[:, None] - (xs[None, :] + dx), yr[:, None] - (ys[None, :] + dy))
-        piece = mass * radial_profile(table, dist, age, tau_h)(radius)
+        piece = mass * radial_profile(table, float(dist), age, tau_h)(radius)  # one domain wind: one distance
         col += piece
         ground += piece / effective_height(dist, pbl_h)
     return ground, col

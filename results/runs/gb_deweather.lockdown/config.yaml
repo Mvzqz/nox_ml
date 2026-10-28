@@ -1,0 +1,29 @@
+name: gb_deweather.lockdown
+period:
+  start: '2023-11-01'
+  end: '2023-12-31'
+simat_hours:
+- 12
+- 17
+data_dir: data
+model:
+  name: gb_deweather
+  params:
+    seed: 7
+    background_ppb: 5.0
+    weather_samples: 20
+    bootstrap_n: 10
+    bootstrap_level: 0.9
+    learning_rate: 0.0993
+    max_iter: 422
+    max_leaf_nodes: 26
+    min_samples_leaf: 7
+    l2_regularization: 0.0967
+    drop_features:
+    - doy_sin
+    - doy_cos
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.9
+  refits: 8

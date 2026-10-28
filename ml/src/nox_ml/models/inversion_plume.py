@@ -43,6 +43,14 @@ class PlumeInversionParams(ModelParams):
 
     bootstrap_n: int = Field(default=200, ge=1, description="replicates of the bootstrap over days")
     bootstrap_level: float = Field(default=0.90, gt=0, lt=1, description="central level of its intervals")
+    # 7: whole weeks. On twins with a background that persists for days (`validation.twins`, 20 seeds) the
+    # 90 % interval of the Sunday ratio held the truth 17 times with 7-day blocks, 6 in 10 with single days
+    # and 14-15 with 14- and 21-day blocks (too few blocks)
+    bootstrap_block_days: int = Field(
+        default=7,
+        ge=1,
+        description="consecutive days drawn together; > 1 keeps the days a persistent background ties",
+    )
     tempo_sigma_mult: float = Field(
         default=1.0, gt=0, description="multiplies the error of every TEMPO pixel; 1 is the nominal weight"
     )
@@ -59,6 +67,17 @@ class InversionPlumeParams(PlumeInversionParams):
     u_min_ms: float = Field(1.0, gt=0, description="floor of the transport speed, m/s")
 
 
+def block_draw(n_days: int, block: int, rng: np.random.Generator) -> np.ndarray:
+    """How many times each of `n_days` (in time order) enters a moving-block bootstrap replicate: blocks of
+    `block` consecutive days with random starts until `n_days` are drawn (the last block is cut). With
+    ``block = 1`` it is the plain bootstrap of days. Days tied by a background that persists for several days
+    stay together, so the spread of the replicates is not understated."""
+    block = min(block, n_days)
+    starts = rng.integers(0, n_days - block + 1, size=-(-n_days // block))
+    picked = (starts[:, None] + np.arange(block)).ravel()[:n_days]
+    return np.bincount(picked, minlength=n_days)
+
+
 def ratio_intervals(
     systems: list[HourSystem],
     points: pd.DataFrame,
@@ -68,16 +87,16 @@ def ratio_intervals(
     level: float,
     seed: int,
     constraints: Sequence[tuple[np.ndarray, float, float]] = (),
+    block: int = 1,
 ) -> pd.DataFrame:
     """Interval of each day type's road total over the weekday's (columns ``day_type``, ``lo``, ``hi``,
-    ``level``): `n` replicates that solve the systems again on whole days drawn with replacement, with the
-    same `constraints` as the fit."""
+    ``level``): `n` replicates that solve the systems again on whole days drawn with replacement, in blocks
+    of `block` consecutive days (`block_draw`), with the same `constraints` as the fit."""
     days, day_index = np.unique([s.day for s in systems], return_inverse=True)
     rng = np.random.default_rng(seed)
     boot = []
     for _ in range(n):
-        pick = rng.choice(len(days), len(days))
-        weights = np.bincount(pick, minlength=len(days))[day_index]
+        weights = block_draw(len(days), block, rng)[day_index]
         boot.append(solve(systems, points, n_regions, weights, constraints).road_factors() @ prior)
     totals = np.array(boot)
     return pd.DataFrame(
@@ -218,6 +237,7 @@ class InversionPlume:
             p.bootstrap_level,
             p.seed,
             self.constraints(data),
+            p.bootstrap_block_days,
         )
         return EmissionEstimate("absolute", table, ci)
 
