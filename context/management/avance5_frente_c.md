@@ -42,7 +42,8 @@ Un ensamble homogéneo de boosting (X4), opcionalmente el de semillas de la PINN
 
 ## X3 (opcional): semillas de la PINN
 
-- E5b con 3–5 semillas de la red (`seed` de `PinnPuffParams`; cada valor entrena una red nueva, ~3 min, guardada en `kernel_dir`), promediadas. Cada semilla rearma las matrices (~11 min).
+- E5b con 3–5 semillas de la red (`seed` de `PinnPuffParams`; cada valor entrena una red nueva, ~3 min, guardada en `kernel_dir`), promediadas. Cada semilla arma sus matrices una vez (~11 min); la caché guarda hasta 16 transportes, así que no se recalculan en cada pliegue.
+- Emisión absoluta: cada semilla tiene otra `transport_key()` y la regla del contrato daría emisión relativa. Es la misma física con otra red: sobrescribir `shares_absolute_level` (como X2 del frente A) y dejar que la dispersión entre redes entre en la desviación.
 - En el avance 4, 8 redes distintas quedaron en una banda de 0.016 ppb: casi seguro no mejora el error. Su valor es dar la incertidumbre de la red. Hacerlo solo si X4, C1 y C2 están cubiertos.
 
 ## Corridas

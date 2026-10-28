@@ -5,6 +5,7 @@ import pytest
 from numpy.testing import assert_allclose
 
 import nox_ml.inversion.jacobian as jacobian_module
+from nox_ml.data.inputs import MAX_CACHED_TRANSPORTS
 from nox_ml.inversion.jacobian import plume_transport
 from nox_ml.inversion.linear import hour_systems, solve
 from nox_ml.models.inversion_plume import InversionPlume, InversionPlumeParams
@@ -103,11 +104,12 @@ def test_another_transport_config_gets_its_own_jacobians(make_inputs):
 def test_the_cache_keeps_a_bounded_number_of_configs(make_inputs):
     inputs = make_inputs()
 
-    for u_min in (1.0, 1.5, 2.0, 2.5, 3.0, 3.5):
-        inputs.jacobians(*plume_transport(SIGMA_THETA, u_min))
+    u_mins = 1.0 + 0.1 * np.arange(MAX_CACHED_TRANSPORTS + 2)
+    for u_min in u_mins:
+        inputs.jacobians(*plume_transport(SIGMA_THETA, float(u_min)))
 
-    assert len(inputs.jacobian_cache) == 4
-    assert plume_transport(SIGMA_THETA, 1.0)[0] not in inputs.jacobian_cache
+    assert len(inputs.jacobian_cache) == MAX_CACHED_TRANSPORTS
+    assert plume_transport(SIGMA_THETA, float(u_mins[0]))[0] not in inputs.jacobian_cache  # the oldest left
 
 
 def test_relabeling_days_shares_the_cache_and_selecting_days_does_not(make_inputs):

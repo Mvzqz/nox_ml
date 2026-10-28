@@ -49,7 +49,9 @@ CHEMISTRY_GAP_H = 6  # longest gap of the chemistry variables that is interpolat
 # April of this year sets the reference OH production (`physics.chemistry.reference_production`). It is not
 # the 2024 of the standard variant because feb-may 2024 is the held-out test period.
 CHEMISTRY_REF_YEAR = 2023
-MAX_CACHED_TRANSPORTS = 4  # transport configurations whose Jacobians an `Inputs` keeps (a tune can try many)
+# Transport configurations whose Jacobians an `Inputs` keeps (~9 MB each in nov-dec 2023, ~18 MB in feb-may
+# 2024): enough for every member of an ensemble and the transport trials of a tune
+MAX_CACHED_TRANSPORTS = 16
 
 
 @dataclass(frozen=True)
