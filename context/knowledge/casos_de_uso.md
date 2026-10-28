@@ -133,6 +133,23 @@ El sistema no depende de una institución: usa datos públicos (SIMAT, TEMPO, ER
 - **Salida:** línea base, cambio de emisión con intervalo, límite de detección y advertencia de escala: con regiones de ~18 km, un proyecto que afecta una zona pequeña puede quedar diluido.
 - **Acciones:** reporte de verificación periódico; decidir continuidad o pagos por resultados con la incertidumbre explícita.
 
+## Qué tan bien se satisface cada caso hoy
+
+Con los resultados de los avances 4 y 5. Escala: alto, medio, bajo. Las brechas y las mejoras para cerrarlas están en [brechas_y_mejoras.md](brechas_y_mejoras.md).
+
+| Caso | Confianza | Detalle espacial | Detalle temporal | Tiempo para obtenerlo | Construido | Satisfacción |
+|---|---|---|---|---|---|---|
+| CU1. Diagnosticar un episodio | Media: con 1–3 días el intervalo de la parte de emisión es amplio (±20–30 % con E7); el sesgo de acumulación en episodios es conocido (~0.94–1.09) | Toda la ciudad (E7) o 9 regiones (inversión) | Por episodio | Días por la publicación de los datos; minutos de cálculo | Parcial: existe el análisis de eventos, falta la descomposición y el veredicto | Media |
+| CU2. Evaluar una medida sostenida | Alta en toda la ciudad con una temporada o más (límite estimado ~6–8 %); baja por región | Ciudad: sí; región de ~18 km: débil; corredor o colonia: no | Mensual o por temporada | Meses (lo exige la medida); minutos a horas de cálculo | Parcial: el análisis existe para contingencias; falta aceptar cualquier conjunto de días | Media |
+| CU3. Planear un piloto | Media: la inyección está validada con E7 en un periodo; falta la curva por duración | Ciudad | — | Minutos | Parcial: existe `--inject`, falta la curva | Media |
+| CU4. Seguimiento de la emisión | Media: un mes (~20 días hábiles) da ~±8–10 % en toda la ciudad (estimado) | Ciudad; 9 regiones con intervalos amplios | Mensual | Días por los datos; el flujo se arma por periodo | No: no hay corridas mensuales automáticas ni ingesta continua | Baja |
+| CU5. Contrastar el inventario | Media para el perfil semanal (domingo, sábado); baja para el reparto espacial (intervalos amplios, regiones negativas) | 9 regiones frente al detalle de calles del inventario | Tipo de día | Horas (inversión) | Parcial: los cocientes existen; falta la comparación directa con el inventario | Baja–media |
+| CU6. Concentración sin estación | Baja–media: ~12 ppb de error, peor que interpolar (10.3 ppb) | Cualquier punto, con un viento uniforme en todo el dominio | Horaria (tardes) | Horas | Parcial: predicción por estación, no en malla | Baja |
+| CU7. Verificar una afirmación | Alta si la afirmación es de toda la ciudad y de un periodo largo; baja si es local o de pocos días | Ciudad | Periodo de la medida | Minutos con los datos ya publicados | No: falta la comparación con la cifra anunciada y la ficha | Media |
+| CU8. Proyecto financiado | Baja para proyectos locales: un corredor queda diluido en una región de ~18 km | Insuficiente para la escala de un proyecto | Mensual | Meses | No | Baja |
+
+Lectura: el sistema ya sirve para preguntas de **toda la ciudad y de periodos largos** (CU2, CU7) y, con poco trabajo, para explicar episodios (CU1) y planear pilotos (CU3). Lo que más falta es **detalle espacial** (CU5, CU8, CU2 local), **ingesta continua de datos** (CU4, CU1) y **un nivel absoluto anclado** (CU5, CU8).
+
 ## Mapa de pantallas propuesto
 
 | Pantalla | Casos de uso | Elementos principales |

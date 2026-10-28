@@ -43,6 +43,16 @@ Todo el análisis usa las tardes (12–17 h), cuando la capa de mezcla está des
 - Una baja de pocos días casi no cambia la exposición anual; una baja sostenida de pocos puntos porcentuales sí. **El sistema mide bien justo esa escala si se acumulan suficientes días (capacidad 4).** Una baja de emisión se traduce en una baja menor de concentración (fondo regional y química del ozono).
 - Pendiente de verificar con la fuente primaria: el efecto de corto plazo (Orellano et al., 2020) y el promedio anual de NO₂ de la ciudad (informe anual de SEDEMA).
 
+## Otras razones para medir la emisión de NOₓ, además de la salud
+
+- **Cumplimiento de normas y programas:** las normas mexicanas de NO₂ y de ozono, y los programas de contingencias, se activan por concentraciones; saber si la emisión cambió ayuda a ajustar esos programas.
+- **Formación de ozono y partículas secundarias:** el NOₓ es precursor del ozono y del nitrato en partículas finas; reducir NOₓ cambia esas dos contaminaciones, con efectos que pueden ser no lineales (en algunas zonas, bajar NOₓ sube el ozono por un tiempo).
+- **Clima:** el NOₓ sale de la misma combustión que el CO₂, así que su emisión sirve como indicador de la actividad de combustión de vehículos e industria. Las estimaciones de NOₓ con satélite se usan en la literatura para verificar emisiones de CO₂ de ciudades y centrales; además, el ozono que forma es un gas de efecto invernadero.
+- **Ecosistemas y cultivos:** el ozono daña la vegetación y reduce rendimientos agrícolas; el depósito de nitrógeno acidifica suelos y agua y altera ecosistemas (por ejemplo, en los bosques que rodean la ciudad).
+- **Economía:** costos en salud, ausentismo y productividad, y daño a materiales y edificios.
+- **Equidad:** la exposición se concentra cerca de vialidades y zonas industriales; medir la emisión por zona permite ver quién carga con ella.
+- **Rendición de cuentas y verificación:** comprobar con datos independientes si los inventarios, los compromisos y los proyectos financiados cumplen lo que prometen.
+
 ## Costo de cómputo (para el diseño de la interfaz)
 
 | Análisis | Tiempo |
