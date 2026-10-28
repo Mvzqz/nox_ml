@@ -37,7 +37,7 @@ Tareas abiertas. Al terminar una, se marca con la fecha y el PR.
 
 - [x] **Artefactos de corrida para ensambles.** `nox-ml run` guarda `oof.parquet` (predicciones fuera de muestra de la estación oculta) y `emissions.parquet` (`docs/models.md`, sección 4) (2026-10-25, PR #12).
 - [x] **Periodo de prueba reservado.** Feb–may 2024 solo se usa para evaluar el modelo final; `nox-ml tune` rechaza configuraciones que lo incluyan (2026-10-25, PR #12).
-- [ ] **Contingencias 2024.** Migrar desde `research-archive` los datos y el cálculo de las contingencias 2024 con CO (`contingencias_2024.py`, `contingencias_co.py`); caen dentro del periodo de prueba y se usan para evaluar el modelo final en el avance 5.
+- [x] **Contingencias 2024.** Migrar desde `research-archive` los datos y el cálculo de las contingencias 2024 con CO (`contingencias_2024.py`, `contingencias_co.py`); caen dentro del periodo de prueba y se usan para evaluar el modelo final en el avance 5. Código y pruebas hechos (`nox_ml.data.contingencies`, `nox_ml.validation.events`, `nox-ml contingencies`); falta la corrida con E7 y con el modelo final (C2) (2026-10-28, PR #57).
 - [ ] **Contrato de ensambles y evaluación en el periodo de prueba.** Un ensamble es un `Model` del registro que envuelve a sus modelos base (stacking anidado por estación sobre `oof.parquet`); modo de `nox-ml` para correr una configuración congelada en feb–may 2024.
 - [ ] **Ensambles X1–X6** (`plan_avances.md`, avance 5). Mínimo para la rúbrica: X1, X4, X5 y X6.
 
