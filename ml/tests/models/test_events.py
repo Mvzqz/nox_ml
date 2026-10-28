@@ -8,6 +8,7 @@ import json
 from dataclasses import replace
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 import yaml
@@ -214,6 +215,38 @@ def test_the_draws_of_a_placebo_share_one_set_of_days_and_its_matrices(base, mon
     assert calls == [len(groups.normal)]
 
 
+def test_an_injected_drop_lowers_only_the_city_part_of_the_event_days(base):
+    groups = events.split_days(base, BUSINESS_MEASURES, BUSINESS_MEASURES)
+    injected = events.inject_drop(base, groups.event, 0.3)
+    background = BACKGROUND_STATION[0]
+
+    for before, after in zip(base.hours, injected.hours, strict=True):
+        factor = 0.7 if local_day(before.hour) in set(groups.event) else 1.0
+        assert after.nox == pytest.approx(background + (before.nox - background) * factor)
+        if len(before.no2):
+            floor = np.quantile(before.no2, events.PIXEL_BACKGROUND_QUANTILE)
+            assert after.no2 == pytest.approx(floor + (before.no2 - floor) * factor)
+    assert injected.jacobian_cache is base.jacobian_cache  # the matrices do not depend on the values
+
+
+def test_the_injected_drops_are_recovered_on_data_without_a_change(base):
+    groups = events.split_days(base, BUSINESS_MEASURES, BUSINESS_MEASURES)
+
+    rows = events.injection_recovery(base, make_model, groups, [0.2, 0.4])
+
+    assert [r["drop"] for r in rows] == [0.0, 0.2, 0.4]
+    assert rows[0]["recovered"] == 0
+    assert rows[1]["recovered"] == pytest.approx(0.2, abs=0.1)
+    assert rows[2]["recovered"] == pytest.approx(0.4, abs=0.1)
+    assert rows[2]["recovered"] > rows[1]["recovered"]
+    assert rows[0]["detected"] is None
+
+
+def test_an_injected_drop_must_be_a_fraction(base):
+    with pytest.raises(ValueError, match="drop must be"):
+        events.inject_drop(base, events.data_days(base)[:1], 1.0)
+
+
 # --- The command -------------------------------------------------------------------------------------------
 
 
@@ -284,6 +317,16 @@ def test_the_sensitivity_option_adds_the_scenario_with_every_active_day(config, 
 
     saved = json.loads((tmp_path / "runs" / "frozen.contingencies" / "contingencies.json").read_text())
     assert result.exit_code == 0 and list(saved["scenarios"]) == ["measures", "all_active"]
+
+
+def test_the_inject_option_adds_the_recovery_to_the_measures_scenario(config, tmp_path, loaded):
+    result = contingencies(config, tmp_path, "--period", "test", "--inject", "0.2", "--inject", "0.4")
+
+    saved = json.loads((tmp_path / "runs" / "frozen.contingencies" / "contingencies.json").read_text())
+    rows = saved["scenarios"]["measures"]["injection"]
+    assert result.exit_code == 0, result.output
+    assert [r["drop"] for r in rows] == [0.0, 0.2, 0.4]
+    assert "injected 20%" in result.output
 
 
 def test_the_refits_option_sets_the_number_of_fake_day_draws(config, tmp_path, loaded):

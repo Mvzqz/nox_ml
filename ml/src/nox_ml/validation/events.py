@@ -27,8 +27,8 @@ This reads the test period (the contingencies are held out data): `run_contingen
 """
 
 import json
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -39,7 +39,7 @@ import yaml
 from nox_ml.data import contingencies
 from nox_ml.data.inputs import Inputs, load_inputs
 from nox_ml.inversion.jacobian import plume_transport
-from nox_ml.inversion.linear import HOLIDAYS, SIGMA_THETA, U_MIN
+from nox_ml.inversion.linear import BACKGROUND_STATION, HOLIDAYS, SIGMA_THETA, U_MIN
 from nox_ml.inversion.normalized import SUNDAY_HOLIDAY, WEEKDAY, day_type, interval
 from nox_ml.models import Model
 from nox_ml.time import local_day
@@ -54,6 +54,7 @@ from nox_ml.validation.experiment import (
 from nox_ml.validation.stagnation import poorly_ventilated_mask
 
 SUFFIX = ".contingencies"
+PIXEL_BACKGROUND_QUANTILE = 0.10  # of an hour's TEMPO columns: the part of the column the city does not emit
 
 
 @dataclass(frozen=True)
@@ -188,16 +189,68 @@ def analyze(
     }
 
 
+def inject_drop(inputs: Inputs, days: pd.DatetimeIndex, drop: float) -> Inputs:
+    """The inputs with the city's part of the observations lowered by `drop` (0.2: 20 %) on `days`: the
+    station NOx above the background prior (`BACKGROUND_STATION`) and the TEMPO columns above the
+    `PIXEL_BACKGROUND_QUANTILE` of their hour. A known emission drop added to real data, to measure the drop
+    an analysis can detect. The Jacobians depend on where the receptors are, not on what they measured, so
+    the cache is kept."""
+    if not 0 <= drop < 1:
+        raise ValueError(f"drop must be in [0, 1), got {drop}")
+    selected = set(days)
+    background = BACKGROUND_STATION[0]
+    hours = []
+    for hour in inputs.hours:
+        if local_day(hour.hour) in selected:
+            nox = background + (hour.nox - background) * (1 - drop)
+            no2 = hour.no2
+            if len(no2):
+                floor = float(np.quantile(no2, PIXEL_BACKGROUND_QUANTILE))
+                no2 = floor + (no2 - floor) * (1 - drop)
+            hour = replace(hour, nox=nox, no2=no2)
+        hours.append(hour)
+    return replace(inputs, hours=hours)
+
+
+def injection_recovery(
+    inputs: Inputs, make_model: Callable[[], Model], groups: Groups, drops: Sequence[float]
+) -> list[dict[str, Any]]:
+    """For each injected drop on the event days, the contingency / normal ratio the model finds and the drop
+    it recovers relative to the ratio without injection (``recovered`` = 1 - ratio / ratio at 0). A drop is
+    detected when its interval stays below the ratio without injection. One fit per drop, plus the one
+    without injection; the matrices of the fitted days are built once."""
+    days = groups.event.union(groups.normal)
+    rows = []
+    for drop in (0.0, *drops):
+        data = inject_drop(inputs, groups.event, drop).on_days(days) if drop else inputs.on_days(days)
+        ratio, bounds = _fit_ratio(data, make_model, groups.event)
+        rows.append(
+            {
+                "drop": drop,
+                "ratio": ratio,
+                "lo": None if bounds is None else bounds[0],
+                "hi": None if bounds is None else bounds[1],
+            }
+        )
+    base = rows[0]["ratio"]
+    for row in rows:
+        row["recovered"] = 1 - row["ratio"] / base
+        row["detected"] = None if row["hi"] is None or not row["drop"] else bool(row["hi"] < base)
+    return rows
+
+
 def contingency_effect(
     inputs: Inputs,
     make_model: Callable[[], Model],
     episodes: pd.DataFrame,
     config: Placebo,
     sensitivity: bool = False,
+    inject: Sequence[float] = (),
 ) -> dict[str, Any]:
     """Scenario ``measures`` (the days with measures, activation days left out) and, with `sensitivity`,
     ``all_active`` (every day with an active contingency). Each is `analyze`. Fits the model
-    ``1 + 2 * config.refits`` times per scenario."""
+    ``1 + 2 * config.refits`` times per scenario. With `inject`, the ``measures`` scenario also gets
+    ``injection``: the drops it recovers when they are added to the data (`injection_recovery`)."""
     if make_model().role != "model":
         raise ValueError("contingencies need a model that estimates emissions, not a reference")
     active = contingencies.active_days(episodes)
@@ -205,14 +258,21 @@ def contingency_effect(
     requested = {"measures": contingencies.measure_days(episodes)}
     if sensitivity:
         requested["all_active"] = active
-    return {
+    result = {
         name: analyze(inputs, make_model, split_days(inputs, days, active), daily, config)
         for name, days in requested.items()
     }
+    if inject:
+        groups = split_days(inputs, requested["measures"], active)
+        result["measures"]["injection"] = injection_recovery(inputs, make_model, groups, inject)
+    return result
 
 
 def run_contingencies(
-    config: ExperimentConfig, runs_dir: Path = Path("runs"), sensitivity: bool = False
+    config: ExperimentConfig,
+    runs_dir: Path = Path("runs"),
+    sensitivity: bool = False,
+    inject: Sequence[float] = (),
 ) -> Path:
     """The contingencies of 2024 with a frozen config, on the test period (`EVALUATION_PERIOD`), written to
     ``runs_dir/<name>.contingencies/``: ``contingencies.json``, ``config.yaml`` (the period is the test
@@ -230,7 +290,9 @@ def run_contingencies(
         "frozen_on": {"start": config.period.start.isoformat(), "end": config.period.end.isoformat()},
         "period": {"start": test.period.start.isoformat(), "end": test.period.end.isoformat()},
         "level": test.placebo.level,
-        "scenarios": contingency_effect(inputs, test.model.build, episodes, test.placebo, sensitivity),
+        "scenarios": contingency_effect(
+            inputs, test.model.build, episodes, test.placebo, sensitivity, inject
+        ),
     }
     out = runs_dir / name
     out.mkdir(parents=True, exist_ok=True)
@@ -251,4 +313,8 @@ def headline(result: dict[str, Any]) -> str:
         for kind, p in s["placebos"].items():
             text = "no pool" if p is None else f"{p['center']:.2f} ({p['lo']:.2f}-{p['hi']:.2f})"
             lines.append(f"  placebo {kind}: {text}")
+        for row in s.get("injection", [])[1:]:
+            seen = {True: "detected", False: "not detected", None: "no interval"}[row["detected"]]
+            drop, ratio, recovered = row["drop"], row["ratio"], row["recovered"]
+            lines.append(f"  injected {drop:.0%}: ratio {ratio:.2f}, recovered {recovered:.0%} ({seen})")
     return "\n".join(lines)
