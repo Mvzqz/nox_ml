@@ -10,7 +10,7 @@ Fecha: 2026-10-28. Primeras seis mejoras de [brechas_y_mejoras.md](brechas_y_mej
 | 1. Festivos incompletos (2 de noviembre y 12 de diciembre) | Quitarlos no mueve el domingo/hábil (E7 0.56 → 0.56; E6 0.53 → 0.53–0.56; E5b 0.48 → 0.48) | Sin efecto |
 | 1. Días hábiles de fin de año (18–29 de diciembre) | **Quitarlos sube el domingo/hábil**: E7 0.56 → 0.63–0.65, E6 0.53 → 0.74–0.75, E5b solo 0.48 → 0.53 | Explica buena parte del sesgo del domingo en los estimadores estadísticos, poco en E5b (ver abajo) |
 | 5. Piso de ruido | ~4 ppb entre estaciones casi en el mismo punto; 11–13 ppb a la distancia típica de la red (5–8 km) | Ningún modelo puede bajar de ~4 ppb; el margen entre 4 y ~10 ppb es estructura a escala menor que la red |
-| 3. Control positivo con calendario | Fin de año 2023: la emisión **sube** (E7 1.38, E6 1.23); Semana Santa 2024: baja 8 % (E7 0.92, 0.74–1.12), no significativa | Sin confirmación positiva todavía; el fin de año no es un control limpio |
+| 3. Control positivo con calendario | Fin de año 2023: la emisión **sube** (E7 1.38, E6 1.23); Semana Santa 2024: baja 8 % (E7 0.92, 0.74–1.12), no significativa | El calendario de 2023–2024 no da un control limpio; el confinamiento de 2020 sí ([controles_de_verdad.md](controles_de_verdad.md)) |
 | 4. Curva de detección | Con E7 en nov–dic: 28 % con 9 días (la mitad de las veces), 37 % con 80 % de potencia; extrapolado: 19 % con una temporada, 10 % con un año. Sin los días de fin de año, igual | Más pesimista que en feb–may (20 % con 9 días): el invierno varía más; el límite depende de la temporada |
 | 2. Diagnóstico de episodios | Herramienta nueva (`nox-ml episode`): separa clima, emisión, fondo regional y parte urbana; en diciembre de 2023 sus veredictos tienen sentido físico | Primera capacidad del caso de uso replanteado (CU1) |
 | 6. Regresión-kriging | Sobre E5b: **10.2 ppb**, el mejor de la tabla (E5b 11.87, kriging 10.33, híbrido con IDW 10.40), con las emisiones y el placebo de E5b | Candidato a modelo final en concentración sin cambiar la emisión |
@@ -69,7 +69,7 @@ Inyección en Semana Santa (E7): 10 % no detectado, 20 % y 30 % detectados, recu
 Lectura:
 - **Fin de año no es un control positivo:** la emisión sube, y dos modelos coinciden. El diagnóstico de episodios (sección 2) apunta a emisión real en la semana previa a Navidad: sube la parte urbana de la columna de TEMPO, no solo el fondo. Sin datos de tráfico de 2023 no se puede confirmar con una fuente independiente.
 - **Semana Santa apunta en la dirección esperada (−8 %), pero dentro del límite de detección (~20 %).** Los días con más baja de tráfico (jueves y viernes santos) son festivos y quedan fuera del análisis de días hábiles; lo que queda es el efecto de las vacaciones escolares, más chico.
-- Conclusión honesta: todavía no hay un cambio real conocido que el método detecte. El control positivo sigue pendiente; un mejor candidato es un periodo largo con cambio conocido (el confinamiento de 2020, fuera de esta entrega) o datos de tráfico recientes.
+- Conclusión: el calendario de 2023–2024 no da un control positivo limpio. El confinamiento de 2020 sí lo da: E7 pasa el placebo de 2019 y mide una caída de ~50 %, dentro del rango esperado ([controles_de_verdad.md](controles_de_verdad.md)).
 
 ## 4. Curva de detección por número de días
 

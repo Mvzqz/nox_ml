@@ -49,6 +49,34 @@ CHEMISTRY_GAP_H = 6  # longest gap of the chemistry variables that is interpolat
 # April of this year sets the reference OH production (`physics.chemistry.reference_production`). It is not
 # the 2024 of the standard variant because feb-may 2024 is the held-out test period.
 CHEMISTRY_REF_YEAR = 2023
+
+
+@dataclass(frozen=True)
+class Sources:
+    """The tables a period reads: SIMAT NOx and wind (``interim/``), the ERA5 file (``raw/era5_openmeteo/``),
+    the filled boundary layer (``interim/``, None: ERA5 alone) and whether there are TEMPO pixels and SIMAT
+    chemistry (the OH loss of the puffs) for it. The default is 2023-2024."""
+
+    simat_nox: str = "simat_nox.parquet"
+    simat_wind: str = "simat_wind.parquet"
+    era5: str = ERA5_FILE
+    pbl_filled: str | None = "pbl_2023_2024.parquet"
+    tempo: bool = True
+    chemistry: bool = True
+
+
+DEFAULT_SOURCES = Sources()
+
+# The 2019-2020 tables of the research (`val2020_data.py`): no TEMPO yet, no MERRA-2, no chemistry migrated
+LOCKDOWN_SOURCES = Sources(
+    simat_nox="simat_nox_2019_2020.parquet",
+    simat_wind="simat_wind_2019_2020.parquet",
+    era5="pbl_wind_center_2019-2020.json",
+    pbl_filled=None,
+    tempo=False,
+    chemistry=False,
+)
+
 # Transport configurations whose Jacobians an `Inputs` keeps (~9 MB each in nov-dec 2023, ~18 MB in feb-may
 # 2024): enough for every member of an ensemble and the transport trials of a tune
 MAX_CACHED_TRANSPORTS = 16
@@ -272,19 +300,31 @@ def load_pixels(path: Path) -> pd.DataFrame:
     return px
 
 
-def load_inputs(data_dir: Path, start: str, end: str, local_hours: tuple[int, int] = (12, 17)) -> Inputs:
+def load_inputs(
+    data_dir: Path,
+    start: str,
+    end: str,
+    local_hours: tuple[int, int] = (12, 17),
+    sources: Sources = DEFAULT_SOURCES,
+) -> Inputs:
     """The inputs of the baseline inversion for the local days ``start`` to ``end`` from `data_dir`
-    (``interim/`` for the tables of `qc-simat`, `qc-tempo` and `fill-pbl`, ``raw/`` for ERA5)."""
+    (``interim/`` for the tables of `qc-simat`, `qc-tempo` and `fill-pbl`, ``raw/`` for ERA5), read from
+    `sources`. Without TEMPO the hours have no pixels; without chemistry, no OH loss rate."""
     interim = data_dir / "interim"
     catalog = gpd.read_file(interim / "estaciones.gpkg").to_crs(UTM).set_index("cve_estac")
     station_xy = pd.DataFrame({"x": catalog.geometry.x, "y": catalog.geometry.y})
     ids = list(station_xy.index)
 
-    nox, ratio = station_nox(pd.read_parquet(interim / "simat_nox.parquet"), ids, start, end, local_hours)
-    wind = domain_wind(pd.read_parquet(interim / "simat_wind.parquet"), ids)
-    era5 = parse_era5(json.loads((data_dir / "raw" / "era5_openmeteo" / ERA5_FILE).read_text()))
-    pbl = hourly_pbl(pd.read_parquet(interim / "pbl_2023_2024.parquet")["pbl_m"], era5)
-    pixels = load_pixels(interim / f"tempo_pixels_{start}_{end}.parquet")
+    nox, ratio = station_nox(pd.read_parquet(interim / sources.simat_nox), ids, start, end, local_hours)
+    wind = domain_wind(pd.read_parquet(interim / sources.simat_wind), ids)
+    era5 = parse_era5(json.loads((data_dir / "raw" / "era5_openmeteo" / sources.era5).read_text()))
+    filled = pd.read_parquet(interim / sources.pbl_filled)["pbl_m"] if sources.pbl_filled else era5.iloc[:0]
+    pbl = hourly_pbl(filled, era5)
+    pixels = (
+        load_pixels(interim / f"tempo_pixels_{start}_{end}.parquet")
+        if sources.tempo
+        else pd.DataFrame({"x": [], "y": [], "vcd": [], "h": pd.to_datetime([])})
+    )
 
     hours, station_ids = assemble(nox, wind, pbl, pixels, station_xy)
     zones = road_emission_cells(read_roads(interim / "roads.gpkg"))
@@ -295,10 +335,12 @@ def load_inputs(data_dir: Path, start: str, end: str, local_hours: tuple[int, in
     profile = interim / "puffs_cdmx" / "perfil_infovial.json"
     # chemistry: the day before the window is the history of the 24 h puffs; the reference April may be in
     # another year than the window
-    years = sorted({CHEMISTRY_REF_YEAR, first.year, last.year})
-    chem = fill_chemistry(load_chemistry(data_dir / "raw" / "simat", years, ids))
-    loss = chemistry_loss_rate(chem)
     window = slice(pd.Timestamp(start) - pd.Timedelta(days=1), last)
+    chemistry = loss_rate = None
+    if sources.chemistry:
+        years = sorted({CHEMISTRY_REF_YEAR, first.year, last.year})
+        chem = fill_chemistry(load_chemistry(data_dir / "raw" / "simat", years, ids))
+        chemistry, loss_rate = chem.loc[window], chemistry_loss_rate(chem).loc[window]
     return Inputs(
         hours,
         station_ids,
@@ -309,6 +351,6 @@ def load_inputs(data_dir: Path, start: str, end: str, local_hours: tuple[int, in
         N_SPLIT**2,
         wind=wind.loc[first:last],
         infovial=read_infovial_profile(profile) if profile.exists() else None,
-        chemistry=chem.loc[window],
-        loss_rate=loss.loc[window],
+        chemistry=chemistry,
+        loss_rate=loss_rate,
     )
