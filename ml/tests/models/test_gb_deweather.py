@@ -3,6 +3,7 @@
 # (pandas typing infers unions for `df[...]`; behavior is covered by the tests instead)
 """Gradient boosting deweathering: what changes against the forest (seed, dropped features, extremes)."""
 
+import numpy as np
 import pytest
 from pydantic import ValidationError
 from ventilation_synthetic import ventilation_inputs
@@ -77,3 +78,15 @@ def test_extreme_params_still_give_a_finite_index_and_prediction(extreme):
     assert estimate.table["mean"].notna().all()
     assert pred["nox_ppb_pred"].notna().all()
     assert model.n_params >= 1
+
+
+def test_the_smearing_factor_recovers_the_noise_it_back_transforms():
+    # the NOx above the background is lognormal with sigma 0.5 around a smooth function of the weather and the
+    # calendar, so the mean of exp(residual) is exp(sigma^2 / 2) = 1.13; the residual of the fit itself would
+    # be smaller, as boosting follows its training rows
+    sigma = 0.5
+    model = GbDeweather(GbDeweatherParams(max_iter=100, learning_rate=0.1)).fit(
+        ventilation_inputs(n_days=120, noise=sigma, seed=1)
+    )
+
+    assert model._smearing == pytest.approx(np.exp(sigma**2 / 2), rel=0.05)

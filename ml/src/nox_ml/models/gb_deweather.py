@@ -11,8 +11,12 @@ placebo and the attenuation of the Sunday index towards 1 are the things to watc
 
 Differences that come with the estimator:
 
-* No out-of-bag predictions exist, so Duan's smearing factor is learnt from the residual of the fit itself.
-  It only rescales `predict_stations`, not the index.
+* No out-of-bag predictions exist, and the residual of the fit itself understates the error (boosting follows
+  the training rows), which would bias `predict_stations` downwards. Duan's smearing factor is learnt instead
+  from out-of-sample residuals: `CV_GROUPS` blocks of whole days (a day's rows stay together, as they share
+  weather), each predicted by a model trained on the other four. It only rescales `predict_stations`, not the
+  index. Cost: `fit` trains the model 1 + `CV_GROUPS` times (the extra ones on 80 % of the rows), about 5
+  times the time of a single boosting fit; the bootstrap refits of the index do not pay it.
 * `drop_features` removes columns of the matrix, for the ablation of features that carry no information in a
   period (``doy_sin`` and ``doy_cos`` are collinear in two months). The day type cannot be dropped: it is the
   quantity under test.
@@ -27,6 +31,8 @@ from sklearn.ensemble import HistGradientBoostingRegressor
 
 from nox_ml.models.base import ModelParams
 from nox_ml.models.rf_deweather import DeweatherParams, Estimator, RfDeweather
+
+CV_GROUPS = 5  # blocks of days for the out-of-sample residuals of the smearing factor
 
 
 class GbDeweatherParams(DeweatherParams):
@@ -76,7 +82,24 @@ class GbDeweather(RfDeweather):
         return design.drop(columns=p.drop_features)
 
     def _log_residual(self, forest: Estimator, design: pd.DataFrame, target: np.ndarray) -> np.ndarray:
-        return target - forest.predict(design)
+        """Residual of the log target out of sample: days are dealt at random (seeded) into `CV_GROUPS` blocks
+        and each block is predicted by a model trained on the rest. With fewer than two days there is nothing
+        to hold out, and the residual of `forest` itself is returned."""
+        assert self._fit_rows is not None
+        days, day_index = np.unique(self._fit_rows["day"].to_numpy(), return_inverse=True)
+        n_groups = min(CV_GROUPS, len(days))
+        if n_groups < 2:
+            return target - forest.predict(design)
+        order = np.random.default_rng(self.params.seed).permutation(len(days))
+        block = np.empty(len(days), dtype=int)
+        for k, chunk in enumerate(np.array_split(order, n_groups)):
+            block[chunk] = k
+        rows_block = block[day_index]
+        predicted = np.empty(len(target))
+        for k in range(n_groups):
+            held = rows_block == k
+            predicted[held] = self._new_forest().fit(design[~held], target[~held]).predict(design[held])
+        return target - predicted
 
     @property
     def n_params(self) -> int:
