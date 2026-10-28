@@ -104,3 +104,13 @@ def test_a_measure_in_an_atypical_period_carries_a_warning(base):
     assert result["atypical_share"] == 1.0
     assert "Advertencia" in products.render_measure(result, "Fin de año", ("2023-11-06", "2023-12-31"))
     assert sheet(base)["atypical_share"] == 0.0
+
+
+def test_a_few_atypical_days_get_a_note_not_a_warning(base):
+    result = products.measure_result(base, make_model, WEEK, BUSINESS_MEASURES, PLACEBO) | {
+        "atypical_share": 0.2
+    }
+
+    text = products.render_measure(result, "Prueba", ("2023-11-06", "2023-12-31"))
+
+    assert "Nota: 20%" in text and "Advertencia" not in text

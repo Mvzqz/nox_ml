@@ -44,6 +44,7 @@ ESTIMATORS = {
 }
 CONFIGS = Path("configs/experiments")
 POWER = events.DETECTION_POWER
+MOSTLY_ATYPICAL = 0.5  # share of atypical measure days from which the sheet warns instead of noting
 PLACEBO = Placebo(n=2000, seed=3, level=0.90, refits=200)  # E7 fits in a second: hundreds of fake events
 
 
@@ -180,13 +181,21 @@ def render_measure(result: dict[str, Any], title: str, period: tuple[str, str]) 
         lines.append(
             f"| Cambio anunciado | {pct(result['claim']['change'])}: **{fits}** en el rango compatible |"
         )
-    if result["atypical_share"] > 0:
+    share = result["atypical_share"]
+    if share >= MOSTLY_ATYPICAL:
         lines += [
             "",
-            f"**Advertencia:** {result['atypical_share']:.0%} de los días evaluados caen en un periodo "
-            "atípico (fin de año o Semana Santa). En esos periodos el método ha confundido la acumulación de "
-            "contaminación con emisión (en diciembre de 2023 midió +40 % cuando el tráfico era el de un día "
-            "normal): no leas el resultado como un cambio de emisión sin otra evidencia.",
+            f"**Advertencia:** {share:.0%} de los días evaluados caen en un periodo atípico (fin de año o "
+            "Semana Santa). En esos periodos el método ha confundido la acumulación de contaminación con "
+            "emisión (en diciembre de 2023 midió +40 % cuando el tráfico era el de un día normal): no leas "
+            "el resultado como un cambio de emisión sin otra evidencia.",
+        ]
+    elif share > 0:
+        lines += [
+            "",
+            f"Nota: {share:.0%} de los días evaluados caen en un periodo atípico (fin de año o Semana "
+            "Santa), donde el método es menos confiable. Son minoría, pero conviene repetir el análisis sin "
+            "esos días.",
         ]
     if result["method"] == "extrapolated":
         lines += [
