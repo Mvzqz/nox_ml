@@ -54,6 +54,26 @@ Fecha: 2026-10-28. Búsqueda en la literatura de los métodos que responden las 
 - **Inventario:** detalle por fuente y por calle, cada varios años.
 - **Veredicto:** mejores para el detalle por fuente y como verdad local; caros y puntuales. Son la validación ideal de nuestros resultados en una zona, no un sustituto.
 
+## Emisión o solo concentración: ¿cuánto vale medir la emisión?
+
+Los resultados del avance 4 (noviembre–diciembre de 2023) muestran que, para detectar si la emisión de **toda la ciudad** cambió, la concentración normalizada por el clima es igual de buena o mejor:
+
+| Modelo | Qué mide | Domingo ÷ hábil (IC 90 %) | Placebo |
+|---|---|---|---|
+| E6, bosque aleatorio | Concentración normalizada por clima, sin física | 0.53 (0.42–0.57) | 0.97 ± 0.09 |
+| E7, estimador normalizado | Concentración ÷ lo que predice el transporte con emisión fija | 0.56 (0.46–0.71) | 0.88 ± 0.22 |
+| E5b, inversión | Emisión por región y tipo de día | 0.48 (0.36–0.62) | 1.01 ± 0.12 |
+
+Lo que la emisión aporta y la concentración no:
+
+1. **Origen espacial:** qué región causa la concentración en otra (las estaciones mezclan lo que llega de varias zonas con el viento). Es la base de la equidad y de evaluar proyectos locales.
+2. **Escenarios:** con emisión y transporte se puede simular "si la región X reduce 10 %, ¿cuánto baja la concentración en cada lugar y con qué clima?" (CU9 en [casos_de_uso.md](casos_de_uso.md)).
+3. **Usar el satélite:** TEMPO mide columnas, no lo que se respira; la emisión es la variable común con las estaciones.
+4. **Comparar con inventarios y compromisos,** que están en emisión.
+5. **Climas no vistos:** la normalización estadística falla cuando el tipo de día y el clima no se cruzan o cuando aparece un régimen nuevo (ADR 0006); la física generaliza mejor.
+
+Hoy esas ventajas son en buena parte **potenciales**: el origen espacial tiene 9 regiones con intervalos amplios (brecha B2) y los escenarios necesitan un nivel absoluto anclado (B4). La que más usamos es la 3. Se vuelven reales con las mejoras 8, 14 y 7 de [brechas_y_mejoras.md](brechas_y_mejoras.md). Para el producto: concentración normalizada para la respuesta rápida de toda la ciudad (CU1, CU2, CU7) e inversión de emisión para el origen espacial y los escenarios.
+
 ## Conclusión
 
 - **Nuestro nicho:** emisión (no concentración), por tipo de día y por región, separada del clima con física, validada con estación oculta y placebo, con límite de detección, a bajo costo y con datos públicos. Ninguna alternativa reúne todo eso, pero varias son mejores en una parte.

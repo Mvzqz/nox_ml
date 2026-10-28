@@ -133,6 +133,16 @@ El sistema no depende de una institución: usa datos públicos (SIMAT, TEMPO, ER
 - **Salida:** línea base, cambio de emisión con intervalo, límite de detección y advertencia de escala: con regiones de ~18 km, un proyecto que afecta una zona pequeña puede quedar diluido.
 - **Acciones:** reporte de verificación periódico; decidir continuidad o pagos por resultados con la incertidumbre explícita.
 
+### CU9. Simular un escenario: ¿qué pasa si...?
+
+- **Usuario:** autoridad o planeador, al comparar opciones antes de decidir; organización civil o financiador, al proponer una medida.
+- **Pregunta:** "Si la región norte reduce 10 % su emisión vial, ¿cuánto baja el NOₓ en cada zona, en un día típico y en un día estancado?"
+- **Entrada:** regiones y porcentaje de cambio de emisión (o un cambio por tipo de día); clima de referencia (un periodo histórico, días típicos o días estancados).
+- **Qué hace el sistema:** aplica el cambio a la emisión estimada y lo propaga con el modelo de transporte, hora por hora, con el clima elegido.
+- **Salida:** mapa y tabla del cambio de concentración por zona y por estación, con su intervalo; cuánto del cambio queda en la propia zona y cuánto llega a otras; la diferencia entre un día ventilado y uno estancado.
+- **Acciones:** comparar escenarios lado a lado; exportar para un documento de decisión; convertir el escenario elegido en una medida a evaluar (CU3 y CU2).
+- **Requisito:** un nivel absoluto anclado y más detalle espacial; sin ellos el escenario solo es válido en términos relativos y por región grande.
+
 ## Qué tan bien se satisface cada caso hoy
 
 Con los resultados de los avances 4 y 5. Escala: alto, medio, bajo. Las brechas y las mejoras para cerrarlas están en [brechas_y_mejoras.md](brechas_y_mejoras.md).
@@ -147,6 +157,7 @@ Con los resultados de los avances 4 y 5. Escala: alto, medio, bajo. Las brechas 
 | CU6. Concentración sin estación | Baja–media: ~12 ppb de error, peor que interpolar (10.3 ppb) | Cualquier punto, con un viento uniforme en todo el dominio | Horaria (tardes) | Horas | Parcial: predicción por estación, no en malla | Baja |
 | CU7. Verificar una afirmación | Alta si la afirmación es de toda la ciudad y de un periodo largo; baja si es local o de pocos días | Ciudad | Periodo de la medida | Minutos con los datos ya publicados | No: falta la comparación con la cifra anunciada y la ficha | Media |
 | CU8. Proyecto financiado | Baja para proyectos locales: un corredor queda diluido en una región de ~18 km | Insuficiente para la escala de un proyecto | Mensual | Meses | No | Baja |
+| CU9. Escenarios | Baja–media: válido en relativo y por región grande; en concentración depende del transporte (factor de hasta 2 en el nivel absoluto) | 9 regiones | Horaria con el clima elegido | Minutos con las matrices ya calculadas | No | Baja |
 
 Lectura: el sistema ya sirve para preguntas de **toda la ciudad y de periodos largos** (CU2, CU7) y, con poco trabajo, para explicar episodios (CU1) y planear pilotos (CU3). Lo que más falta es **detalle espacial** (CU5, CU8, CU2 local), **ingesta continua de datos** (CU4, CU1) y **un nivel absoluto anclado** (CU5, CU8).
 
@@ -159,6 +170,7 @@ Lectura: el sistema ya sirve para preguntas de **toda la ciudad y de periodos la
 | Evaluar medida | CU2, CU7, CU8 | Formulario de la medida, veredicto con límite de detección, serie antes y después |
 | Planear piloto | CU3 | Efecto esperado y duración, curva de detección |
 | Inventario | CU5 | Reparto por región y perfil semanal, inventario frente a estimado |
+| Escenarios | CU9 | Selector de regiones y porcentaje, clima de referencia, mapa del cambio, comparación de escenarios |
 | Mapa | CU6, apoyo de CU1 y CU5 | Regiones, estaciones, píxeles de TEMPO, concentración estimada |
 | Datos y método | Todos | Cobertura, fuentes, versión, limitaciones (de [capacidades.md](capacidades.md)) |
 
