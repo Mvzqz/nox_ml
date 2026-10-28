@@ -139,6 +139,13 @@ def contingencies(
         int | None,
         typer.Option(min=2, help="Fake-day draws per placebo (default: the config's placebo.refits)."),
     ] = None,
+    inject: Annotated[
+        list[float] | None,
+        typer.Option(
+            help="Emission drop added to the measure days (repeatable: --inject 0.1 --inject 0.2): "
+            "the drop the analysis detects."
+        ),
+    ] = None,
 ) -> None:
     """Emission on 2024 contingency days over normal days, with placebos (test period only).
 
@@ -151,7 +158,7 @@ def contingencies(
         raise typer.Exit(2) from error
     if refits is not None:
         cfg = cfg.model_copy(update={"placebo": cfg.placebo.model_copy(update={"refits": refits})})
-    out = events.run_contingencies(cfg, runs_dir, sensitivity)
+    out = events.run_contingencies(cfg, runs_dir, sensitivity, inject or [])
     typer.echo(events.headline(json.loads((out / "contingencies.json").read_text())))
     typer.echo(f"Written to {out}/")
 
