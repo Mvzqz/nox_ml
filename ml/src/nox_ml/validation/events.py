@@ -125,7 +125,8 @@ def fake_event_ratios(
 
 def poorly_ventilated_pool(daily: pd.DataFrame, groups: Groups) -> pd.DatetimeIndex:
     """Normal days at least as stagnant as the bulk of the event days (`poorly_ventilated_mask`), judged by
-    the model-free ventilation of the daily table (`normalized_days`). Empty without event days in `daily`."""
+    the ``stagnation`` of the daily table (`normalized_days`: the NOx the plume predicts with the prior
+    emission, so high means poorly ventilated, as in the research). Empty without event days in `daily`."""
     event = groups.event.intersection(daily.index)
     if event.empty:
         return pd.DatetimeIndex([])

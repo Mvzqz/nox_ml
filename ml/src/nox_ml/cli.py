@@ -135,15 +135,22 @@ def contingencies(
     sensitivity: Annotated[
         bool, typer.Option(help="Also count every day with an active contingency (activation included).")
     ] = False,
+    refits: Annotated[
+        int | None,
+        typer.Option(min=2, help="Fake-day draws per placebo (default: the config's placebo.refits)."),
+    ] = None,
 ) -> None:
     """Emission on 2024 contingency days over normal days, with placebos (test period only).
 
-    Fits the model 1 + 2 * placebo.refits times per scenario. Writes runs/<name>.contingencies/."""
+    Fits the model 1 + 2 * refits times per scenario: a cheap model (E7, E6) can afford hundreds of draws,
+    which a placebo interval needs; an expensive one keeps the config's. Writes runs/<name>.contingencies/."""
     try:
         cfg = experiment.read_config(config)
     except ValidationError as error:
         typer.echo(f"Invalid config {config}:\n{error}", err=True)
         raise typer.Exit(2) from error
+    if refits is not None:
+        cfg = cfg.model_copy(update={"placebo": cfg.placebo.model_copy(update={"refits": refits})})
     out = events.run_contingencies(cfg, runs_dir, sensitivity)
     typer.echo(events.headline(json.loads((out / "contingencies.json").read_text())))
     typer.echo(f"Written to {out}/")

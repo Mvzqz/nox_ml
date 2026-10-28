@@ -269,6 +269,16 @@ def test_the_sensitivity_option_adds_the_scenario_with_every_active_day(config, 
     assert result.exit_code == 0 and list(saved["scenarios"]) == ["measures", "all_active"]
 
 
+def test_the_refits_option_sets_the_number_of_fake_day_draws(config, tmp_path, loaded):
+    result = contingencies(config, tmp_path, "--period", "test", "--refits", "5")
+
+    out = tmp_path / "runs" / "frozen.contingencies"
+    saved = json.loads((out / "contingencies.json").read_text())
+    assert result.exit_code == 0, result.output
+    assert len(saved["scenarios"]["measures"]["placebos"]["random"]["ratios"]) == 5
+    assert yaml.safe_load((out / "config.yaml").read_text())["placebo"]["refits"] == 5
+
+
 def test_the_command_needs_the_test_period_and_a_valid_config(config, tmp_path, loaded):
     bad = tmp_path / "bad.yaml"
     bad.write_text(
