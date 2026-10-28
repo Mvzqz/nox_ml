@@ -30,7 +30,20 @@ El rango sale de eventos falsos de la misma duración sacados de días normales 
 | Periodos atípicos | Vacaciones de fin de año de 2023 | La ficha mide +40 % y advierte que es un periodo donde el método confunde acumulación con emisión | Sí, con la advertencia |
 | Pruebas automáticas | Datos sintéticos con baja impuesta y sin cambio; modo extrapolado; advertencia; inversión de la calculadora | 9 pruebas | Sí |
 
-Pendiente: mostrar dos fichas a alguien fuera del equipo y pedirle que explique qué concluye (comprensión).
+### Varias temporadas
+
+`ficha-medida` acepta varias temporadas (`--data` repetido): cada una se compara con sus propios días normales y los cambios se combinan pesando cada temporada por su precisión (inverso de la varianza en escala logarítmica). Validación con inyecciones en nov–dic 2023 y nov–dic 2024 (150 repeticiones, 9 días por temporada):
+
+| Baja inyectada | El rango combinado contiene la verdad | Se detecta la baja |
+|---|---|---|
+| 0 % | 87 % | 6 % (falsa alarma) |
+| 10 % | 88 % | 37 % |
+| 20 % (el mínimo que reporta la ficha combinada) | 89 % | 78 % |
+| 30 % | 87 % | 99 % |
+
+Con dos temporadas, el mínimo detectable con 9 días por temporada baja de 36 % y 26 % (cada una sola) a 20 %. Las temporadas desde 2025 leen las estaciones de OpenAQ y el viento de los aeropuertos (`sources_for`).
+
+Pendiente: la prueba de comprensión con tres personas fuera del equipo; protocolo, fichas y registro en `context/management/prueba_fichas/`.
 
 ## Lo que muestran las fichas de ejemplo
 
