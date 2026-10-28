@@ -54,6 +54,12 @@ Tareas abiertas. Al terminar una, se marca con la fecha y el PR.
 - [ ] **Corrección de mph por año de la etiqueta.** `simat.fix_wind_speed` decide por el año de `local`: la hora 24 del 31 de diciembre de 2024 (etiqueta 2025-01-01 00:00, 19 filas) queda sin corregir. Fuera de los periodos de estudio; corregir por archivo de origen.
 - [x] **Características de E6 justificadas.** Se hacen en la sesión de E6 (hora y día cíclicos, ventilación y su acumulado, dirección del viento con seno y coseno, tipo de día), con la justificación de cada transformación y codificación (2026-10-25, PR #20).
 
+- [ ] **Temporadas de ozono 2025 y 2026 (después del avance 5).** Con 2024 solo 9 días hábiles con medidas de contingencia: el límite de detección es de ~±13 % con E7 y ~±27 % con E5b. 2025 tuvo 5 contingencias (26 feb, 18 mar, 1, 23 y 25 abr) y 2026 ya pasó; juntas podrían duplicar o triplicar los días y probar el modelo en años completamente nuevos. Trabajo estimado de 2 a 4 días:
+  - Datos: TEMPO feb–may de cada año (revisar la versión del producto), SIMAT 2025–2026 (2026 puede venir sin validar; repetir los controles de mph, sensores atascados y estaciones nuevas o dadas de baja), capa límite ERA5 de Open-Meteo (cubre 2025–2026; confirmar que no hace falta el relleno con MERRA-2) y las fechas de las contingencias verificadas con la CAMe.
+  - Código fijo en 2023–2024: `HOLIDAYS` (sin festivos de 2025–2026 se contarían como hábiles), `pbl_2023_2024.parquet` y el rango de `fill-pbl`, los nombres de los archivos de píxeles de TEMPO, `WIND_FIX_YEAR` de la corrección de mph, el módulo de contingencias (un solo archivo de 2024) y la referencia de OH (abril de 2023).
+  - Supuestos que envejecen: el perfil horario de Infovial es de 2017; revisar centrales nuevas o retiradas en las fuentes puntuales.
+  - Cómputo: cada temporada cuesta como feb–may 2024 (2 a 4 h por modelo).
+  - Alternativa menor sin datos nuevos: medir también los 7 días con medidas en fin de semana contra su mismo tipo de día (+7 días en grupos chicos; ~2 h de código).
 - [ ] **Confinamiento 2020 frente a 2019 (fuera del avance 5).** Migrar `val2020_data.py` y `val2020_ratio.py` de `research-archive` y correr E7 y E6, que no necesitan TEMPO. El modelo final no aplica: necesita TEMPO (desde 2023) y MERRA-2 (no descargado para 2019–2020), y sin TEMPO la inversión no pasa el placebo de 2019 (`reports/validacion_2020.md`).
 
 ## Ventajas del proyecto
