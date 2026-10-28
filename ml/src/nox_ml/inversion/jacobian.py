@@ -14,6 +14,7 @@ afternoon).
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from dataclasses import field as field_
 from functools import cache, partial
 
 import numpy as np
@@ -32,11 +33,13 @@ from nox_ml.physics.plume import (
 )
 from nox_ml.physics.puff import (
     MAX_AGE_H,
+    NS_PER_HOUR,
     TRAFFIC_PROFILE,
     HourProfile,
     Survival,
     Trajectories,
     Weights,
+    WindField,
     cumulative_loss,
     puffs,
     road_weights,
@@ -84,6 +87,10 @@ class Transport:
     survival: Survival
     road_profile: HourProfile
     max_age_h: int = MAX_AGE_H
+    # with a field, each source moves with the wind at its location (`Trajectories.from_field`) instead of the
+    # wind of the domain; `traj` still sets the clock and the survival
+    field: WindField | None = None
+    motion: dict = field_(default_factory=dict, compare=False, repr=False)  # per source set, built once
 
 
 @dataclass(frozen=True)
@@ -145,6 +152,20 @@ def jacobian_hour_puff(
     )
 
 
+def source_motion(transport: Transport, xs: Array, ys: Array) -> tuple[Trajectories, Array, Array]:
+    """The trajectories of the sources (xs, ys) and the wind at them every hour (hours, sources), from the
+    field of `transport`, computed once per source set."""
+    assert transport.field is not None
+    key = (len(xs), float(xs.sum()), float(ys.sum()))
+    if key not in transport.motion:
+        offset = round((transport.field.t0.value - transport.traj.t0.value) / NS_PER_HOUR)
+        if offset:
+            raise ValueError("the wind field must start at the hour of the trajectories")
+        u, v = transport.field.at(xs, ys)
+        transport.motion[key] = (Trajectories.from_arrays(transport.traj.t0, u, v), u, v)
+    return transport.motion[key]
+
+
 def _block(
     h: pd.Timestamp,
     wind_h: tuple[float, float],
@@ -162,18 +183,24 @@ def _block(
     u, v = wind_h
     reach = float(speed(np.hypot(u, v))) * 3600  # the last hour's plume only extends as far as the wind went
     t_target = transport.traj.t(h) + 0.5
+    hour = round(transport.traj.t(h))
     pick = 0 if ground else 1
     roads_now = transport.road_profile(h)
     roads_before = road_weights(transport.traj, transport.road_profile)
 
     def response(xs: Array, ys: Array, weights: Weights) -> tuple[Array, Array]:
-        steady = plume(xs, ys, receptors.x, receptors.y, u, v, pbl_h, extra_sy=extra_sy, x_max=reach)
+        traj, us, vs, far = transport.traj, u, v, reach
+        if transport.field is not None:
+            traj, field_u, field_v = source_motion(transport, xs, ys)
+            us, vs = field_u[hour][None, :], field_v[hour][None, :]
+            far = speed(np.hypot(us, vs)) * 3600
+        steady = plume(xs, ys, receptors.x, receptors.y, us, vs, pbl_h, extra_sy=extra_sy, x_max=far)
         aged = puffs(
             xs,
             ys,
             receptors.x,
             receptors.y,
-            transport.traj,
+            traj,
             t_target,
             pbl_h,
             weights,

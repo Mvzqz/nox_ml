@@ -72,6 +72,22 @@ HOLIDAYS = (
     "2024-03-28",
     "2024-03-29",
     "2024-05-01",
+    "2024-11-18",  # 2024-2026: the seasons after the delivery (`configs/seasons/`)
+    "2024-12-25",
+    "2025-01-01",
+    "2025-02-03",
+    "2025-03-17",
+    "2025-04-17",
+    "2025-04-18",
+    "2025-05-01",
+    "2025-11-17",
+    "2025-12-25",
+    "2026-01-01",
+    "2026-02-02",
+    "2026-03-16",
+    "2026-04-02",
+    "2026-04-03",
+    "2026-05-01",
 )
 
 AIRPORT_PRIOR = 500.0  # t/yr, assumption (the inventory has no value per airport)
@@ -130,6 +146,9 @@ class History:
     wind: pd.DataFrame | None = None
     infovial: Infovial | None = None
     loss_rate: pd.Series | None = None
+    # the wind of each station and where the stations are, for a transport with a wind field
+    station_wind: pd.DataFrame | None = None
+    station_xy: pd.DataFrame | None = None
 
 
 @runtime_checkable

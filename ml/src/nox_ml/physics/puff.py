@@ -46,11 +46,54 @@ TRAFFIC_PROFILE = {
 
 
 @dataclass(frozen=True)
+class WindField:
+    """The hourly wind of each station (`u`, `v`: (hours, stations), m/s, NaN where a station has no data)
+    from `t0` on, and where the stations are (`x`, `y`, m). `at` interpolates it to any point."""
+
+    t0: pd.Timestamp
+    u: Array
+    v: Array
+    x: Array
+    y: Array
+
+    @classmethod
+    def from_stations(cls, wind: pd.DataFrame, xy: pd.DataFrame) -> "WindField":
+        """`wind`: hourly frame indexed by UTC hour with columns ``(u, station)`` and ``(v, station)``;
+        `xy`: ``x``, ``y`` of the stations. Gaps of up to 3 h of a station are interpolated."""
+        idx = pd.date_range(wind.index.min(), wind.index.max(), freq="h")
+        full = wind.reindex(idx).interpolate(limit=3, limit_area="inside")
+        stations = list(full["u"].columns)
+        position = xy.loc[stations]
+        return cls(
+            cast(pd.Timestamp, idx[0]),
+            full["u"].to_numpy(float),
+            full["v"].to_numpy(float),
+            position["x"].to_numpy(float),
+            position["y"].to_numpy(float),
+        )
+
+    def at(
+        self, xs: Array, ys: Array, power: float = 2.0, min_distance: float = 500.0
+    ) -> tuple[Array, Array]:
+        """Wind (hours, points) at the points: inverse-distance weighting (``1 / d^power``, `d` floored at
+        `min_distance` m) of the stations that report each hour; calm where none does."""
+        d = np.maximum(np.hypot(self.x[:, None] - xs[None, :], self.y[:, None] - ys[None, :]), min_distance)
+        w = d**-power
+        has = ~np.isnan(self.u)
+        norm = has.astype(float) @ w
+        with np.errstate(invalid="ignore"):
+            u = np.where(norm > 0, np.nan_to_num(self.u) @ w / norm, 0.0)
+            v = np.where(norm > 0, np.nan_to_num(self.v) @ w / norm, 0.0)
+        return u, v
+
+
+@dataclass(frozen=True)
 class Trajectories:
-    """Displacement and distance travelled, integrating the hourly wind of the domain.
+    """Displacement and distance travelled, integrating the hourly wind.
 
     `cx`, `cy` accumulate the vector wind (m); `cs` accumulates the floored speed (m). Index k is the start
-    of hour k after `t0`.
+    of hour k after `t0`. With the wind of the domain they are vectors (one trajectory for every source);
+    with a `WindField` they are (hours, sources): each source moves with the wind at its location.
     """
 
     t0: pd.Timestamp
@@ -65,11 +108,22 @@ class Trajectories:
         idx = pd.date_range(wind.index.min(), wind.index.max(), freq="h")
         full = wind.reindex(idx).interpolate(limit=3).fillna(0.0)
         u, v = full["u"].to_numpy(), full["v"].to_numpy()
+        return cls.from_arrays(cast(pd.Timestamp, idx[0]), u, v, u_min)
+
+    @classmethod
+    def from_field(cls, field: WindField, xs: Array, ys: Array, u_min: float = U_MIN) -> "Trajectories":
+        """One trajectory per source (xs, ys), with the wind of `field` at the source."""
+        u, v = field.at(xs, ys)
+        return cls.from_arrays(field.t0, u, v, u_min)
+
+    @classmethod
+    def from_arrays(cls, t0: pd.Timestamp, u: Array, v: Array, u_min: float = U_MIN) -> "Trajectories":
+        start = np.zeros((1, *u.shape[1:]))
         return cls(
-            t0=cast(pd.Timestamp, idx[0]),
-            cx=np.r_[0, np.cumsum(u * 3600)],
-            cy=np.r_[0, np.cumsum(v * 3600)],
-            cs=np.r_[0, np.cumsum(speed(np.hypot(u, v), u_min) * 3600)],
+            t0=t0,
+            cx=np.concatenate([start, np.cumsum(u * 3600, axis=0)]),
+            cy=np.concatenate([start, np.cumsum(v * 3600, axis=0)]),
+            cs=np.concatenate([start, np.cumsum(speed(np.hypot(u, v), u_min) * 3600, axis=0)]),
         )
 
     @property
@@ -80,11 +134,15 @@ class Trajectories:
         """Hours from `t0` to the timestamp `h`."""
         return (h.value - self.t0.value) / NS_PER_HOUR
 
-    def between(self, t_from: float, t_to: float) -> tuple[float, float, float]:
-        """Displacement (dx, dy) and distance travelled L between two times (hours from `t0`)."""
+    def between(self, t_from: float, t_to: float) -> tuple[Array, Array, Array]:
+        """Displacement (dx, dy) and distance travelled L between two times (hours from `t0`): scalars, or
+        one per source with a wind field."""
 
-        def at(c: Array, t: float) -> float:
-            return float(np.interp(t, self.k, c))
+        def at(c: Array, t: float) -> Array:
+            t = min(max(t, 0.0), len(c) - 1.0)
+            i = min(int(np.floor(t)), len(c) - 2)
+            f = t - i
+            return c[i] * (1 - f) + c[i + 1] * f
 
         return (
             at(self.cx, t_to) - at(self.cx, t_from),
@@ -166,7 +224,7 @@ def puffs(
             + extra_sy**2
         )
         sz = 0.24 * dist * np.sqrt(1 + 0.001 * dist)
-        zeff = min(np.sqrt(np.pi / 2) * sz, pbl_h)
+        zeff = np.minimum(np.sqrt(np.pi / 2) * sz, pbl_h)
         r2 = (xr[:, None] - (xs[None, :] + dx)) ** 2 + (yr[:, None] - (ys[None, :] + dy)) ** 2
         col = w * dt * np.exp(-r2 / (2 * sy2)) / (2 * np.pi * sy2) * survival(t_rel, t_target, age)
         c += col

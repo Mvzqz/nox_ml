@@ -16,7 +16,7 @@ import json
 from collections.abc import Collection, Hashable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import geopandas as gpd
 import numpy as np
@@ -43,6 +43,11 @@ from nox_ml.physics.chemistry import (
 )
 from nox_ml.time import local_day
 
+HISTORY_DAYS = 4  # days of wind and chemistry kept before a window: puffs followed up to 72 h and a margin
+KNOT_MS = 0.5144
+# Airport wind to network wind: least squares of the network domain wind on the mean of the MMMX and MMSM
+# METAR winds, afternoons of 2023 (r 0.58 for u and 0.78 for v; median direction difference 30 degrees)
+AIRPORT_WIND_FACTOR = 0.393
 MIN_PBL_M = 200.0  # floor of the boundary layer height after averaging with the next hour
 LABEL_SHIFT = pd.Timedelta(hours=1)  # SIMAT labels the end of the hour
 CHEMISTRY_GAP_H = 6  # longest gap of the chemistry variables that is interpolated (the rest: climatology)
@@ -54,15 +59,21 @@ CHEMISTRY_REF_YEAR = 2023
 @dataclass(frozen=True)
 class Sources:
     """The tables a period reads: SIMAT NOx and wind (``interim/``), the ERA5 file (``raw/era5_openmeteo/``),
-    the filled boundary layer (``interim/``, None: ERA5 alone) and whether there are TEMPO pixels and SIMAT
-    chemistry (the OH loss of the puffs) for it. The default is 2023-2024."""
+    the filled boundary layer (``interim/``, None: ERA5 alone), whether there are TEMPO pixels, and where the
+    chemistry (the OH loss of the puffs) comes from. The default is 2023-2024."""
 
     simat_nox: str = "simat_nox.parquet"
     simat_wind: str = "simat_wind.parquet"
+    # "network": the mean of the SIMAT station winds; "airports": the METAR winds of `metar` (raw/metar/),
+    # scaled by `AIRPORT_WIND_FACTOR`, for periods without SIMAT meteorology
+    wind: Literal["network", "airports"] = "network"
+    metar: tuple[str, ...] = ("MMMX_2023-2024.csv", "MMSM_2023-2024.csv")
     era5: str = ERA5_FILE
     pbl_filled: str | None = "pbl_2023_2024.parquet"
     tempo: bool = True
-    chemistry: bool = True
+    # "simat": O3, TMP and RH of the SIMAT stations; "airports": O3 of the station table (OpenAQ has it) and
+    # TMP and RH of the METAR reports; "none": no OH loss rate
+    chemistry: Literal["simat", "airports", "none"] = "simat"
 
 
 DEFAULT_SOURCES = Sources()
@@ -74,8 +85,22 @@ LOCKDOWN_SOURCES = Sources(
     era5="pbl_wind_center_2019-2020.json",
     pbl_filled=None,
     tempo=False,
-    chemistry=False,
+    chemistry="none",
 )
+
+
+def openaq_sources(start: str, end: str) -> Sources:
+    """The tables of a window after 2024, which SIMAT has not published: station NOx and O3 from OpenAQ
+    (`nox-ml fetch-openaq START END`, END exclusive), wind, temperature and humidity of the airports, ERA5."""
+    return Sources(
+        simat_nox=f"openaq_nox_{start}_{end}.parquet",
+        wind="airports",
+        metar=("MMMX_2024-2026.csv", "MMSM_2024-2026.csv"),
+        era5="pbl_wind_center_2024-2026.json",
+        pbl_filled=None,
+        chemistry="airports",
+    )
+
 
 # Transport configurations whose Jacobians an `Inputs` keeps (~9 MB each in nov-dec 2023, ~18 MB in feb-may
 # 2024): enough for every member of an ensemble and the transport trials of a tune
@@ -102,6 +127,9 @@ class Inputs:
     # and the Infovial profile of the roads. Optional: without them the hours' own winds are used.
     wind: pd.DataFrame | None = field(default=None, compare=False, repr=False)
     infovial: Infovial | None = field(default=None, compare=False, repr=False)
+    # The hourly wind of each station (columns ``(u, station)`` and ``(v, station)``, same index), for a
+    # transport that moves each source with the wind at its location. Optional.
+    station_wind: pd.DataFrame | None = field(default=None, compare=False, repr=False)
     # For transports with OH chemistry: the hourly O3 (ppb), TMP (C) and RH (%) of the domain and the NOx loss
     # rate (1/s) they give (`chemistry_loss_rate`), both indexed by the UTC start of the hour. Optional.
     chemistry: pd.DataFrame | None = field(default=None, compare=False, repr=False)
@@ -135,7 +163,7 @@ class Inputs:
                 self.no2_nox_ratio,
                 self.n_regions,
                 jacobian=transport,
-                history=History(self.wind, self.infovial, self.loss_rate),
+                history=History(self.wind, self.infovial, self.loss_rate, self.station_wind, self.station_xy),
             )
         return self.jacobian_cache[key]
 
@@ -212,6 +240,22 @@ def station_nox(
     return rows, ratio
 
 
+def station_winds(wind: pd.DataFrame, stations: Sequence[str]) -> pd.DataFrame:
+    """The hourly wind of each station (``u``, ``v`` in m/s, blowing towards) as columns ``(u, station)`` and
+    ``(v, station)``, indexed by ``h``; the stations of `domain_wind`."""
+    w = wind[wind["id_station"].isin(stations)].dropna(subset=["WSP", "WDR"])
+    direction = np.deg2rad(w["WDR"])
+    frame = pd.DataFrame(
+        {
+            "h": w["utc"] - LABEL_SHIFT,
+            "station": w["id_station"],
+            "u": -w["WSP"] * np.sin(direction),
+            "v": -w["WSP"] * np.cos(direction),
+        }
+    )
+    return frame.pivot_table(index="h", columns="station", values=["u", "v"])
+
+
 def domain_wind(wind: pd.DataFrame, stations: Sequence[str]) -> pd.DataFrame:
     """Plain hourly mean of the station winds (``u``, ``v`` in m/s, blowing towards), indexed by ``h``.
 
@@ -221,6 +265,47 @@ def domain_wind(wind: pd.DataFrame, stations: Sequence[str]) -> pd.DataFrame:
     direction = np.deg2rad(w["WDR"])
     u, v = -w["WSP"] * np.sin(direction), -w["WSP"] * np.cos(direction)
     return pd.DataFrame({"h": w["utc"] - LABEL_SHIFT, "u": u, "v": v}).groupby("h")[["u", "v"]].mean()
+
+
+def airport_wind(metar: Sequence[pd.DataFrame], factor: float = AIRPORT_WIND_FACTOR) -> pd.DataFrame:
+    """Hourly wind of the domain from airport METAR reports (``valid`` UTC, ``sknt`` knots, ``drct``
+    degrees from): the vector mean of each airport's reports of the hour, averaged over airports and scaled
+    by `factor` (``u``, ``v`` in m/s, blowing towards), indexed by ``h``, the start of the hour."""
+    hourly = []
+    for reports in metar:
+        m = reports.dropna(subset=["sknt", "drct"])
+        speed, direction = m["sknt"] * KNOT_MS, np.deg2rad(m["drct"])
+        frame = pd.DataFrame(
+            {
+                "h": pd.to_datetime(m["valid"]).dt.floor("h"),
+                "u": -speed * np.sin(direction),
+                "v": -speed * np.cos(direction),
+            }
+        )
+        hourly.append(frame.groupby("h")[["u", "v"]].mean())
+    return pd.concat(hourly).groupby(level=0).mean() * factor
+
+
+def airport_chemistry(
+    stations_table: pd.DataFrame, metar: Sequence[pd.DataFrame], stations: Sequence[str]
+) -> pd.DataFrame:
+    """Hourly ``O3`` (ppb, mean of `stations` in the station table, which stamps the end of the hour) and
+    ``TMP`` (C) and ``RH`` (%) of the airports (mean of each airport's reports, then over airports), indexed
+    by ``h``, the start of the hour in UTC, like `simat.domain_chemistry`."""
+    rows = stations_table[stations_table["id_station"].isin(stations)]
+    o3 = rows.groupby(rows["utc"] - LABEL_SHIFT)["O3"].mean().rename_axis("h")
+    hourly = []
+    for reports in metar:
+        frame = pd.DataFrame(
+            {
+                "h": pd.to_datetime(reports["valid"]).dt.floor("h"),
+                "TMP": (reports["tmpf"] - 32) * 5 / 9,
+                "RH": reports["relh"],
+            }
+        )
+        hourly.append(frame.groupby("h")[["TMP", "RH"]].mean())
+    met = pd.concat(hourly).groupby(level=0).mean()
+    return pd.concat([o3, met], axis=1)
 
 
 def hourly_pbl(filled: pd.Series, era5: pd.Series) -> pd.Series:
@@ -315,8 +400,14 @@ def load_inputs(
     station_xy = pd.DataFrame({"x": catalog.geometry.x, "y": catalog.geometry.y})
     ids = list(station_xy.index)
 
-    nox, ratio = station_nox(pd.read_parquet(interim / sources.simat_nox), ids, start, end, local_hours)
-    wind = domain_wind(pd.read_parquet(interim / sources.simat_wind), ids)
+    station_table = pd.read_parquet(interim / sources.simat_nox)
+    nox, ratio = station_nox(station_table, ids, start, end, local_hours)
+    by_station = None
+    if sources.wind == "airports":
+        wind = airport_wind([pd.read_csv(data_dir / "raw" / "metar" / name) for name in sources.metar])
+    else:
+        wind_table = pd.read_parquet(interim / sources.simat_wind)
+        wind, by_station = domain_wind(wind_table, ids), station_winds(wind_table, ids)
     era5 = parse_era5(json.loads((data_dir / "raw" / "era5_openmeteo" / sources.era5).read_text()))
     filled = pd.read_parquet(interim / sources.pbl_filled)["pbl_m"] if sources.pbl_filled else era5.iloc[:0]
     pbl = hourly_pbl(filled, era5)
@@ -328,18 +419,24 @@ def load_inputs(
 
     hours, station_ids = assemble(nox, wind, pbl, pixels, station_xy)
     zones = road_emission_cells(read_roads(interim / "roads.gpkg"))
-    # puffs look back one day: the winds from two days before the window (and nothing after it, so a period
-    # never reads the winds of another one)
-    first = pd.Timestamp(start) - pd.Timedelta(days=2)
+    # puffs look back up to `HISTORY_DAYS`: the winds from before the window (and nothing after it, so a
+    # period never reads the winds of another one)
+    first = pd.Timestamp(start) - pd.Timedelta(days=HISTORY_DAYS)
     last = pd.Timestamp(end) + pd.Timedelta(days=1)
     profile = interim / "puffs_cdmx" / "perfil_infovial.json"
-    # chemistry: the day before the window is the history of the 24 h puffs; the reference April may be in
+    # chemistry: the history of the puffs before the window; the reference April may be in
     # another year than the window
-    window = slice(pd.Timestamp(start) - pd.Timedelta(days=1), last)
+    window = slice(pd.Timestamp(start) - pd.Timedelta(days=HISTORY_DAYS), last)
     chemistry = loss_rate = None
-    if sources.chemistry:
-        years = sorted({CHEMISTRY_REF_YEAR, first.year, last.year})
-        chem = fill_chemistry(load_chemistry(data_dir / "raw" / "simat", years, ids))
+    if sources.chemistry != "none":
+        if sources.chemistry == "simat":
+            years = sorted({CHEMISTRY_REF_YEAR, first.year, pd.Timestamp(end).year})  # not the day after
+            raw = load_chemistry(data_dir / "raw" / "simat", years, ids)
+        else:  # the reference April from SIMAT, the window from the station table and the airports
+            reference = load_chemistry(data_dir / "raw" / "simat", [CHEMISTRY_REF_YEAR], ids)
+            metar = [pd.read_csv(data_dir / "raw" / "metar" / name) for name in sources.metar]
+            raw = pd.concat([reference, airport_chemistry(station_table, metar, ids)]).sort_index()
+        chem = fill_chemistry(raw)
         chemistry, loss_rate = chem.loc[window], chemistry_loss_rate(chem).loc[window]
     return Inputs(
         hours,
@@ -350,6 +447,7 @@ def load_inputs(
         ratio,
         N_SPLIT**2,
         wind=wind.loc[first:last],
+        station_wind=None if by_station is None else by_station.loc[first:last],
         infovial=read_infovial_profile(profile) if profile.exists() else None,
         chemistry=chemistry,
         loss_rate=loss_rate,

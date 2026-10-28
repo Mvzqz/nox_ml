@@ -13,7 +13,7 @@ import typer
 from pydantic import ValidationError
 
 from nox_ml import __version__
-from nox_ml.data import pbl, simat, tempo
+from nox_ml.data import openaq, pbl, simat, tempo
 from nox_ml.data.inputs import load_inputs
 from nox_ml.data.qc import render
 from nox_ml.validation import compare as comparison
@@ -82,6 +82,20 @@ def fetch_merra2(
     if failed:
         typer.echo(f"Failed (first 5): {failed[:5]}", err=True)
         raise typer.Exit(1)
+
+
+@app.command("fetch-openaq")
+def fetch_openaq(
+    start: Annotated[str, typer.Argument(help="First day, YYYY-MM-DD (UTC).")],
+    end: Annotated[str, typer.Argument(help="Day after the last one, YYYY-MM-DD (UTC, exclusive).")],
+    data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
+) -> None:
+    """Download hourly station NOx, NO, NO2 and O3 from OpenAQ (SINAICA) for years SIMAT has not published.
+
+    Needs an OpenAQ API key in OPENAQ_API_KEY. Writes raw/openaq/ and interim/openaq_nox_<start>_<end>.parquet
+    (the table of qc-simat). Takes about a second per request (the key's rate limit)."""
+    raw, interim = openaq.run_fetch(start, end, data_dir)
+    typer.echo(f"Written to {raw} and {interim}")
 
 
 @app.command("fill-pbl")
