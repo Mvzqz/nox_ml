@@ -233,7 +233,7 @@ def test_without_torch_the_other_models_still_register_and_the_pinn_does_not():
 
     assert out.stdout.strip() == (
         "['convex_ensemble', 'gb_deweather', 'idw', 'inversion_plume', 'inversion_puff', 'kriging', "
-        "'lognormal_map', 'normalized_ratio', 'regularized_ls', 'rf_deweather']"
+        "'lognormal_map', 'normalized_ratio', 'regularized_ls', 'residual_kriging', 'rf_deweather']"
     )
 
 
