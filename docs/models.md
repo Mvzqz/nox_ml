@@ -186,6 +186,14 @@ frozen = stacking.fit_weights(observed, oof, rule="stack")  # weights on all sta
 
 `nested_oof` gives the ensemble's out-of-fold RMSE (`stacking.loo_rmse`) for the nov–dec 2023 table without refitting any base model. The weights of the final ensemble (`frozen`) go into the `weights` of its config before `evaluate`. One leak remains and is documented in ADR 0007.
 
+### `pinn_seeds` (X3)
+
+A subclass of `ConvexEnsemble` (`nox_ml.models.pinn.seeds`): E5b (`base`, an experiment config; default: `configs/experiments/pinn_puff.yaml`) once per network seed in `seeds` (default `[0, 1, 2, 3]`; 0 is the bundled network), equal weights. Its aim is the uncertainty of the network, not a lower error.
+
+- **Emissions are absolute.** The members' `transport_key()` differ (the key holds the network), but they are the same physics, so `shares_absolute_level` is true when the members differ only in `seed`. The sd is that of the mixture: the variance between networks adds to the one within each.
+- **Cache.** `seeds` is validated against `MAX_CACHED_TRANSPORTS` (16, `nox_ml.data.inputs`): with more members than slots every fold would evict and rebuild the Jacobians (~11 min per member). New networks are trained once (~3 min) and stored in `kernel_dir`.
+- **Cost.** The sum of its members: ~1.5-2 h in nov–dec 2023 with 4 seeds.
+
 ### Tests
 
-`convex_ensemble` is in `REGISTRY`, so `test_contract` runs on it. `tests/models/test_ensemble.py` covers members, convex weights and the emission rule; `tests/test_stacking.py` covers convex weights and that a station never sets its own; `tests/test_evaluate.py` covers the test-period mode.
+`convex_ensemble` is in `REGISTRY`, so `test_contract` runs on it. `tests/models/test_ensemble.py` covers members, convex weights and the emission rule; `tests/test_stacking.py` covers convex weights and that a station never sets its own; `tests/test_evaluate.py` covers the test-period mode. `tests/models/test_pinn_seeds.py` covers `pinn_seeds`; `test_contract` runs it with tiny networks (same class, small defaults) so that it trains in seconds.

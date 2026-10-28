@@ -1,0 +1,31 @@
+# PINN seeds (X3): E5b averaged over several trainings of the network (nox_ml.models.pinn.seeds). Each seed
+# trains its own kernel (seed 0 is bundled; the others are cached in kernel_dir, ~3 min each) and builds its
+# own matrices (~11 min); the run takes ~1.5-2 h. Not tuned: the members are pinn_puff.yaml's.
+# Run: uv run nox-ml run configs/experiments/pinn_seeds.yaml  ->  runs/pinn_seeds/
+name: pinn_seeds
+period:
+  start: 2023-11-01
+  end: 2023-12-31
+simat_hours: [12, 17]
+model:
+  name: pinn_seeds
+  params:
+    seeds: [0, 1, 2, 3]  # at most MAX_CACHED_TRANSPORTS (16)
+    base:                # the pinn_puff.yaml model; `seed` is set per member
+      name: pinn_puff
+      params:
+        layers: 4
+        width: 64
+        learning_rate: 0.002
+        physics_weight: 1.0
+        adam_steps: 3000
+        lbfgs_rounds: 15
+        kappa: 1500.0
+        tau_h: 12.0
+        u_min: 2.0
+        max_age_h: 24
+        lifetime: oh
+        bootstrap_n: 200
+        bootstrap_level: 0.90
+        kernel_dir: .cache/pinn
+placebo: {n: 2000, seed: 3, level: 0.90, refits: 8}

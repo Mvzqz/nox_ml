@@ -23,7 +23,11 @@ LEARN_FROM_WEATHER = {"rf_deweather"}  # no forward model: judged on stations wh
 
 
 @pytest.fixture(params=sorted(REGISTRY))
-def model_cls(request):
+def model_cls(request, monkeypatch):
+    if request.param == "pinn_seeds":  # the default networks take minutes to train: same class, tiny networks
+        from test_pinn_seeds import SmallPinnSeeds
+
+        monkeypatch.setitem(REGISTRY, "pinn_seeds", SmallPinnSeeds)
     return REGISTRY[request.param]
 
 
