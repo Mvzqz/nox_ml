@@ -232,8 +232,8 @@ def test_without_torch_the_other_models_still_register_and_the_pinn_does_not():
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
 
     assert out.stdout.strip() == (
-        "['convex_ensemble', 'idw', 'inversion_plume', 'inversion_puff', 'kriging', 'lognormal_map', "
-        "'normalized_ratio', 'regularized_ls', 'rf_deweather']"
+        "['convex_ensemble', 'gb_deweather', 'idw', 'inversion_plume', 'inversion_puff', 'kriging', "
+        "'lognormal_map', 'normalized_ratio', 'regularized_ls', 'rf_deweather']"
     )
 
 

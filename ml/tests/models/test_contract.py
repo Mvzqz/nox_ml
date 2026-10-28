@@ -19,7 +19,10 @@ from nox_ml.validation import experiment
 from nox_ml.validation.experiment import ExperimentConfig, Placebo, model_placebo, run_experiment
 
 STATIONS = ["AAA", "BBB", "CCC"]
-LEARN_FROM_WEATHER = {"rf_deweather"}  # no forward model: judged on stations where weather sets the NOx
+LEARN_FROM_WEATHER = {
+    "rf_deweather",
+    "gb_deweather",
+}  # no forward model: judged on stations where weather sets the NOx
 
 
 @pytest.fixture(params=sorted(REGISTRY))

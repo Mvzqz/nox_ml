@@ -1,0 +1,16 @@
+# Tuning of X4 (gb_deweather) on nov-dec 2023 (`nox-ml tune`): 30 random trials scored by leave-one-station-out
+# RMSE. [lo, hi] pairs of numbers are continuous ranges (integers for int params); drop_features lists are choices
+# (none, the collinear day-of-year pair, that pair and the 6 h ventilation).
+# Run: uv run nox-ml tune configs/experiments/gb_deweather.search.yaml  ->  runs/gb_deweather/trials.csv
+config: gb_deweather.yaml
+model: gb_deweather
+search: random
+n_trials: 30
+seed: 7
+space:
+  learning_rate: [0.02, 0.2]
+  max_iter: [100, 1000]
+  max_leaf_nodes: [15, 63]
+  min_samples_leaf: [5, 50]
+  l2_regularization: [0, 1]
+  drop_features: [[], [doy_sin, doy_cos], [doy_sin, doy_cos, ventilation_6h]]
