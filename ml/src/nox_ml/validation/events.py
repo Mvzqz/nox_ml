@@ -1,7 +1,8 @@
 # pyright: reportArgumentType=false, reportAttributeAccessIssue=false, reportIndexIssue=false, reportCallIssue=false
 # pyright: reportOperatorIssue=false, reportReturnType=false, reportAssignmentType=false, reportGeneralTypeIssues=false
 # (pandas typing infers unions for `df[...]`; behavior is covered by the tests instead)
-"""Did the emission fall on the days with contingency measures? Any model of the registry, with placebos.
+"""Did the emission fall on the days with contingency measures, or on a set of calendar days (school holidays,
+year-end)? Any model of the registry, with placebos.
 
 Same mechanism as the placebo of the model (`experiment.placebo_ratios`): the model is fitted on business days
 only and the event days are relabeled as Sundays (`Inputs.with_day_kinds`), so the model's Sunday / weekday
@@ -23,7 +24,9 @@ relabeled as Sunday would mix the contingency with the Saturday pattern of traff
 comparison cannot separate. A measure day on a weekend is a day we cannot measure, so it is listed, not used.
 
 This reads the test period (the contingencies are held out data): `run_contingencies` only runs on it, like
-`experiment.run_on_test_period`, and nothing here is reachable from `tune`.
+`experiment.run_on_test_period`, and nothing here is reachable from `tune`. `run_calendar` runs on the
+period of the config or on the test period; the event days are the requested calendar days and the
+contingency days are left out of the normal ones.
 """
 
 import json
@@ -35,6 +38,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import yaml
+from scipy.stats import norm
 
 from nox_ml.data import contingencies
 from nox_ml.data.inputs import Inputs, load_inputs
@@ -54,6 +58,10 @@ from nox_ml.validation.experiment import (
 from nox_ml.validation.stagnation import poorly_ventilated_mask
 
 SUFFIX = ".contingencies"
+CALENDAR_SUFFIX = ".calendar-"  # + label: runs/<name>.calendar-<label>/
+DETECTION_SUFFIX = ".detection"
+DETECTION_POWER = 0.80  # the usual power of a detection limit
+EXTRAPOLATED_DAYS = (20, 60, 120, 250)  # a month of business days, a season, half a year, a year
 PIXEL_BACKGROUND_QUANTILE = 0.10  # of an hour's TEMPO columns: the part of the column the city does not emit
 
 
@@ -109,17 +117,29 @@ def fake_event_ratios(
     """Contingency over normal ratio of the model with as many fake event days as real ones, drawn from
     `pool` (a subset of the normal days), once per refit. The model sees no real event day. There is no change
     to find: they should be centered on 1."""
-    n_fake = len(groups.event)
-    if n_fake > len(pool) or n_fake >= len(groups.normal):
+    return _fake_ratios(inputs, make_model, groups.normal, pool, len(groups.event), refits, seed)
+
+
+def _fake_ratios(
+    inputs: Inputs,
+    make_model: Callable[[], Model],
+    normal: pd.DatetimeIndex,
+    pool: pd.DatetimeIndex,
+    n_fake: int,
+    refits: int,
+    seed: int,
+) -> np.ndarray:
+    """Ratio of `n_fake` days drawn from `pool` over the rest of `normal`, once per refit."""
+    if n_fake > len(pool) or n_fake >= len(normal):
         raise ValueError(
             f"placebo needs {n_fake} fake days from a pool of {len(pool)}, "
-            f"with more than {n_fake} normal days left (has {len(groups.normal)})"
+            f"with more than {n_fake} normal days left (has {len(normal)})"
         )
     rng = np.random.default_rng(seed)
-    normal = inputs.on_days(groups.normal)  # once: `on_days` starts an empty Jacobian cache
+    days = inputs.on_days(normal)  # once: `on_days` starts an empty Jacobian cache
     return np.array(
         [
-            _fit_ratio(normal, make_model, pool[rng.choice(len(pool), n_fake, replace=False)])[0]
+            _fit_ratio(days, make_model, pool[rng.choice(len(pool), n_fake, replace=False)])[0]
             for _ in range(refits)
         ]
     )
@@ -239,6 +259,16 @@ def injection_recovery(
     return rows
 
 
+def _require_emissions(make_model: Callable[[], Model]) -> None:
+    if make_model().role != "model":
+        raise ValueError("event analyses need a model that estimates emissions, not a reference")
+
+
+def _daily(inputs: Inputs) -> pd.DataFrame:
+    """The daily table of `normalized_days` with the baseline plume, for the ventilation of the days."""
+    return normalized_days(inputs, inputs.jacobians(*plume_transport(SIGMA_THETA, U_MIN)))
+
+
 def contingency_effect(
     inputs: Inputs,
     make_model: Callable[[], Model],
@@ -246,15 +276,19 @@ def contingency_effect(
     config: Placebo,
     sensitivity: bool = False,
     inject: Sequence[float] = (),
+    atypical: pd.DatetimeIndex | None = None,
 ) -> dict[str, Any]:
     """Scenario ``measures`` (the days with measures, activation days left out) and, with `sensitivity`,
     ``all_active`` (every day with an active contingency). Each is `analyze`. Fits the model
     ``1 + 2 * config.refits`` times per scenario. With `inject`, the ``measures`` scenario also gets
-    ``injection``: the drops it recovers when they are added to the data (`injection_recovery`)."""
-    if make_model().role != "model":
-        raise ValueError("contingencies need a model that estimates emissions, not a reference")
+    ``injection``: the drops it recovers when they are added to the data (`injection_recovery`).
+    `atypical` days (e.g. school holidays) are neither event nor normal days: they would bias the reference
+    (they are listed as left out)."""
+    _require_emissions(make_model)
     active = contingencies.active_days(episodes)
-    daily = normalized_days(inputs, inputs.jacobians(*plume_transport(SIGMA_THETA, U_MIN)))
+    if atypical is not None:
+        active = active.union(atypical)
+    daily = _daily(inputs)
     requested = {"measures": contingencies.measure_days(episodes)}
     if sensitivity:
         requested["all_active"] = active
@@ -273,6 +307,7 @@ def run_contingencies(
     runs_dir: Path = Path("runs"),
     sensitivity: bool = False,
     inject: Sequence[float] = (),
+    atypical: pd.DatetimeIndex | None = None,
 ) -> Path:
     """The contingencies of 2024 with a frozen config, on the test period (`EVALUATION_PERIOD`), written to
     ``runs_dir/<name>.contingencies/``: ``contingencies.json``, ``config.yaml`` (the period is the test
@@ -291,8 +326,9 @@ def run_contingencies(
         "period": {"start": test.period.start.isoformat(), "end": test.period.end.isoformat()},
         "level": test.placebo.level,
         "scenarios": contingency_effect(
-            inputs, test.model.build, episodes, test.placebo, sensitivity, inject
+            inputs, test.model.build, episodes, test.placebo, sensitivity, inject, atypical
         ),
+        "atypical": [] if atypical is None else day_list(atypical),
     }
     out = runs_dir / name
     out.mkdir(parents=True, exist_ok=True)
@@ -302,14 +338,165 @@ def run_contingencies(
     return out
 
 
+def calendar_effect(
+    inputs: Inputs,
+    make_model: Callable[[], Model],
+    days: pd.DatetimeIndex,
+    excluded: pd.DatetimeIndex,
+    config: Placebo,
+    inject: Sequence[float] = (),
+) -> dict[str, Any]:
+    """`analyze` with `days` (calendar days with less traffic expected) as the event days; `excluded` (the
+    contingency days) are neither event nor normal days. With `inject`, also ``injection``, as for the
+    contingencies. A real drop the analysis should see: its positive control."""
+    _require_emissions(make_model)
+    groups = split_days(inputs, days, days.union(excluded))
+    result = analyze(inputs, make_model, groups, _daily(inputs), config)
+    if inject:
+        result["injection"] = injection_recovery(inputs, make_model, groups, inject)
+    return result
+
+
+def run_calendar(
+    config: ExperimentConfig,
+    days: pd.DatetimeIndex,
+    label: str,
+    runs_dir: Path = Path("runs"),
+    test_period: bool = False,
+    inject: Sequence[float] = (),
+) -> Path:
+    """`calendar_effect` of `days` on the period of `config` (or on the test period, `EVALUATION_PERIOD`),
+    with the 2024 contingency days left out, written to ``runs_dir/<name>.calendar-<label>/``:
+    ``calendar.json``, ``config.yaml`` and ``code_version.json``. Only `nox-ml calendar` calls this."""
+    base = config.name.removesuffix(".test").split(CALENDAR_SUFFIX)[0]
+    name = f"{base}{CALENDAR_SUFFIX}{label}"
+    period = Period(start=EVALUATION_PERIOD[0], end=EVALUATION_PERIOD[1]) if test_period else config.period
+    run = config.model_copy(update={"name": name, "period": period})
+    episodes = contingencies.read_episodes(config.data_dir / "raw" / contingencies.EPISODES_FILE)
+    inputs = load_inputs(
+        run.data_dir, run.period.start.isoformat(), run.period.end.isoformat(), run.simat_hours
+    )
+    result = {
+        "model": run.model.name,
+        "label": label,
+        "frozen_on": {"start": config.period.start.isoformat(), "end": config.period.end.isoformat()},
+        "period": {"start": period.start.isoformat(), "end": period.end.isoformat()},
+        "level": run.placebo.level,
+        "scenarios": {
+            label: calendar_effect(
+                inputs, run.model.build, days, contingencies.active_days(episodes), run.placebo, inject
+            )
+        },
+    }
+    out = runs_dir / name
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "config.yaml").write_text(yaml.safe_dump(run.model_dump(mode="json"), sort_keys=False))
+    (out / "calendar.json").write_text(json.dumps(result, indent=2) + "\n")
+    (out / "code_version.json").write_text(json.dumps(code_version(), indent=2) + "\n")
+    return out
+
+
+def detection_curve(
+    inputs: Inputs,
+    make_model: Callable[[], Model],
+    normal: pd.DatetimeIndex,
+    counts: Sequence[int],
+    config: Placebo,
+    power: float = DETECTION_POWER,
+) -> dict[str, Any]:
+    """The smallest emission drop an event of k days can show, for each k of `counts`, from the placebo of k
+    fake days drawn from `normal` (days where nothing changed).
+
+    A drop d multiplies the ratio: it is detected when ``(1 - d) * r`` falls below the lower placebo bound
+    ``lo``, with ``r`` a placebo ratio. So the drop detected with probability p is ``1 - lo / q_p``, with
+    ``q_p`` the p quantile of the placebo ratios: ``mdc_half`` at p = 0.5 and ``mdc`` at p = `power`. The
+    injection test supports the multiplicative form (the drops are recovered whole).
+
+    ``cv`` is the day-to-day variation that fits the spread of the log ratios, ``sd = cv * sqrt(1/k +
+    1/(n - k))`` with n normal days; ``extrapolated`` gives the drop for longer events against a reference of
+    as many days (before and after), with normal quantiles: the rule for counts the data cannot hold."""
+    rows = []
+    for k in counts:
+        ratios = _fake_ratios(inputs, make_model, normal, normal, k, config.refits, config.seed)
+        lo, hi = interval(ratios, config.level)
+        rows.append(
+            {
+                "days": k,
+                "center": float(np.median(ratios)),
+                "lo": lo,
+                "hi": hi,
+                "mdc_half": 1 - lo / float(np.median(ratios)),
+                "mdc": 1 - lo / float(np.quantile(ratios, power)),
+                "sd_log": float(np.std(np.log(ratios), ddof=1)),
+            }
+        )
+    n = len(normal)
+    scale = np.array([np.sqrt(1 / r["days"] + 1 / (n - r["days"])) for r in rows])
+    sd = np.array([r["sd_log"] for r in rows])
+    cv = float(scale @ sd / (scale @ scale))  # least squares through the origin
+    z = float(norm.ppf(0.5 + config.level / 2) + norm.ppf(power))
+    extrapolated = [
+        {"days": k, "mdc": float(1 - np.exp(-z * cv * np.sqrt(2 / k)))} for k in EXTRAPOLATED_DAYS
+    ]
+    return {"n_normal": n, "power": power, "cv": cv, "rows": rows, "extrapolated": extrapolated}
+
+
+def run_detection(
+    config: ExperimentConfig,
+    counts: Sequence[int],
+    runs_dir: Path = Path("runs"),
+    power: float = DETECTION_POWER,
+    exclude: pd.DatetimeIndex | None = None,
+    label: str | None = None,
+) -> Path:
+    """`detection_curve` on the business days of the period of `config` without contingency nor `exclude`
+    (atypical periods, e.g. the year-end), written to ``runs_dir/<name>.detection[-<label>]/``:
+    ``detection.json``, ``config.yaml`` and ``code_version.json``. Only `nox-ml detection` calls this."""
+    _require_emissions(config.model.build)
+    base = config.name.removesuffix(".test").split(DETECTION_SUFFIX)[0]
+    name = f"{base}{DETECTION_SUFFIX}{f'-{label}' if label else ''}"
+    exclude = pd.DatetimeIndex([]) if exclude is None else exclude
+    run = config.model_copy(update={"name": name})
+    episodes = contingencies.read_episodes(config.data_dir / "raw" / contingencies.EPISODES_FILE)
+    inputs = load_inputs(
+        run.data_dir, run.period.start.isoformat(), run.period.end.isoformat(), run.simat_hours
+    )
+    left_out = contingencies.active_days(episodes).union(exclude)
+    normal = split_days(inputs, pd.DatetimeIndex([]), left_out).normal
+    result = {
+        "model": run.model.name,
+        "period": {"start": run.period.start.isoformat(), "end": run.period.end.isoformat()},
+        "excluded": day_list(exclude),
+        "level": run.placebo.level,
+        "refits": run.placebo.refits,
+        **detection_curve(inputs, run.model.build, normal, counts, run.placebo, power),
+    }
+    out = runs_dir / name
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "config.yaml").write_text(yaml.safe_dump(run.model_dump(mode="json"), sort_keys=False))
+    (out / "detection.json").write_text(json.dumps(result, indent=2) + "\n")
+    (out / "code_version.json").write_text(json.dumps(code_version(), indent=2) + "\n")
+    return out
+
+
+def detection_headline(result: dict[str, Any]) -> str:
+    """The curve in a few lines, for the terminal."""
+    power = result["power"]
+    lines = [f"days  placebo            drop seen half the time  drop seen {power:.0%} of the time"]
+    for r in result["rows"]:
+        bounds = f"{r['center']:.2f} ({r['lo']:.2f}-{r['hi']:.2f})"
+        lines.append(f"{r['days']:>4}  {bounds:<17}  {r['mdc_half']:>23.0%}  {r['mdc']:>24.0%}")
+    lines.append(f"day-to-day variation {result['cv']:.2f}; extrapolated, against as many days before:")
+    lines.extend(f"{e['days']:>4}  {e['mdc']:.0%}" for e in result["extrapolated"])
+    return "\n".join(lines)
+
+
 def headline(result: dict[str, Any]) -> str:
     """The ratios and placebos of each scenario in a few lines, for the terminal."""
     lines = []
     for name, s in result["scenarios"].items():
         bounds = "" if s["lo"] is None else f" ({s['lo']:.2f}-{s['hi']:.2f})"
-        lines.append(
-            f"{name}: contingency / normal {s['ratio']:.2f}{bounds} on {len(s['days']['event'])} days"
-        )
+        lines.append(f"{name}: event / normal {s['ratio']:.2f}{bounds} on {len(s['days']['event'])} days")
         for kind, p in s["placebos"].items():
             text = "no pool" if p is None else f"{p['center']:.2f} ({p['lo']:.2f}-{p['hi']:.2f})"
             lines.append(f"  placebo {kind}: {text}")

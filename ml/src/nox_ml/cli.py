@@ -17,11 +17,12 @@ from nox_ml.data import pbl, simat, tempo
 from nox_ml.data.inputs import load_inputs
 from nox_ml.data.qc import render
 from nox_ml.validation import compare as comparison
-from nox_ml.validation import diagnostics, events, experiment
+from nox_ml.validation import diagnostics, episodes, events, experiment
 from nox_ml.validation import tune as tuning
 
 RAW = Path("data/raw")
 INTERIM = Path("data/interim")
+DETECTION_DAYS = (3, 5, 9, 15, 20)  # event lengths of `detection`, in business days
 
 
 class Period(StrEnum):
@@ -146,6 +147,13 @@ def contingencies(
             "the drop the analysis detects."
         ),
     ] = None,
+    exclude: Annotated[
+        list[str] | None,
+        typer.Option(
+            help="Atypical days kept out of the normal ones (school holidays), "
+            "YYYY-MM-DD[:YYYY-MM-DD] (repeatable)."
+        ),
+    ] = None,
 ) -> None:
     """Emission on 2024 contingency days over normal days, with placebos (test period only).
 
@@ -158,9 +166,146 @@ def contingencies(
         raise typer.Exit(2) from error
     if refits is not None:
         cfg = cfg.model_copy(update={"placebo": cfg.placebo.model_copy(update={"refits": refits})})
-    out = events.run_contingencies(cfg, runs_dir, sensitivity, inject or [])
+    try:
+        atypical = parse_days(exclude) if exclude else None
+    except ValueError as error:
+        typer.echo(f"Invalid days {exclude}: {error}", err=True)
+        raise typer.Exit(2) from error
+    out = events.run_contingencies(cfg, runs_dir, sensitivity, inject or [], atypical)
     typer.echo(events.headline(json.loads((out / "contingencies.json").read_text())))
     typer.echo(f"Written to {out}/")
+
+
+def parse_days(spans: list[str]) -> pd.DatetimeIndex:
+    """Local days of ``YYYY-MM-DD`` or ``YYYY-MM-DD:YYYY-MM-DD`` (inclusive) spans."""
+    days = set()
+    for span in spans:
+        start, _, end = span.partition(":")
+        days.update(pd.date_range(start, end or start, freq="D"))
+    return pd.DatetimeIndex(sorted(days))
+
+
+@app.command()
+def calendar(
+    config: Annotated[Path, typer.Argument(help="Frozen experiment YAML, e.g. runs/<name>/config.yaml.")],
+    days: Annotated[
+        list[str],
+        typer.Option(help="Event days, YYYY-MM-DD or YYYY-MM-DD:YYYY-MM-DD (inclusive; repeatable)."),
+    ],
+    label: Annotated[
+        str, typer.Option(help="Name of the event, e.g. year_end: runs/<name>.calendar-<label>/.")
+    ],
+    period: Annotated[
+        Period | None, typer.Option(help="Run on the test period (feb-may 2024) instead of the config's.")
+    ] = None,
+    runs_dir: Annotated[Path, typer.Option(help="Where runs/<name>.calendar-<label>/ is written.")] = Path(
+        "runs"
+    ),
+    refits: Annotated[
+        int | None,
+        typer.Option(min=2, help="Fake-day draws per placebo (default: the config's placebo.refits)."),
+    ] = None,
+    inject: Annotated[
+        list[float] | None,
+        typer.Option(
+            help="Emission drop added to the event days (repeatable): the drop the analysis detects."
+        ),
+    ] = None,
+) -> None:
+    """Emission on calendar days (school holidays, year-end) over normal business days, with placebos.
+
+    The positive control of the event analysis: days when traffic is known to fall. Contingency days are left
+    out of the normal ones. Writes runs/<name>.calendar-<label>/."""
+    try:
+        cfg = experiment.read_config(config)
+        event_days = parse_days(days)
+    except ValidationError as error:
+        typer.echo(f"Invalid config {config}:\n{error}", err=True)
+        raise typer.Exit(2) from error
+    except ValueError as error:
+        typer.echo(f"Invalid days {days}: {error}", err=True)
+        raise typer.Exit(2) from error
+    if refits is not None:
+        cfg = cfg.model_copy(update={"placebo": cfg.placebo.model_copy(update={"refits": refits})})
+    out = events.run_calendar(cfg, event_days, label, runs_dir, period is Period.test, inject or [])
+    typer.echo(events.headline(json.loads((out / "calendar.json").read_text())))
+    typer.echo(f"Written to {out}/")
+
+
+@app.command()
+def detection(
+    config: Annotated[Path, typer.Argument(help="Frozen experiment YAML, e.g. runs/<name>/config.yaml.")],
+    days: Annotated[
+        list[int] | None, typer.Option(min=1, help="Event lengths in business days (repeatable).")
+    ] = None,
+    runs_dir: Annotated[Path, typer.Option(help="Where runs/<name>.detection/ is written.")] = Path("runs"),
+    refits: Annotated[
+        int | None,
+        typer.Option(min=2, help="Fake-day draws per length (default: the config's placebo.refits)."),
+    ] = None,
+    exclude: Annotated[
+        list[str] | None,
+        typer.Option(help="Atypical days kept out of the normal ones, YYYY-MM-DD[:YYYY-MM-DD] (repeatable)."),
+    ] = None,
+    label: Annotated[
+        str | None, typer.Option(help="Suffix of the output: runs/<name>.detection-<label>/.")
+    ] = None,
+) -> None:
+    """The smallest emission drop an event of k business days can show, on the period of the config.
+
+    From the placebo of k fake days drawn from the normal days; also extrapolated to longer events. Answers
+    "how many days does a measure need". Writes runs/<name>.detection/."""
+    try:
+        cfg = experiment.read_config(config)
+        excluded = parse_days(exclude or [])
+    except ValidationError as error:
+        typer.echo(f"Invalid config {config}:\n{error}", err=True)
+        raise typer.Exit(2) from error
+    except ValueError as error:
+        typer.echo(f"Invalid days {exclude}: {error}", err=True)
+        raise typer.Exit(2) from error
+    if refits is not None:
+        cfg = cfg.model_copy(update={"placebo": cfg.placebo.model_copy(update={"refits": refits})})
+    out = events.run_detection(cfg, days or list(DETECTION_DAYS), runs_dir, exclude=excluded, label=label)
+    typer.echo(events.detection_headline(json.loads((out / "detection.json").read_text())))
+    typer.echo(f"Written to {out}/")
+
+
+@app.command()
+def episode(
+    days: Annotated[
+        list[str],
+        typer.Option(help="Episode days, YYYY-MM-DD or YYYY-MM-DD:YYYY-MM-DD (inclusive; repeatable)."),
+    ],
+    data: Annotated[
+        str, typer.Option(help="Data window START:END with TEMPO pixels, e.g. 2023-11-01:2023-12-31.")
+    ],
+    label: Annotated[
+        str | None, typer.Option(help="Name of the output (default: first and last day).")
+    ] = None,
+    data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
+    runs_dir: Annotated[Path, typer.Option(help="Where runs/episodes/<label>.json is written.")] = Path(
+        "runs"
+    ),
+    seed: Annotated[int, typer.Option(help="Seed of the fake episodes.")] = 0,
+) -> None:
+    """Why an episode was high or low: weather, emission or regional background, against normal days.
+
+    No model is fitted: the weather is the baseline plume with the prior emission and the emission is the
+    normalized estimator. Contingency days are not used as references. Writes runs/episodes/<label>.json."""
+    try:
+        episode_days = parse_days(days)
+        start, end = (pd.Timestamp(day).date().isoformat() for day in data.split(":"))
+    except ValueError as error:
+        typer.echo(f"Invalid days {days} or window {data}: {error}", err=True)
+        raise typer.Exit(2) from error
+    result = episodes.run_episode(data_dir, start, end, episode_days, seed)
+    name = label or f"{episode_days[0]:%Y-%m-%d}_{episode_days[-1]:%Y-%m-%d}"
+    out = runs_dir / "episodes" / f"{name}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(result, indent=2) + "\n")
+    typer.echo(episodes.headline(result))
+    typer.echo(f"Written to {out}")
 
 
 @app.command("compare")
