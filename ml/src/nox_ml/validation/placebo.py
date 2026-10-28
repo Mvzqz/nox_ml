@@ -7,7 +7,7 @@ far from 1 a null result lands. Days are Timestamps indexing a *daily table* fro
 
 from __future__ import annotations
 
-from collections.abc import Collection, Sequence
+from collections.abc import Collection, Iterator, Sequence
 from datetime import datetime
 
 import numpy as np
@@ -104,21 +104,37 @@ def placebo(
     ``pool_mask`` is a boolean array aligned with ``d`` selecting eligible days; real event days are removed.
     With no emission change the samples are centered on 1; their spread is the noise of a null result.
     """
-    real = set(event_days)
+    samples = []
+    for fake, excluded in fake_event_sets(d, event_days, pool_mask, n, rng):
+        est = estimate(d, fake, excluded)
+        if est:
+            samples.append(est["emission"])
+    return np.array(samples)
+
+
+def fake_event_sets(
+    d: pd.DataFrame,
+    event_days: Sequence,
+    pool_mask: np.ndarray,
+    n: int,
+    rng: np.random.Generator,
+    real: Collection | None = None,
+) -> Iterator[tuple[list, set]]:
+    """``n`` fake event sets with the weekday pattern of ``event_days``, drawn from the pool (``pool_mask``
+    aligned with ``d``, without the ``real`` days, by default the event days), each with the days its
+    references must avoid (the real and the fake ones). Sets that find no day are skipped."""
+    real = set(event_days) if real is None else set(real)
     weekdays = [d.loc[x, "weekday"] for x in event_days]
     pool = d[pool_mask & ~d.index.isin(list(real))]
     by_weekday = {k: list(pool.index[pool.weekday == k]) for k in range(7)}
-    samples = []
     for _ in range(n):
         fake = []
         for k in weekdays:
             options = [x for x in by_weekday[k] if x not in fake]
             if options:
                 fake.append(options[rng.integers(len(options))])
-        est = estimate(d, fake, real | set(fake)) if fake else None
-        if est:
-            samples.append(est["emission"])
-    return np.array(samples)
+        if fake:
+            yield fake, real | set(fake)
 
 
 def split_placebo(d: pd.DataFrame, n_fake: int, n: int, rng: np.random.Generator) -> np.ndarray:

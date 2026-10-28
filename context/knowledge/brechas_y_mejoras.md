@@ -22,7 +22,7 @@ Valor = qué tan importante es la pregunta para quien la hace × cuántos usuari
 
 | Brecha | Qué causa | Casos afectados |
 |---|---|---|
-| B1. Pocos días por evento y solo dos periodos de datos (nov–dic 2023, feb–may 2024) | Límites de detección altos (~15–20 % con 9 días); límites de temporada y año solo extrapolados | CU2, CU3, CU7, CU8 |
+| B1. Pocos días por evento y solo dos periodos de datos (nov–dic 2023, feb–may 2024) | Límites de detección altos (~20–37 % con 9 días según la temporada y la potencia); límites de temporada y año solo extrapolados | CU2, CU3, CU7, CU8 |
 | B2. Resolución espacial de 9 regiones de ~18 km | Un proyecto o una medida local queda diluido; reparto espacial mal determinado (regiones negativas) | CU8, CU5, CU2 local |
 | B3. Un solo viento uniforme por hora para todo el dominio | Es la mayor fuente de error del transporte; limita la confianza de todo lo demás | Todos |
 | B4. Nivel absoluto sin ancla (cambia hasta un factor de 2 según el transporte) | No se pueden dar toneladas confiables | CU5, CU8 |

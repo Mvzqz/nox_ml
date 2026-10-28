@@ -275,6 +275,10 @@ def config(tmp_path):
     return path
 
 
+def scaled_base():
+    return ventilation_inputs(n_days=56, sunday=1.0, noise=0.1)
+
+
 @pytest.fixture
 def loaded(monkeypatch, base):
     asked = []
@@ -309,7 +313,7 @@ def test_the_command_writes_the_ratio_its_interval_and_the_placebos_for_the_test
     assert measures["ratio"] == pytest.approx(0.7, abs=0.12)
     assert set(measures) >= {"lo", "hi", "days", "placebos"}
     assert set(measures["placebos"]) == {"random", "poorly_ventilated"}
-    assert "contingency / normal" in result.output
+    assert "event / normal" in result.output
 
 
 def test_the_sensitivity_option_adds_the_scenario_with_every_active_day(config, tmp_path, loaded):
@@ -388,3 +392,133 @@ def test_running_it_again_on_its_own_output_keeps_one_folder(config, tmp_path, l
 
     assert again.exit_code == 0
     assert [p.name for p in (tmp_path / "runs").iterdir()] == ["frozen.contingencies"]
+
+
+# --- Calendar events ---------------------------------------------------------------------------------------
+
+HOLIDAY_WEEK = pd.date_range("2023-12-11", "2023-12-15")  # Monday to Friday, no contingency
+
+
+def test_a_calendar_drop_is_found_and_the_contingency_days_are_not_normal(base):
+    drop = dict.fromkeys(HOLIDAY_WEEK, 0.7)
+    calm = events.calendar_effect(scaled(base, drop), make_model, HOLIDAY_WEEK, BUSINESS_MEASURES, PLACEBO)
+
+    wild = scaled(base, drop | dict.fromkeys(BUSINESS_MEASURES, 3.0))
+    result = events.calendar_effect(wild, make_model, HOLIDAY_WEEK, BUSINESS_MEASURES, PLACEBO, inject=[0.2])
+
+    assert result["days"]["event"] == [d.date().isoformat() for d in HOLIDAY_WEEK]
+    assert result["ratio"] == pytest.approx(
+        calm["ratio"]
+    )  # the contingency days are neither event nor reference
+    assert result["hi"] < 0.9 < result["placebos"]["random"]["lo"]  # the forest shrinks 5 days of 0.7 a bit
+    assert result["placebos"]["random"]["center"] == pytest.approx(1.0, abs=0.12)
+    assert [r["drop"] for r in result["injection"]] == [0.0, 0.2]
+
+
+def test_a_calendar_analysis_refuses_a_reference(base):
+    with pytest.raises(ValueError, match="estimates emissions"):
+        events.calendar_effect(base, lambda: REGISTRY["idw"](), HOLIDAY_WEEK, BUSINESS_MEASURES, PLACEBO)
+
+
+def test_day_spans_are_parsed_inclusive_and_merged():
+    days = cli.parse_days(["2023-12-18:2023-12-20", "2023-12-19", "2023-12-26"])
+
+    assert days.strftime("%m-%d").tolist() == ["12-18", "12-19", "12-20", "12-26"]
+
+
+def calendar(config, tmp_path, *extra):
+    return CliRunner().invoke(
+        cli.app,
+        ["calendar", str(config), "--runs-dir", str(tmp_path / "runs"), "--label", "holidays", *extra],
+    )
+
+
+def test_the_calendar_command_runs_on_the_config_period_by_default(config, tmp_path, loaded):
+    result = calendar(config, tmp_path, "--days", "2023-12-11:2023-12-15", "--days", "2023-12-16")
+
+    assert result.exit_code == 0, result.output
+    assert loaded == [("2023-11-06", "2023-12-31")]
+    out = tmp_path / "runs" / "frozen.calendar-holidays"
+    assert sorted(p.name for p in out.iterdir()) == ["calendar.json", "code_version.json", "config.yaml"]
+    saved = json.loads((out / "calendar.json").read_text())
+    assert saved["label"] == "holidays" and list(saved["scenarios"]) == ["holidays"]
+    scenario = saved["scenarios"]["holidays"]
+    assert len(scenario["days"]["event"]) == 5
+    assert set(scenario["days"]["event"]).isdisjoint(d.date().isoformat() for d in BUSINESS_MEASURES)
+    assert "event / normal" in result.output
+
+
+def test_the_calendar_command_can_run_on_the_test_period(config, tmp_path, loaded):
+    result = calendar(config, tmp_path, "--days", "2023-12-11:2023-12-15", "--period", "test")
+
+    stored = yaml.safe_load((tmp_path / "runs" / "frozen.calendar-holidays" / "config.yaml").read_text())
+    assert result.exit_code == 0, result.output
+    assert loaded == [(EVALUATION_PERIOD[0].isoformat(), EVALUATION_PERIOD[1].isoformat())]
+    assert stored["period"] == {"start": "2024-02-15", "end": "2024-05-31"}
+
+
+def test_the_calendar_command_refuses_bad_days(config, tmp_path, loaded):
+    assert calendar(config, tmp_path, "--days", "2023-13-40").exit_code == 2
+    assert loaded == []
+
+
+# --- Detection curve ---------------------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def curve(base):
+    # the fixture has no day-to-day variation of the emission, which is what limits a detection: add 20 %
+    days = events.data_days(base)
+    rng = np.random.default_rng(5)
+    varied = scaled(base, dict(zip(days, rng.lognormal(0, 0.2, len(days)), strict=True)))
+    normal = events.split_days(varied, pd.DatetimeIndex([]), BUSINESS_MEASURES).normal
+    return events.detection_curve(varied, make_model, normal, [3, 9], Placebo(refits=20, seed=2))
+
+
+def test_the_detectable_drop_shrinks_with_more_days(curve):
+    short, long = curve["rows"]
+
+    assert (short["days"], long["days"]) == (3, 9)
+    assert 0 < long["mdc_half"] < short["mdc_half"] < 1
+    assert long["mdc_half"] <= long["mdc"]  # more power needs a larger drop
+    assert curve["cv"] > 0
+    extrapolated = [e["mdc"] for e in curve["extrapolated"]]
+    assert extrapolated == sorted(extrapolated, reverse=True) and extrapolated[-1] > 0
+
+
+def test_the_detection_command_writes_the_curve(config, tmp_path, loaded):
+    result = CliRunner().invoke(
+        cli.app,
+        ["detection", str(config), "--runs-dir", str(tmp_path / "runs"), "--days", "3", "--days", "5"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert loaded == [("2023-11-06", "2023-12-31")]
+    saved = json.loads((tmp_path / "runs" / "frozen.detection" / "detection.json").read_text())
+    assert [r["days"] for r in saved["rows"]] == [3, 5] and len(saved["rows"][0]) == 7
+    assert saved["model"] == "rf_deweather" and "extrapolated" in result.output
+
+
+def test_the_detection_command_keeps_the_excluded_days_out_of_the_normal_ones(config, tmp_path, loaded):
+    args = ["detection", str(config), "--runs-dir", str(tmp_path / "runs"), "--days", "3"]
+
+    result = CliRunner().invoke(cli.app, [*args, "--exclude", "2023-12-11:2023-12-15", "--label", "calm"])
+
+    assert result.exit_code == 0, result.output
+    saved = json.loads((tmp_path / "runs" / "frozen.detection-calm" / "detection.json").read_text())
+    active = events.contingencies.active_days(EPISODES)
+    full = events.split_days(scaled_base(), pd.DatetimeIndex([]), active).normal
+    assert saved["excluded"][0] == "2023-12-11" and len(saved["excluded"]) == 5
+    assert saved["n_normal"] == len(full) - 5
+
+
+def test_atypical_days_are_left_out_of_the_reference(config, tmp_path, loaded):
+    result = contingencies(config, tmp_path, "--period", "test", "--exclude", "2023-12-11:2023-12-13")
+
+    saved = json.loads((tmp_path / "runs" / "frozen.contingencies" / "contingencies.json").read_text())
+    measures = saved["scenarios"]["measures"]
+    assert result.exit_code == 0, result.output
+    assert saved["atypical"] == ["2023-12-11", "2023-12-12", "2023-12-13"]
+    assert {"2023-12-11", "2023-12-12", "2023-12-13"} <= set(measures["days"]["left_out"])
+    full = events.split_days(scaled_base(), BUSINESS_MEASURES, events.contingencies.active_days(EPISODES))
+    assert measures["days"]["n_normal"] == len(full.normal) - 3
