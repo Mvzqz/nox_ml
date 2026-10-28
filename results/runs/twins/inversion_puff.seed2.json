@@ -1,0 +1,101 @@
+{
+  "generator": {
+    "name": "inversion_puff",
+    "model": "inversion_puff"
+  },
+  "period": {
+    "start": "2023-11-01",
+    "end": "2023-12-31"
+  },
+  "truth": {
+    "weekday": 1.0,
+    "saturday": 0.85,
+    "sunday_holiday": 0.69
+  },
+  "estimators": [
+    "normalized_ratio",
+    "rf_deweather",
+    "baseline",
+    "inversion_puff"
+  ],
+  "scenarios": {
+    "realistic": [
+      {
+        "model": "normalized_ratio",
+        "sunday_holiday": {
+          "estimate": 0.6802508764451405,
+          "lo": 0.5887223363267083,
+          "hi": 0.7710637731482869,
+          "truth": 0.69,
+          "covered": true
+        },
+        "saturday": {
+          "estimate": 0.7897022968882454,
+          "lo": 0.6588616964431339,
+          "hi": 0.980384311588678,
+          "truth": 0.85,
+          "covered": true
+        },
+        "config": "normalized_ratio"
+      },
+      {
+        "model": "rf_deweather",
+        "sunday_holiday": {
+          "estimate": 0.6714208705566727,
+          "lo": 0.6157258936759021,
+          "hi": 0.7648586506319116,
+          "truth": 0.69,
+          "covered": true
+        },
+        "saturday": {
+          "estimate": 0.7857586785892493,
+          "lo": 0.6418682887925621,
+          "hi": 0.8501441637875756,
+          "truth": 0.85,
+          "covered": true
+        },
+        "config": "rf_deweather"
+      },
+      {
+        "model": "inversion_plume",
+        "sunday_holiday": {
+          "estimate": 0.5228406924791038,
+          "lo": 0.4318715620852711,
+          "hi": 0.6305333886655187,
+          "truth": 0.69,
+          "covered": false
+        },
+        "saturday": {
+          "estimate": 0.8873308334728255,
+          "lo": 0.6357100454960807,
+          "hi": 1.2909144899700413,
+          "truth": 0.85,
+          "covered": true
+        },
+        "config": "baseline"
+      },
+      {
+        "model": "inversion_puff",
+        "sunday_holiday": {
+          "estimate": 0.6172329625578674,
+          "lo": 0.580070052356141,
+          "hi": 0.6743547293202676,
+          "truth": 0.69,
+          "covered": false
+        },
+        "saturday": {
+          "estimate": 0.7987139101109754,
+          "lo": 0.7144353046426087,
+          "hi": 0.8692179119623116,
+          "truth": 0.85,
+          "covered": true
+        },
+        "config": "inversion_puff"
+      }
+    ]
+  },
+  "code_version": {
+    "git_hash": "85887839fb41af045c1546fb585d59b9eb0b124d",
+    "dirty": true
+  }
+}

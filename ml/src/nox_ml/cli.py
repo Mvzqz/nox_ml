@@ -17,7 +17,8 @@ from nox_ml.data import pbl, simat, tempo
 from nox_ml.data.inputs import load_inputs
 from nox_ml.data.qc import render
 from nox_ml.validation import compare as comparison
-from nox_ml.validation import diagnostics, episodes, events, experiment
+from nox_ml.validation import diagnostics, episodes, events, experiment, twins
+from nox_ml.validation import lockdown as lockdown_validation
 from nox_ml.validation import tune as tuning
 
 RAW = Path("data/raw")
@@ -306,6 +307,58 @@ def episode(
     out.write_text(json.dumps(result, indent=2) + "\n")
     typer.echo(episodes.headline(result))
     typer.echo(f"Written to {out}")
+
+
+@app.command()
+def twin(
+    generator: Annotated[
+        Path, typer.Argument(help="Experiment YAML whose model's transport makes the twin.")
+    ],
+    estimators: Annotated[
+        list[Path], typer.Argument(help="Experiment YAMLs of the models fitted to the twin.")
+    ],
+    scenario: Annotated[
+        list[str] | None, typer.Option(help="Scenarios (repeatable): clean, realistic. Default: both.")
+    ] = None,
+    runs_dir: Annotated[
+        Path, typer.Option(help="Where runs/twins/<generator>.seed<seed>.json is written.")
+    ] = Path("runs"),
+    seed: Annotated[int, typer.Option(help="Seed of the background and noise.")] = 0,
+) -> None:
+    """Twin experiment: real receptors with observations simulated from a known emission (Sunday / weekday
+    0.69); every estimator is fitted to it and its ratio is compared with the truth."""
+    scenarios = scenario or list(twins.SCENARIOS)
+    unknown = sorted(set(scenarios) - set(twins.SCENARIOS))
+    try:
+        if unknown:
+            raise ValueError(f"unknown scenarios {unknown}; known: {sorted(twins.SCENARIOS)}")
+        gen = experiment.read_config(generator)
+        configs = [experiment.read_config(path) for path in estimators]
+    except (ValidationError, ValueError) as error:
+        typer.echo(f"Invalid input:\n{error}", err=True)
+        raise typer.Exit(2) from error
+    out = twins.run_twins(gen, configs, scenarios, runs_dir, seed)
+    typer.echo(twins.headline(json.loads(out.read_text())))
+    typer.echo(f"Written to {out}")
+
+
+@app.command()
+def lockdown(
+    config: Annotated[
+        Path, typer.Argument(help="Experiment YAML of the model, e.g. configs/experiments/<name>.yaml.")
+    ],
+    runs_dir: Annotated[Path, typer.Option(help="Where runs/<name>.lockdown/ is written.")] = Path("runs"),
+) -> None:
+    """The 2020 lockdown against the same dates of 2019: emission of each phase over the base, by year, and
+    2020 over 2019 (a known drop: the positive control). Stations only; writes runs/<name>.lockdown/."""
+    try:
+        cfg = experiment.read_config(config)
+    except ValidationError as error:
+        typer.echo(f"Invalid config {config}:\n{error}", err=True)
+        raise typer.Exit(2) from error
+    out = lockdown_validation.run_lockdown(cfg, runs_dir)
+    typer.echo(lockdown_validation.headline(json.loads((out / "lockdown.json").read_text())))
+    typer.echo(f"Written to {out}/")
 
 
 @app.command("compare")

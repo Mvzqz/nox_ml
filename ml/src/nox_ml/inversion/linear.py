@@ -54,6 +54,16 @@ DAY_TYPE_NAMES = ("weekday", "saturday", "sunday_holiday")
 TRAFFIC_RATIOS = {1: 0.87, 2: 0.69}
 TRAFFIC_RATIO_SD = 0.04
 HOLIDAYS = (
+    "2019-02-04",  # 2019-2020: the lockdown validation (`validation.lockdown`)
+    "2019-03-18",
+    "2019-04-18",
+    "2019-04-19",
+    "2019-05-01",
+    "2020-02-03",
+    "2020-03-16",
+    "2020-04-09",
+    "2020-04-10",
+    "2020-05-01",
     "2023-11-20",
     "2023-12-25",
     "2024-01-01",

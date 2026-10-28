@@ -1,0 +1,212 @@
+{
+  "generator": {
+    "name": "inversion_puff",
+    "model": "inversion_puff"
+  },
+  "period": {
+    "start": "2023-11-01",
+    "end": "2023-12-31"
+  },
+  "truth": {
+    "weekday": 1.0,
+    "saturday": 0.85,
+    "sunday_holiday": 0.69
+  },
+  "estimators": [
+    "normalized_ratio",
+    "rf_deweather",
+    "baseline",
+    "inversion_puff",
+    "pinn_puff"
+  ],
+  "scenarios": {
+    "clean": [
+      {
+        "model": "normalized_ratio",
+        "sunday_holiday": {
+          "estimate": 0.6760358273929912,
+          "lo": 0.6153873210277205,
+          "hi": 0.7460546716636127,
+          "truth": 0.69,
+          "covered": true
+        },
+        "saturday": {
+          "estimate": 0.8547791652568156,
+          "lo": 0.7517943496354568,
+          "hi": 0.9900369578106881,
+          "truth": 0.85,
+          "covered": true
+        },
+        "config": "normalized_ratio"
+      },
+      {
+        "model": "rf_deweather",
+        "sunday_holiday": {
+          "estimate": 0.7103048554029194,
+          "lo": 0.6775783700737609,
+          "hi": 0.7439490496019829,
+          "truth": 0.69,
+          "covered": true
+        },
+        "saturday": {
+          "estimate": 0.8441621805253886,
+          "lo": 0.7729752384173915,
+          "hi": 0.9641323363330808,
+          "truth": 0.85,
+          "covered": true
+        },
+        "config": "rf_deweather"
+      },
+      {
+        "model": "inversion_plume",
+        "sunday_holiday": {
+          "estimate": 0.5770144563177734,
+          "lo": 0.4816961391575774,
+          "hi": 0.6991246011712648,
+          "truth": 0.69,
+          "covered": true
+        },
+        "saturday": {
+          "estimate": 0.9647962477774795,
+          "lo": 0.7450909657181833,
+          "hi": 1.3011279609974864,
+          "truth": 0.85,
+          "covered": true
+        },
+        "config": "baseline"
+      },
+      {
+        "model": "inversion_puff",
+        "sunday_holiday": {
+          "estimate": 0.6923504278234069,
+          "lo": 0.6904785807530792,
+          "hi": 0.6943642036549067,
+          "truth": 0.69,
+          "covered": false
+        },
+        "saturday": {
+          "estimate": 0.8519350379650277,
+          "lo": 0.850077280091153,
+          "hi": 0.8534665276861311,
+          "truth": 0.85,
+          "covered": false
+        },
+        "config": "inversion_puff"
+      },
+      {
+        "model": "pinn_puff",
+        "sunday_holiday": {
+          "estimate": 0.6625540233075128,
+          "lo": 0.5726015762977889,
+          "hi": 0.7994105998063463,
+          "truth": 0.69,
+          "covered": true
+        },
+        "saturday": {
+          "estimate": 0.9566199846627016,
+          "lo": 0.7966750674010575,
+          "hi": 1.1345837434742387,
+          "truth": 0.85,
+          "covered": true
+        },
+        "config": "pinn_puff"
+      }
+    ],
+    "realistic": [
+      {
+        "model": "normalized_ratio",
+        "sunday_holiday": {
+          "estimate": 0.752359839615302,
+          "lo": 0.6408178271637397,
+          "hi": 0.8878642881358706,
+          "truth": 0.69,
+          "covered": true
+        },
+        "saturday": {
+          "estimate": 0.8349179076965071,
+          "lo": 0.6865955211437569,
+          "hi": 1.0430612836511888,
+          "truth": 0.85,
+          "covered": true
+        },
+        "config": "normalized_ratio"
+      },
+      {
+        "model": "rf_deweather",
+        "sunday_holiday": {
+          "estimate": 0.7728663982965559,
+          "lo": 0.6877652221899507,
+          "hi": 0.8918323880265119,
+          "truth": 0.69,
+          "covered": true
+        },
+        "saturday": {
+          "estimate": 0.791214504887093,
+          "lo": 0.7090902252605544,
+          "hi": 0.9704782370863958,
+          "truth": 0.85,
+          "covered": true
+        },
+        "config": "rf_deweather"
+      },
+      {
+        "model": "inversion_plume",
+        "sunday_holiday": {
+          "estimate": 0.6543414095278391,
+          "lo": 0.5226512993462262,
+          "hi": 0.8059105162470879,
+          "truth": 0.69,
+          "covered": true
+        },
+        "saturday": {
+          "estimate": 1.0209886708616724,
+          "lo": 0.7842039597446288,
+          "hi": 1.3893555969994464,
+          "truth": 0.85,
+          "covered": true
+        },
+        "config": "baseline"
+      },
+      {
+        "model": "inversion_puff",
+        "sunday_holiday": {
+          "estimate": 0.7565614186572873,
+          "lo": 0.695777529774696,
+          "hi": 0.8185225302031779,
+          "truth": 0.69,
+          "covered": false
+        },
+        "saturday": {
+          "estimate": 0.8923507683878611,
+          "lo": 0.8302917628113898,
+          "hi": 0.9687278334047164,
+          "truth": 0.85,
+          "covered": true
+        },
+        "config": "inversion_puff"
+      },
+      {
+        "model": "pinn_puff",
+        "sunday_holiday": {
+          "estimate": 0.7252906267199061,
+          "lo": 0.6188264659958488,
+          "hi": 0.8693813122015379,
+          "truth": 0.69,
+          "covered": true
+        },
+        "saturday": {
+          "estimate": 1.0087800971292433,
+          "lo": 0.8707898223528269,
+          "hi": 1.1915268933592782,
+          "truth": 0.85,
+          "covered": false
+        },
+        "config": "pinn_puff"
+      }
+    ]
+  },
+  "code_version": {
+    "git_hash": "85887839fb41af045c1546fb585d59b9eb0b124d",
+    "dirty": true
+  }
+}
