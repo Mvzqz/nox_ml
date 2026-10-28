@@ -1,0 +1,33 @@
+# Regression-kriging (nox_ml.models.residual_kriging): E5b (pinn_puff.yaml) plus the kriging of its residuals
+# between the stations of each hour. The variogram shape is one for the period (pooled maximum likelihood on
+# the training stations), its mean and scale are each hour's. The emissions are E5b's.
+# Run: uv run nox-ml run configs/experiments/residual_kriging.yaml  ->  runs/residual_kriging/
+name: residual_kriging
+period:
+  start: 2023-11-01
+  end: 2023-12-31
+simat_hours: [12, 17]
+model:
+  name: residual_kriging
+  params:
+    base:
+      name: pinn_puff
+      params:
+        layers: 4
+        width: 64
+        learning_rate: 0.002
+        physics_weight: 1.0
+        adam_steps: 3000
+        lbfgs_rounds: 15
+        kappa: 1500.0
+        seed: 0
+        tau_h: 12.0
+        u_min: 2.0
+        max_age_h: 24
+        lifetime: oh
+        bootstrap_n: 200
+        bootstrap_level: 0.90
+        kernel_dir: .cache/pinn
+    length_scale_km: null   # null: pooled leave-one-out of the training residuals
+    nugget: null
+placebo: {n: 2000, seed: 3, level: 0.90, refits: 8}
