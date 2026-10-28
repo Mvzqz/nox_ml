@@ -17,7 +17,7 @@ from nox_ml.data import openaq, pbl, simat, tempo
 from nox_ml.data.inputs import load_inputs
 from nox_ml.data.qc import render
 from nox_ml.validation import compare as comparison
-from nox_ml.validation import diagnostics, episodes, events, experiment, twins
+from nox_ml.validation import diagnostics, episodes, events, experiment, products, twins
 from nox_ml.validation import lockdown as lockdown_validation
 from nox_ml.validation import tune as tuning
 
@@ -373,6 +373,58 @@ def lockdown(
     out = lockdown_validation.run_lockdown(cfg, runs_dir)
     typer.echo(lockdown_validation.headline(json.loads((out / "lockdown.json").read_text())))
     typer.echo(f"Written to {out}/")
+
+
+@app.command("ficha-medida")
+def ficha_medida(
+    days: Annotated[
+        list[str], typer.Option(help="Days of the measure, YYYY-MM-DD[:YYYY-MM-DD] (repeatable).")
+    ],
+    data: Annotated[str, typer.Option(help="Season window START:END, e.g. 2023-11-01:2023-12-31.")],
+    title: Annotated[str, typer.Option(help="Title of the sheet (Spanish), e.g. 'Hoy No Circula sabatino'.")],
+    claim: Annotated[float | None, typer.Option(help="Announced change as a fraction, e.g. -0.2.")] = None,
+    data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
+    out_dir: Annotated[Path, typer.Option(help="Where the sheet is written.")] = Path("runs/fichas"),
+) -> None:
+    """Sheet: did the emission change on these days? With the estimator validated for changes (E7)."""
+    try:
+        event = parse_days(days)
+        start, end = (pd.Timestamp(day).date().isoformat() for day in data.split(":"))
+    except ValueError as error:
+        typer.echo(f"Invalid days {days} or window {data}: {error}", err=True)
+        raise typer.Exit(2) from error
+    inputs = products.season_inputs(data_dir, start, end)
+    excluded = products.reference_exclusions(data_dir, start, end, event)
+    result = products.measure_result(inputs, products.estimator("change"), event, excluded, claim=claim)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / f"medida_{event[0]:%Y-%m-%d}_{event[-1]:%Y-%m-%d}.md"
+    out.write_text(products.render_measure(result, title, (start, end)))
+    typer.echo(out.read_text())
+    typer.echo(f"Written to {out}")
+
+
+@app.command("ficha-dias")
+def ficha_dias(
+    data: Annotated[str, typer.Option(help="Season window START:END whose day-to-day variation is used.")],
+    drops: Annotated[list[float] | None, typer.Option(help="Drops as fractions (repeatable).")] = None,
+    data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
+    out_dir: Annotated[Path, typer.Option(help="Where the sheet is written.")] = Path("runs/fichas"),
+) -> None:
+    """Sheet: how many business days a measure needs to show a drop, from the variation of the season."""
+    start, end = (pd.Timestamp(day).date().isoformat() for day in data.split(":"))
+    inputs = products.season_inputs(data_dir, start, end)
+    normal = events.split_days(
+        inputs,
+        pd.DatetimeIndex([]),
+        products.reference_exclusions(data_dir, start, end, pd.DatetimeIndex([])),
+    ).normal
+    curve = events.detection_curve(inputs, products.estimator("change"), normal, [5, 9, 15], products.PLACEBO)
+    table = [(d, products.days_needed(d, curve["cv"])) for d in (drops or [0.05, 0.1, 0.2, 0.3])]
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / f"dias_{start}_{end}.md"
+    out.write_text(products.render_days(table, curve["cv"], (start, end)))
+    typer.echo(out.read_text())
+    typer.echo(f"Written to {out}")
 
 
 @app.command("compare")
