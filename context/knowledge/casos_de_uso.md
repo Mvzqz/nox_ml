@@ -19,12 +19,18 @@ Documentos por actualizar con este enfoque: el notebook del avance 5 (contingenc
 
 ## Usuarios
 
-| Usuario | Quién es | Qué necesita | Frecuencia |
+El sistema no depende de una institución: usa datos públicos (SIMAT, TEMPO, ERA5) y cualquiera puede correrlo. Por eso los usuarios son roles, no organizaciones; los ejemplos son posibles, no acuerdos.
+
+| Usuario | Ejemplos posibles | Qué necesita | Frecuencia |
 |---|---|---|---|
-| Analista de calidad del aire | Personal técnico de SEDEMA (Dirección de Calidad del Aire) | Explicar episodios, preparar evaluaciones, revisar datos | Semanal |
-| Responsable de política | Dirección de SEDEMA o de la CAMe | Saber si una medida funciona y cuánto tiempo darle | Mensual o por decisión |
-| Equipo del inventario de emisiones | SEDEMA | Contrastar los patrones del inventario con lo que miden el aire y el satélite | Por edición del inventario |
-| Investigador | Academia (UNAM, Tec) | Datos y resultados reproducibles, con su incertidumbre | Ocasional |
+| Autoridad ambiental o de movilidad | Gobiernos de la ciudad, del estado o de alcaldías; comisiones metropolitanas; agencias de movilidad; INECC | Explicar episodios, saber si una medida funciona y cuánto tiempo darle | Semanal o por decisión |
+| Evaluador independiente | Organizaciones civiles de aire limpio y movilidad, observatorios ciudadanos | Verificar con datos públicos si una medida anunciada cambió la emisión | Por medida o por anuncio |
+| Periodista de datos | Medios con secciones de datos o de medio ambiente | Contrastar afirmaciones ("la medida redujo la contaminación") y explicar episodios al público | Por episodio o por nota |
+| Financiador de proyectos | Bancos de desarrollo, fondos de aire limpio o de clima, redes de ciudades | Medir, reportar y verificar el efecto de proyectos que financian (corredores de transporte, zonas de bajas emisiones, renovación de flotas) | Por proyecto, al inicio y al cierre |
+| Planeador urbano o de transporte | Operadores y planeadores de transporte público, consultoras de movilidad | Saber cuánto tiempo y qué zonas medir para evaluar un proyecto | Al diseñar y al evaluar |
+| Equipo de inventario de emisiones | Quien elabore o revise un inventario (gobierno, academia, consultoras) | Contrastar los patrones del inventario con lo que miden el aire y el satélite | Por edición del inventario |
+| Investigador | Salud pública, ciencias de la atmósfera, ciencia de datos | Series de emisión y concentración con su incertidumbre, reproducibles | Ocasional |
+| Otras ciudades | Ciudades dentro de la cobertura de TEMPO (Norteamérica) | Replicar el análisis con su red de monitoreo | Por proyecto |
 
 ## Principios de la experiencia
 
@@ -39,7 +45,7 @@ Documentos por actualizar con este enfoque: el notebook del avance 5 (contingenc
 
 ### CU1. Diagnosticar un episodio: ¿fue el clima o la emisión?
 
-- **Usuario:** analista de calidad del aire.
+- **Usuario:** autoridad ambiental (analista técnico) o periodista de datos.
 - **Pregunta:** "Ayer y antier la concentración de NOₓ fue muy alta. ¿Se emitió más o el aire estuvo estancado?"
 - **Entrada:**
   - rango de fechas del episodio (o elegir una contingencia de la lista);
@@ -55,7 +61,7 @@ Documentos por actualizar con este enfoque: el notebook del avance 5 (contingenc
 
 ### CU2. Evaluar una medida sostenida
 
-- **Usuario:** responsable de política, con el analista.
+- **Usuario:** autoridad ambiental o de movilidad, evaluador independiente o financiador del proyecto.
 - **Pregunta:** "Desde marzo restringimos la circulación en el centro los sábados. ¿Bajó la emisión?"
 - **Entrada:**
   - fecha de inicio (y fin, si ya terminó);
@@ -72,7 +78,7 @@ Documentos por actualizar con este enfoque: el notebook del avance 5 (contingenc
 
 ### CU3. Planear la evaluación de un piloto
 
-- **Usuario:** responsable de política, antes de lanzar una medida.
+- **Usuario:** autoridad o planeador de transporte antes de lanzar una medida, o financiador al diseñar el monitoreo de un proyecto.
 - **Pregunta:** "Si la medida reduce la emisión 8 %, ¿cuánto tiempo hay que mantenerla para poder demostrarlo?"
 - **Entrada:** efecto esperado (%); días de la semana en que aplica; regiones; temporada.
 - **Qué hace el sistema:** inyecta el efecto en datos históricos de la misma temporada con distintos números de días y mide cuándo se detecta.
@@ -81,7 +87,7 @@ Documentos por actualizar con este enfoque: el notebook del avance 5 (contingenc
 
 ### CU4. Seguimiento de la emisión
 
-- **Usuario:** analista y responsable de política.
+- **Usuario:** autoridad ambiental, evaluador independiente u observatorio ciudadano.
 - **Pregunta:** "¿Cómo va la emisión este mes frente al anterior y frente al mismo mes del año pasado?"
 - **Entrada:** ninguna (tablero); opcional: periodo y región.
 - **Salida:**
@@ -92,7 +98,7 @@ Documentos por actualizar con este enfoque: el notebook del avance 5 (contingenc
 
 ### CU5. Contrastar el inventario
 
-- **Usuario:** equipo del inventario de emisiones.
+- **Usuario:** equipo de inventario de emisiones o investigador.
 - **Pregunta:** "¿El reparto por región y el ciclo semanal del inventario coinciden con lo que mide el aire?"
 - **Entrada:** edición del inventario (por defecto, la vigente).
 - **Salida:**
@@ -103,11 +109,29 @@ Documentos por actualizar con este enfoque: el notebook del avance 5 (contingenc
 
 ### CU6. Concentración donde no hay estación (secundario)
 
-- **Usuario:** analista o investigador.
+- **Usuario:** investigador de salud pública, planeador urbano o periodista.
 - **Pregunta:** "¿Qué NOₓ hubo en esta colonia, que no tiene estación?"
 - **Entrada:** punto o zona en el mapa; fechas.
 - **Salida:** serie estimada con su error típico (~12 ppb) y la parte atribuible a la emisión vial frente al fondo.
 - **Acciones:** exportar. Advertencia en la interfaz: para concentración sola, interpolar estaciones es más exacto; el valor del modelo es explicar de dónde viene.
+
+### CU7. Verificar una afirmación pública
+
+- **Usuario:** periodista de datos o evaluador independiente.
+- **Pregunta:** "Se anunció que una medida redujo la contaminación 15 %. ¿Lo respaldan los datos, una vez descontado el clima?"
+- **Entrada:** la medida (fechas, días, zonas) y la cifra anunciada.
+- **Qué hace el sistema:** lo mismo que CU2, más la comparación con la cifra anunciada: ¿cae dentro del intervalo?, ¿el cambio de concentración se explica por el clima?
+- **Salida:** veredicto ("compatible con los datos", "no compatible", "no evaluable con estos días"), con la descomposición clima × emisión y el límite de detección; un texto corto citable con su intervalo.
+- **Acciones:** exportar una ficha para publicar con la metodología y los datos; enlazar el análisis reproducible.
+
+### CU8. Medir, reportar y verificar un proyecto financiado
+
+- **Usuario:** financiador o ejecutor de un proyecto (corredor de transporte, zona de bajas emisiones, renovación de flota).
+- **Pregunta:** "El proyecto prometía reducir la emisión de NOₓ de su zona. ¿Lo hizo, y con qué certeza?"
+- **Entrada:** zona del proyecto, fecha de inicio, efecto comprometido; periodo base.
+- **Qué hace el sistema:** al inicio, CU3 (cuánto tiempo medir); durante y al cierre, CU2 para la región del proyecto, con el índice normalizado por mes.
+- **Salida:** línea base, cambio de emisión con intervalo, límite de detección y advertencia de escala: con regiones de ~18 km, un proyecto que afecta una zona pequeña puede quedar diluido.
+- **Acciones:** reporte de verificación periódico; decidir continuidad o pagos por resultados con la incertidumbre explícita.
 
 ## Mapa de pantallas propuesto
 
@@ -115,7 +139,7 @@ Documentos por actualizar con este enfoque: el notebook del avance 5 (contingenc
 |---|---|---|
 | Inicio / seguimiento | CU4 | Índice de emisión por mes y región, cambios marcados, cobertura de datos |
 | Episodio | CU1 | Selector de fechas o contingencia, veredicto, cascada, series, mapa de ventilación |
-| Evaluar medida | CU2 | Formulario de la medida, veredicto con límite de detección, serie antes y después |
+| Evaluar medida | CU2, CU7, CU8 | Formulario de la medida, veredicto con límite de detección, serie antes y después |
 | Planear piloto | CU3 | Efecto esperado y duración, curva de detección |
 | Inventario | CU5 | Reparto por región y perfil semanal, inventario frente a estimado |
 | Mapa | CU6, apoyo de CU1 y CU5 | Regiones, estaciones, píxeles de TEMPO, concentración estimada |
@@ -126,4 +150,4 @@ Documentos por actualizar con este enfoque: el notebook del avance 5 (contingenc
 - El comando de diagnóstico de episodios (CU1): `diagnose_episode` y `nox-ml diagnose` (ver `tareas.md`).
 - La curva de detección por número de días (CU3) generaliza la prueba de inyección (`--inject`).
 - Más años de datos (temporadas 2025 y 2026) para afinar los límites de detección (`tareas.md`).
-- Validar el flujo con usuarios reales de SEDEMA antes de construir la interfaz completa.
+- Validar el flujo con usuarios potenciales de varios perfiles (autoridad, organización civil, periodista, financiador, investigador) antes de construir la interfaz completa.
