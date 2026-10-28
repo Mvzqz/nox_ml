@@ -7,12 +7,12 @@ Fecha: 2026-10-29. Todos los modelos daban domingo ÷ hábil de 0.42–0.56 en n
 | Causa candidata | Veredicto | Evidencia |
 |---|---|---|
 | El método (inversión o estimador) | **No** | Con gemelos de verdad conocida (0.69), los modelos recuperan 0.66–0.77 |
-| Días hábiles de fin de año en la referencia | **Sí, en parte** | Sin el 18–29 de diciembre: E7 0.56 → 0.63–0.65, E6 0.53 → 0.75, E2 0.52 → 0.59, E5b 0.48 → 0.53 |
+| Días hábiles de fin de año en la referencia (acumulación que los modelos atribuyen a la emisión; el tráfico de esas fechas es normal) | **Sí, en parte** | Sin el 18–29 de diciembre: E7 0.56 → 0.63–0.65, E6 0.53 → 0.75, E2 0.52 → 0.59, E5b 0.48 → 0.53 |
 | Peso de TEMPO | No como causa principal | Bajarlo de ×1 a ×10 no sube el domingo; solo quitarlo casi del todo, y entonces la inversión queda mal condicionada |
 | Referencia de tráfico mal ponderada | No | Con cualquier ponderación de los pesados, Infovial da ≥ 0.64 en el día completo y ≥ 0.72 en la tarde |
 | Transporte equivocado | Sí, para la pluma | En gemelos generados con puffs, la pluma da 0.51–0.65; los puffs, no |
 
-Con fin de año fuera y los intervalos honestos (bootstrap por bloques de 7 días), E7 y E6 quedan dentro del rango del tráfico y las inversiones con puffs (E2 0.59, E5b 0.53, 0.44–0.67) quedan 0.05–0.10 por debajo, con el límite superior del intervalo de E5b tocando la referencia.
+Con fin de año fuera y los intervalos honestos (bootstrap por bloques de 7 días), E7 (0.63–0.65) y E6 (0.75) quedan en el rango de enero de 2017 (0.65–0.73) o cerca del de noviembre–diciembre de 2018 (0.76–0.81). Las inversiones con puffs (E2 0.59, E5b 0.53, 0.44–0.67) quedan 0.1–0.25 por debajo.
 
 ## Peso de TEMPO
 
@@ -40,7 +40,19 @@ Infovial, enero de 2017 (sin el 1 y el 2 de enero), 26 vialidades primarias. Cla
 | Pesados × 3 (1, 2, 15, 30, 45, 60) | 0.74 / 0.93 | 0.67 / 0.85 |
 | Solo C3–C6 | 0.73 / 0.92 | 0.65 / 0.84 |
 
-Sin la primera semana de enero (vacaciones escolares) las cifras cambian en ±0.01. Aun suponiendo que solo los pesados emiten NOₓ, el domingo del tráfico no baja de 0.64. La referencia de 0.65–0.73 es la del día completo, la que corresponde a modelos con memoria del transporte (puffs de 24 h).
+Sin la primera semana de enero (vacaciones escolares) las cifras cambian en ±0.01.
+
+**Noviembre–diciembre de 2018** (la misma temporada que nuestros datos; ponderado 1, 2, 5, 10, 15, 20):
+
+| | Tarde (12–17 h) | Día completo |
+|---|---|---|
+| Domingo ÷ hábil (hasta el 11 de diciembre) | 0.81 | 0.76 |
+| Días hábiles del 12 al 14 de diciembre ÷ normales | 1.02 | 1.01 |
+| Días hábiles del 17 al 21 de diciembre ÷ normales | 1.02 | 1.01 |
+| Días hábiles del 26 al 28 de diciembre ÷ normales | 0.97 | 0.91 |
+
+- En noviembre–diciembre la referencia del domingo es más alta que en enero: 0.76–0.81. La brecha de las inversiones es mayor de lo que creíamos (E5b sin fin de año, 0.53).
+- **El tráfico de fin de año no sube.** El NOₓ alto de los días hábiles del 18 al 22 de diciembre de 2023 no es más tráfico: es acumulación que los modelos no separan de la emisión. El fin de año se excluye de la referencia porque ahí los modelos fallan, no porque haya más autos. Aun suponiendo que solo los pesados emiten NOₓ, el domingo del tráfico no baja de 0.64. La referencia de 0.65–0.73 es la del día completo, la que corresponde a modelos con memoria del transporte (puffs de 24 h).
 
 Limitaciones de la referencia: son vialidades primarias de 2017. Después de 2020 el trabajo desde casa bajó el tráfico de los días hábiles, lo que subiría el domingo/hábil, no lo bajaría.
 

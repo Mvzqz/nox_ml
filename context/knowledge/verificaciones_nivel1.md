@@ -29,7 +29,7 @@ Fecha: 2026-10-28. Primeras seis mejoras de [brechas_y_mejoras.md](brechas_y_mej
 | E6 (bosque aleatorio) | 0.53 (0.42–0.57) | 0.75 (0.63–0.89) | 0.74 (0.60–0.81) |
 | E5b (PINN con puffs) | 0.48 (0.36–0.62) | 0.53 (0.44–0.67) | 0.53 (0.44–0.68) |
 
-El rango esperado por el tráfico es 0.65–0.73. Sin los días de fin de año, E7 y E6 quedan dentro o cerca; E5b sube solo 0.05 y sigue lejos. Es la primera causa concreta del sesgo del domingo en los estimadores estadísticos, que no tienen término de fondo y cargan el aumento de fin de año a la referencia de día hábil. En E5b explica una parte menor: la inversión estima un fondo por hora que absorbe parte del aumento, y su sesgo restante debe tener otra causa (supuesto inicial, química, peso de TEMPO), que es el experimento de techo 3. El diagnóstico de episodios (sección 2) indica que en la semana del 18 de diciembre subió la parte de la columna que agrega la ciudad, no solo el fondo regional: hubo más emisión (compras, traslados y actividad de diciembre), además de algo de acumulación.
+El rango esperado por el tráfico es 0.65–0.73. Sin los días de fin de año, E7 y E6 quedan dentro o cerca; E5b sube solo 0.05 y sigue lejos. Es la primera causa concreta del sesgo del domingo en los estimadores estadísticos, que no tienen término de fondo y cargan el aumento de fin de año a la referencia de día hábil. En E5b explica una parte menor: la inversión estima un fondo por hora que absorbe parte del aumento, y su sesgo restante debe tener otra causa (supuesto inicial, química, peso de TEMPO), que es el experimento de techo 3. No es más tráfico: en 2018, el tráfico de las vialidades primarias de Infovial en los días hábiles del 12 al 21 de diciembre fue el de un día normal (1.01–1.02 ponderado por emisión) y bajó después de Navidad ([sesgo_domingo.md](sesgo_domingo.md)). El aumento de NOₓ es acumulación que los modelos no captan; por eso esos días no sirven de referencia.
 
 Consecuencias:
 - Para el avance 5, reportar el domingo/hábil también sin los días de fin de año, como sensibilidad, sin cambiar el modelo ni la selección.
@@ -67,7 +67,7 @@ Comando nuevo: `nox-ml calendar <config> --days INICIO:FIN --label NOMBRE [--per
 Inyección en Semana Santa (E7): 10 % no detectado, 20 % y 30 % detectados, recuperados completos. En fin de año, solo 30 % se detecta (la variación de nov–dic es mayor).
 
 Lectura:
-- **Fin de año no es un control positivo:** la emisión sube, y dos modelos coinciden. El diagnóstico de episodios (sección 2) apunta a emisión real en la semana previa a Navidad: sube la parte urbana de la columna de TEMPO, no solo el fondo. Sin datos de tráfico de 2023 no se puede confirmar con una fuente independiente.
+- **Fin de año no es un control positivo:** la emisión sube, y dos modelos coinciden. El tráfico de Infovial de 2018 no sube en esas fechas, así que el aumento no es emisión vial: el método confunde una acumulación con emisión en esa semana.
 - **Semana Santa apunta en la dirección esperada (−8 %), pero dentro del límite de detección (~20 %).** Los días con más baja de tráfico (jueves y viernes santos) son festivos y quedan fuera del análisis de días hábiles; lo que queda es el efecto de las vacaciones escolares, más chico.
 - Conclusión: el calendario de 2023–2024 no da un control positivo limpio. El confinamiento de 2020 sí lo da: E7 pasa el placebo de 2019 y mide una caída de ~50 %, dentro del rango esperado ([controles_de_verdad.md](controles_de_verdad.md)).
 
@@ -108,12 +108,12 @@ Diciembre de 2023 (entre paréntesis, el intervalo de los días normales):
 | Semana | Concentración | Clima | Emisión | Fondo regional | Parte urbana | Veredicto |
 |---|---|---|---|---|---|---|
 | 11–15 dic (estancada) | 1.55 (0.77–1.31) | 2.20 (0.77–1.33) | 0.70 (0.80–1.23) | 1.56 (0.58–1.66) | 0.71 (0.64–1.46) | Clima; la emisión sale en contra |
-| 18–22 dic | 1.36 (0.75–1.34) | 1.02 (0.68–1.76) | 1.34 (0.63–1.28) | 1.78 (0.57–1.73) | 1.65 (0.67–1.47) | Emisión, con el fondo arriba |
+| 18–22 dic | 1.36 (0.75–1.34) | 1.02 (0.68–1.76) | 1.34 (0.63–1.28) | 1.78 (0.57–1.73) | 1.65 (0.67–1.47) | Emisión, con el fondo arriba (falso positivo: el tráfico no sube) |
 | 26–29 dic | 0.81 (0.71–1.43) | 0.72 (0.64–1.79) | 1.12 (0.62–1.36) | 0.77 (0.47–1.92) | 1.21 (0.65–1.57) | Normal |
 
 Lectura:
 - La semana estancada es clima, pero la emisión sale baja (0.70): en estancamientos fuertes la normalización sobrecorrige la ventilación, un sesgo ya conocido del estimador. El veredicto lo marca (`emission_against_weather`) en lugar de reportar una baja de emisión. La parte urbana de la columna también baja: con la capa de mezcla baja el NO₂ se concentra en superficie, pero la columna no crece igual.
-- La semana del 18 de diciembre no se explica por el clima. Subió el fondo regional, pero también la parte que agrega la ciudad (+65 %): hubo más emisión, no solo acumulación. Es consistente con el aumento de actividad de diciembre.
+- La semana del 18 de diciembre no se explica por el clima de los modelos. Subieron el fondo regional y la parte que agrega la ciudad (+65 %), y el veredicto dice emisión. Pero el tráfico de Infovial de 2018 en esas fechas es el normal: es un **falso positivo**. La parte urbana de la columna también sube cuando el aire se acumula sobre la ciudad, no solo con más emisión, así que no basta para separar emisión de acumulación local. El veredicto debe leerse como "no lo explica la ventilación", no como "hubo más emisión", hasta tener una referencia de actividad.
 - El veredicto es una pista, no una prueba; para afirmar un cambio de emisión sostenido hace falta un periodo más largo (sección 4).
 
 ## Decisión para la corrida única del sábado

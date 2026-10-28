@@ -16,7 +16,9 @@ The episode days are compared with reference days of the same weekday within fou
 Each ratio gets a null interval from fake episodes with the same weekdays drawn from normal days
 (`placebo.placebo`), and the verdict reads them together. The emission estimator has no background term: when
 the background rose too, a rise of the emission can be accumulation: with usual weather, the urban part of the
-column tells them apart.
+column tells regional accumulation from the city's, but not accumulation over the city from emission. In the
+week before Christmas 2023 it said emission while the traffic of those dates (Infovial 2018) was normal: read
+``emission`` as "the ventilation does not explain it" until there is an activity reference.
 """
 
 from collections.abc import Collection, Iterator, Sequence
@@ -26,7 +28,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from nox_ml.data import contingencies
+from nox_ml.data import calendar, contingencies
 from nox_ml.data.inputs import Inputs, load_inputs
 from nox_ml.inversion.jacobian import plume_transport
 from nox_ml.inversion.linear import SIGMA_THETA, U_MIN
@@ -188,6 +190,7 @@ def run_episode(
     inputs = load_inputs(data_dir, start, end)
     daily = normalized_days(inputs, inputs.jacobians(*plume_transport(SIGMA_THETA, U_MIN)))
     episodes = contingencies.read_episodes(data_dir / "raw" / contingencies.EPISODES_FILE)
-    excluded = set(contingencies.active_days(episodes)) - set(days)
+    atypical = calendar.atypical_days(start, end)
+    excluded = (set(contingencies.active_days(episodes)) | set(atypical)) - set(days)
     result = diagnose_episode(daily, tempo_parts(inputs), days, excluded, seed=seed)
     return {"data": {"start": start, "end": end}, **result}

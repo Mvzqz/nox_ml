@@ -16,12 +16,14 @@ from typer.testing import CliRunner
 from ventilation_synthetic import ventilation_inputs
 
 from nox_ml import cli
+from nox_ml.data.calendar import atypical_days
 from nox_ml.data.inputs import Inputs
 from nox_ml.inversion.linear import BACKGROUND_STATION
 from nox_ml.models import REGISTRY
 from nox_ml.models.rf_deweather import RfDeweather, RfDeweatherParams
 from nox_ml.time import local_day
 from nox_ml.validation import events, tune
+from nox_ml.validation.events import day_list
 from nox_ml.validation.experiment import EVALUATION_PERIOD, Placebo, normalized_days
 
 FAST = RfDeweatherParams(n_estimators=30, bootstrap_n=3)
@@ -506,10 +508,10 @@ def test_the_detection_command_keeps_the_excluded_days_out_of_the_normal_ones(co
 
     assert result.exit_code == 0, result.output
     saved = json.loads((tmp_path / "runs" / "frozen.detection-calm" / "detection.json").read_text())
-    active = events.contingencies.active_days(EPISODES)
+    active = events.contingencies.active_days(EPISODES).union(atypical_days("2023-11-06", "2023-12-31"))
     full = events.split_days(scaled_base(), pd.DatetimeIndex([]), active).normal
     assert saved["excluded"][0] == "2023-12-11" and len(saved["excluded"]) == 5
-    assert saved["n_normal"] == len(full) - 5
+    assert saved["n_normal"] == len(full) - 1  # 12-15 Dec are year-end days already: only the 11th is new
 
 
 def test_atypical_days_are_left_out_of_the_reference(config, tmp_path, loaded):
@@ -518,7 +520,8 @@ def test_atypical_days_are_left_out_of_the_reference(config, tmp_path, loaded):
     saved = json.loads((tmp_path / "runs" / "frozen.contingencies" / "contingencies.json").read_text())
     measures = saved["scenarios"]["measures"]
     assert result.exit_code == 0, result.output
-    assert saved["atypical"] == ["2023-12-11", "2023-12-12", "2023-12-13"]
+    easter = day_list(atypical_days(*EVALUATION_PERIOD))  # the calendar's, for the test period
+    assert saved["atypical"] == sorted(["2023-12-11", "2023-12-12", "2023-12-13", *easter])
     assert {"2023-12-11", "2023-12-12", "2023-12-13"} <= set(measures["days"]["left_out"])
     full = events.split_days(scaled_base(), BUSINESS_MEASURES, events.contingencies.active_days(EPISODES))
     assert measures["days"]["n_normal"] == len(full.normal) - 3
