@@ -172,3 +172,41 @@ def test_the_tuning_search_of_e2_is_valid_and_has_16_trials():
 
     assert base.model.name == "inversion_puff"
     assert len(trials(space, base)) == 16
+
+
+def test_a_uniform_station_wind_field_gives_the_matrix_of_the_domain_wind(make_inputs):
+    # every hour blows as the history (3, 0): the last hour's plume then sees the same wind either way
+    steady = make_inputs()
+    steady = replace(steady, hours=[replace(h, wind=(3.0, 0.0)) for h in steady.hours])
+
+    def make():
+        return steady
+
+    inputs = make()
+    history = hourly_history(make_inputs, None)
+    assert history.wind is not None
+    columns = pd.MultiIndex.from_product([["u", "v"], list(inputs.station_xy.index)])
+    station_wind = pd.DataFrame(
+        np.r_[[3.0] * len(inputs.station_xy), [0.0] * len(inputs.station_xy)][None, :].repeat(
+            len(history.wind), 0
+        ),
+        index=history.wind.index,
+        columns=columns,
+    )
+    with_field = replace(history, station_wind=station_wind, station_xy=inputs.station_xy)
+
+    domain = hour_matrix(make, PuffTransport(24, "fixed", TAU_H), history)
+    field = hour_matrix(make, PuffTransport(24, "fixed", TAU_H, wind_field=True), with_field)
+
+    assert_allclose(field.stations, domain.stations, rtol=1e-9, atol=1e-12)
+    assert_allclose(field.pixels, domain.pixels, rtol=1e-9, atol=1e-3)
+
+
+def test_the_wind_field_needs_the_station_winds_and_has_its_own_key(make_inputs):
+    with pytest.raises(ValueError, match="station_wind"):
+        hour_matrix(
+            make_inputs, PuffTransport(24, "fixed", TAU_H, wind_field=True), hourly_history(make_inputs, None)
+        )
+
+    keys = {InversionPuff(InversionPuffParams(wind_field=f)).transport_key() for f in (False, True)}
+    assert len(keys) == 2

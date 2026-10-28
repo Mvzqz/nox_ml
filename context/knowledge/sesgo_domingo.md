@@ -68,3 +68,33 @@ Las inversiones con puffs quedan 0.05–0.10 por debajo del tráfico aun sin fin
 - Para el producto, la referencia de día hábil debe excluir periodos atípicos de forma automática: el fin de año explica la mayor parte del sesgo de E6 y E7.
 - Los cocientes de las inversiones se reportan con intervalos por bloques de 7 días; con ellos, E5b sin fin de año es compatible con el tráfico en el límite superior.
 - La brecha restante (0.05–0.10) es del orden del límite de detección de una temporada: no invalida los cambios grandes (como el confinamiento), pero sí pide cautela con cambios de 5–10 %.
+
+## Mejoras de modelo probadas sin efecto (2026-10-29)
+
+Con E2 en nov–dic 2023:
+
+| Cambio | Error con estación oculta | Domingo | Sin fin de año | Fin de año ÷ normal |
+|---|---|---|---|---|
+| Ninguno (viento del dominio, puffs de 24 h) | 12.50 | 0.52 | 0.59 | 1.23 |
+| Campo de viento: cada fuente con el viento de las 20 estaciones interpolado en su ubicación (`wind_field`) | 12.62 | 0.49 | 0.52 | — |
+| Puffs de 48 h | 12.49 | 0.52 | 0.59 | 1.23 |
+| Puffs de 72 h | 12.49 | 0.52 | 0.59 | 1.23 |
+| Viento de los aeropuertos en lugar del de la red | 12.53 | 0.52 | — | — |
+
+- El campo de viento no mejora: el viento de cada estación es local (calles, edificios) y moverse con él agrega ruido. Queda como opción apagada.
+- La memoria de varios días no cambia nada: con la química de OH el NOₓ vive pocas horas y lo emitido hace más de un día casi no aporta. El exceso de fin de año no es NOₓ viejo; es algo que el modelo no representa (capa de mezcla, fuentes de diciembre o fondo regional).
+- Las inversiones dependen poco del detalle del viento: con el de los aeropuertos dan lo mismo. Los estadísticos sí cambian (E7 16.75 → 18.04 ppb; el domingo de E6, 0.53 → 0.44).
+
+## Noviembre–diciembre de 2024: una temporada nueva
+
+Con los modelos congelados (`configs/seasons/`), en un año que no se usó para elegir nada. Primera corrida, con el 18 de noviembre y el 25 de diciembre contados por error como hábiles (se repite con los festivos corregidos):
+
+| Modelo | Error con estación oculta 2024 (2023) | Domingo ÷ hábil 2024 | Placebo |
+|---|---|---|---|
+| E7 | 15.3 (16.75) | 0.59 (0.46–0.75) | 1.04 ± 0.22 |
+| E6 | 13.8 (14.6) | 0.72 (0.62–0.92) | 1.02 ± 0.10 |
+| X4 | 13.6 (14.3) | 0.67 (0.60–0.79) | 1.01 ± 0.13 |
+| E2 | 12.1 (12.5) | 0.64 (0.54–0.72) | 0.98 ± 0.16 |
+| E5b | 11.5 (11.87) | 0.61 (0.42–0.80) | 0.93 ± 0.25 |
+
+Los modelos se sostienen en el año nuevo, y en 2024 las inversiones quedan mucho más cerca del tráfico (0.61–0.64 frente a 0.76–0.81): buena parte del sesgo de 2023 era de esa temporada.

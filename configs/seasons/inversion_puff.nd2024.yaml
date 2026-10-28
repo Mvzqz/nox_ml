@@ -1,0 +1,21 @@
+# inversion_puff frozen (configs/experiments/inversion_puff.yaml) on nov-dec 2024: a season not used to choose anything.
+name: inversion_puff.nd2024
+period:
+  start: '2024-11-01'
+  end: '2024-12-31'
+simat_hours:
+- 12
+- 17
+model:
+  name: inversion_puff
+  params:
+    max_age_h: 24
+    lifetime: oh
+    bootstrap_n: 200
+    bootstrap_level: 0.9
+    seed: 7
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.9
+  refits: 8

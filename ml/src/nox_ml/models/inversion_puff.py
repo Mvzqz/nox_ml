@@ -32,6 +32,7 @@ from nox_ml.models.base import ModelParams
 from nox_ml.models.inversion_plume import InversionPlume, PlumeInversionParams
 from nox_ml.physics.puff import (
     Trajectories,
+    WindField,
     cumulative_loss,
     fixed_lifetime,
     local_hour_profile,
@@ -47,6 +48,11 @@ class InversionPuffParams(PlumeInversionParams):
         "NOx loss of the inputs (`lifetime: oh` in configs/experiments/inversion_puff.yaml)",
     )
     tau_h: float = Field(default=12.0, gt=0, description="constant NOx lifetime (h), when lifetime is fixed")
+    wind_field: bool = Field(
+        default=False,
+        description="move each source with the wind interpolated from the stations at its location (IDW), "
+        "instead of the mean wind of the domain",
+    )
 
 
 @dataclass(frozen=True)
@@ -58,6 +64,7 @@ class PuffTransport:
     max_age_h: int
     lifetime: Literal["oh", "fixed"]
     tau_h: float
+    wind_field: bool = False
 
     def for_hours(
         self, hours: Sequence[HourData], history: History
@@ -79,7 +86,15 @@ class PuffTransport:
             survival = variable_lifetime(cumulative_loss(history.loss_rate, traj))
         else:
             survival = fixed_lifetime(self.tau_h)
-        transport = Transport(traj, survival, profile, self.max_age_h)
+        field = None
+        if self.wind_field:
+            if history.station_wind is None or history.station_xy is None:
+                raise ValueError(
+                    "wind_field needs the wind of each station: the inputs have no `station_wind`"
+                )
+            hours_index = pd.date_range(wind.index.min(), wind.index.max(), freq="h")
+            field = WindField.from_stations(history.station_wind.reindex(hours_index), history.station_xy)
+        transport = Transport(traj, survival, profile, self.max_age_h, field)
 
         def at(data: HourData, sources: Sources, no2_nox_ratio: float) -> HourJacobian:
             return jacobian_hour_puff(
@@ -96,11 +111,11 @@ class InversionPuff(InversionPlume):
     def transport(self) -> PuffTransport:
         p = self.params
         assert isinstance(p, InversionPuffParams)
-        return PuffTransport(p.max_age_h, p.lifetime, p.tau_h)
+        return PuffTransport(p.max_age_h, p.lifetime, p.tau_h, p.wind_field)
 
     def transport_key(self) -> tuple:
         """Puffs have no kernel identity: the transport and its lifetime are the key. Never equal to the
         plume's key, so the two never share cached Jacobians."""
         p = self.params
         assert isinstance(p, InversionPuffParams)
-        return ("inversion_puff", p.max_age_h, p.lifetime, p.tau_h)
+        return ("inversion_puff", p.max_age_h, p.lifetime, p.tau_h, p.wind_field)

@@ -42,15 +42,16 @@ def plume(
     v: ArrayLike,
     pbl: float,
     extra_sy: float = 0.0,
-    x_max: float = X_MAX,
+    x_max: ArrayLike = X_MAX,
     sigma_theta: float = SIGMA_THETA,
     u_min: float = U_MIN,
 ) -> tuple[Array, Array]:
     """Contribution of sources (xs, ys) at receptors (xr, yr) per 1 g/s.
 
-    `u`, `v` are scalars (one wind for the domain) or (receptors, sources) matrices. Returns the ground-level
-    concentration (g/m3) and the column (g/m2), both shaped (receptors, sources). Ground-level Gaussian
-    source, urban Briggs class B, mixing limited by the boundary layer `pbl` (m).
+    `u`, `v` (and `x_max`) are scalars (one wind for the domain) or arrays that broadcast to (receptors,
+    sources), e.g. one per source. Returns the ground-level concentration (g/m3) and the column (g/m2), both
+    shaped (receptors, sources). Ground-level Gaussian source, urban Briggs class B, mixing limited by the
+    boundary layer `pbl` (m).
     """
     mag = np.hypot(u, v)
     sp = speed(mag, u_min)
@@ -59,7 +60,7 @@ def plume(
     dy = yr[:, None] - ys[None, :]
     along = dx * ex + dy * ey
     cross = -dx * ey + dy * ex
-    ok = (along > 0) & (along < x_max)
+    ok = (along > 0) & (along < np.asarray(x_max))
     a = np.maximum(along, MIN_ALONG)
     sy = np.sqrt((0.32 * a / np.sqrt(1 + 0.0004 * a)) ** 2 + (a * sigma_theta) ** 2 + extra_sy**2)
     zeff = effective_height(along, pbl)
