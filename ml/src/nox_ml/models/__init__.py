@@ -9,6 +9,7 @@ from nox_ml.models.lognormal_map import LognormalMap
 from nox_ml.models.normalized_ratio import NormalizedRatio
 from nox_ml.models.references import Idw, Kriging
 from nox_ml.models.regularized_ls import RegularizedLs
+from nox_ml.models.residual_kriging import ResidualKriging
 from nox_ml.models.rf_deweather import RfDeweather
 
 REGISTRY: dict[str, type[Model]] = {
@@ -22,6 +23,7 @@ REGISTRY: dict[str, type[Model]] = {
     LognormalMap.name: LognormalMap,
     Idw.name: Idw,
     Kriging.name: Kriging,
+    ResidualKriging.name: ResidualKriging,
 }
 
 try:
