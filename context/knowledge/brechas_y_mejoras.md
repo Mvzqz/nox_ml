@@ -15,7 +15,8 @@ Valor = qué tan importante es la pregunta para quien la hace × cuántos usuari
 | 5 | CU3. Planear un piloto | Barato de construir y cambia cómo se diseñan las medidas: cuánto tiempo mantenerlas antes de juzgarlas | Media |
 | 6 | CU4. Seguimiento de la emisión | Valor continuo, pero depende de tener datos actualizados | Baja |
 | 7 | CU5. Contrastar el inventario | Valioso para pocos usuarios; exige detalle espacial y nivel absoluto | Baja–media |
-| 8 | CU6. Concentración sin estación | Hay alternativas mejores para concentración sola (interpolación, modelos de pronóstico) | Baja |
+| 8 | CU9. Simular un escenario | Responde la pregunta previa a decidir; es lo que la concentración sola no puede hacer. Requiere ancla del nivel absoluto y más detalle espacial | Baja |
+| 9 | CU6. Concentración sin estación | Hay alternativas mejores para concentración sola (interpolación, modelos de pronóstico) | Baja |
 
 ## Qué impide satisfacerlos
 
@@ -49,7 +50,7 @@ Factibilidad: alta (técnica conocida y datos disponibles), media (hay que proba
 | 10 | Datos de tráfico recientes (conteos públicos, índices de congestión) como validación | B9 | Media (depende del acceso) | 1–3 días | Medio | CU2, CU7 |
 | 11 | Separar orígenes (vialidades frente a industria) con trazadores (CO, SO₂) y perfiles horarios | B7 | Baja–media | 5+ días | Alto si funciona | CU5, CU8 |
 | 12 | Campo de viento variable (malla de viento o un modelo meteorológico) en lugar de un viento uniforme | B3 | Baja–media (una PINN del campo completo es mucho más cara) | 10+ días | Alto, en todos | Todos |
-| 13 | Replicar en otra ciudad con cobertura de TEMPO | — | Media | 3–5 días por ciudad | Medio (amplía usuarios) | Otras ciudades |
+| 13 | Replicar en otra ciudad con cobertura de TEMPO; antes, clasificar ciudades con la regla del límite de detección (ver "Otras ciudades") | — | Media (clasificar: alta) | Clasificar: 1–2 días; replicar: 3–5 días por ciudad | Medio–alto: el valor es mayor en ciudades sin alternativas | Otras ciudades |
 | 14 | Total de la ciudad con el método de divergencia de flujo o el ajuste de pluma sobre TEMPO, como ancla del nivel absoluto y comparación independiente ([alternativas.md](alternativas.md)) | B4 | Alta (método publicado, datos ya descargados) | 2–3 días | Alto: resuelve el nivel absoluto a nivel ciudad y nos compara con el método que podría sustituirnos | CU5, CU8, credibilidad |
 
 Ruta sugerida: la mejora 14 es la ancla del nivel absoluto más barata y conviene adelantarla a la 7. Las mejoras 1 a 3 son baratas y convierten capacidades que ya existen en herramientas (una semana de trabajo en total con la 4). Con la 6 llegan a usuarios. La 5 y la 8 son las que más amplían el valor después; la 11 y la 12 son investigación.
@@ -92,6 +93,28 @@ Reutilizan lo que ya existe o responden preguntas nuevas con los mismos datos.
 | 7 | Boletín mensual | Tras los datos continuos | Alto y continuo |
 
 Antes de publicar el conjunto de datos, revisar la licencia de cada fuente en `data/README.md` (los datos de movilidad de Google y Apple no se pueden redistribuir sin verificar sus términos).
+## Otras ciudades (mejora 13)
+
+**Qué dice la investigación:**
+- **Los Ángeles,** probada con datos reales por tener el mejor paquete (viento HRRR de 3 km, tráfico PeMS, estudios publicados): con 16–17° de error de viento frente a 28–32° en la Ciudad de México, **un mejor viento no mejoró la inversión** (13.6 → 14.1 ppb en estación oculta). Lo que mejoró fue pasar a puffs, igual que aquí. Su domingo (0.52 frente a 0.67 de la literatura) muestra la misma subestimación.
+- **El límite de detección lo fija el modelo de transporte, no la red:** con 24, 15 o 9 estaciones queda en ±0.18–0.19, y empeorar el viento 20–30° no lo cambia. TEMPO pesa para el reparto por zonas.
+- **Regla para predecir el límite en una ciudad nueva:** cambio mínimo detectable ≈ 2 · CV · √(1/k + 1/(n − k)), con CV la variación día a día del estimador en días hábiles, k los días con el cambio y n los días totales. Ajusta a la Ciudad de México y Bogotá; en Los Ángeles (no usada para ajustar) resultó conservadora (predijo ±0.20, se midió ±0.14).
+- **Bogotá** (sin TEMPO): Día sin carro con CO −23 % y NOₓ sin cambio, placebo ±9 %.
+
+**Dónde vale más:** en Estados Unidos el método rendiría igual o algo mejor, pero allí sobran alternativas (inventarios detallados, HRRR, inversiones con modelos químicos y TEMPO). En ciudades mexicanas dentro de la cobertura de TEMPO rendiría parecido o algo peor, pero casi no hay alternativas; ahí el valor es mayor.
+
+**Por tamaño de ciudad:**
+
+| Tipo | Qué serviría | Qué no |
+|---|---|---|
+| Metrópoli mediana (1–5 millones, red de 10 o más estaciones; Monterrey, Guadalajara) | Todo el método a nivel ciudad, quizá algunas regiones | Detalle fino |
+| Ciudad chica con red mínima (3–9 estaciones) | Cambios de toda la ciudad con E6 y E7 y diagnóstico de episodios, con límites más altos | Regiones, escenarios |
+| Ciudad sin estaciones de NOₓ | Solo métodos de satélite y viento, si la pluma se distingue del fondo | Todo lo que necesita estaciones |
+| Ciudad con una fuente puntual dominante (Salamanca, Tula) | Satélite y viento para la fuente, estaciones para la ciudad | — |
+
+Limitantes en ciudades chicas: menos señal frente al ruido de TEMPO y al fondo regional (el estimador varía más y el límite crece), pocos píxeles (~2 × 4.5 km) por ciudad, redes con huecos o sin NOₓ, y pocos eventos o datos de tráfico para validar.
+
+**Experimento propuesto (barato, sin construir nada):** listar en SINAICA las ciudades dentro de la cobertura de TEMPO con estaciones de NOₓ y datos horarios completos, calcular el CV del estimador normalizado con unos meses de cada red y aplicar la regla para clasificarlas por el cambio sostenido que podrían detectar en una temporada. Empezar por Monterrey y Guadalajara.
 
 ## Riesgos de la ruta
 
