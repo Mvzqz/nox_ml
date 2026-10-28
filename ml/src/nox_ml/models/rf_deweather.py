@@ -47,7 +47,7 @@ from typing import ClassVar, Literal, Self
 import numpy as np
 import pandas as pd
 from pydantic import Field
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor
 
 from nox_ml.data.inputs import Inputs
 from nox_ml.inversion.linear import BACKGROUND_STATION, DAY_TYPE_NAMES, HOLIDAYS
@@ -65,14 +65,12 @@ WEATHER = [
 ]  # resampled to deweather
 FLOOR_ABOVE_BACKGROUND_PPB = 1.0  # NOx above the background is floored here before the log (noise, clean air)
 
+type Estimator = RandomForestRegressor | HistGradientBoostingRegressor
 
-class RfDeweatherParams(ModelParams):
-    n_estimators: int = Field(200, ge=1, description="trees of the forest")
-    max_depth: int | None = Field(
-        None, ge=1, description="maximum depth of a tree; null grows until the leaves are pure"
-    )
-    min_samples_leaf: int = Field(3, ge=1, description="minimum station rows in a leaf")
-    max_features: float = Field(1.0, gt=0, le=1, description="fraction of the features tried at each split")
+
+class DeweatherParams(ModelParams):
+    """What every deweathering model shares, whatever its estimator."""
+
     background_ppb: float = Field(
         BACKGROUND_STATION[0],
         ge=0,
@@ -83,6 +81,15 @@ class RfDeweatherParams(ModelParams):
     )
     bootstrap_n: int = Field(10, ge=1, description="refits on days drawn with replacement, for the intervals")
     bootstrap_level: float = Field(0.90, gt=0, lt=1, description="central level of the intervals")
+
+
+class RfDeweatherParams(DeweatherParams):
+    n_estimators: int = Field(200, ge=1, description="trees of the forest")
+    max_depth: int | None = Field(
+        None, ge=1, description="maximum depth of a tree; null grows until the leaves are pure"
+    )
+    min_samples_leaf: int = Field(3, ge=1, description="minimum station rows in a leaf")
+    max_features: float = Field(1.0, gt=0, le=1, description="fraction of the features tried at each split")
 
 
 def ventilation_features(hours: pd.DataFrame) -> pd.DataFrame:
@@ -145,13 +152,13 @@ class RfDeweather:
 
     def __init__(self, params: RfDeweatherParams | None = None) -> None:
         self.params: ModelParams = params or self.Params()
-        self._forest: RandomForestRegressor | None = None
+        self._forest: Estimator | None = None
         self._stations: list[str] = []
         self._fit_rows: pd.DataFrame | None = None
         self._smearing = 1.0  # Duan's factor: back-transforms the mean of the log to a mean
 
-    def _forest_params(self) -> RfDeweatherParams:
-        assert isinstance(self.params, RfDeweatherParams)
+    def _forest_params(self) -> DeweatherParams:
+        assert isinstance(self.params, DeweatherParams)
         return self.params
 
     def _target(self, rows: pd.DataFrame) -> np.ndarray:
@@ -159,8 +166,10 @@ class RfDeweather:
         above = rows["nox"].to_numpy() - self._forest_params().background_ppb
         return np.log(np.maximum(above, FLOOR_ABOVE_BACKGROUND_PPB))
 
-    def _new_forest(self, oob_score: bool = False) -> RandomForestRegressor:
-        p = self._forest_params()
+    def _new_forest(self, oob_score: bool = False) -> Estimator:
+        """An unfitted estimator; the extension point of the subclasses that change it."""
+        p = self.params
+        assert isinstance(p, RfDeweatherParams)
         return RandomForestRegressor(
             n_estimators=p.n_estimators,
             max_depth=p.max_depth,
@@ -171,10 +180,15 @@ class RfDeweather:
             n_jobs=-1,
         )
 
+    def _log_residual(self, forest: Estimator, design: pd.DataFrame, target: np.ndarray) -> np.ndarray:
+        """Residual of the log target that the smearing factor is learnt from (out of bag for the forest)."""
+        assert isinstance(forest, RandomForestRegressor)
+        return target - forest.oob_prediction_
+
     @property
     def n_params(self) -> int:
         """Nodes of all the trees."""
-        if self._forest is None:
+        if not isinstance(self._forest, RandomForestRegressor):
             raise RuntimeError("fit the model first")
         return int(sum(tree.tree_.node_count for tree in self._forest.estimators_))
 
@@ -206,9 +220,10 @@ class RfDeweather:
         self._stations = sorted(set(rows["station"]))
         self._fit_rows = rows
         target = self._target(rows)
-        forest = self._new_forest(oob_score=True).fit(self._matrix(rows), target)
+        design = self._matrix(rows)
+        forest = self._new_forest(oob_score=True).fit(design, target)
         self._forest = forest
-        residual = target - forest.oob_prediction_
+        residual = self._log_residual(forest, design, target)
         self._smearing = float(np.nanmean(np.exp(residual))) if np.isfinite(residual).any() else 1.0
         return self
 
@@ -222,18 +237,17 @@ class RfDeweather:
             PREDICTION_COLUMNS
         ]
 
-    def _indices(
-        self, forest: RandomForestRegressor, design: pd.DataFrame, weights: np.ndarray
-    ) -> np.ndarray:
+    def _indices(self, forest: Estimator, design: pd.DataFrame, weights: np.ndarray) -> np.ndarray:
         """Emission index of each day type over the weekday (geometric means). Each row of the fit gets the
         weather of `weather_samples` rows drawn from the period, and the forest's predictions are averaged per
         row; the `weights` (1 per row, or the counts of a bootstrap over days) average them by day type."""
         assert self._fit_rows is not None
         p = self._forest_params()
         rng = np.random.default_rng(p.seed)
-        draws = design[WEATHER].to_numpy()[rng.choice(len(design), p.weather_samples)]
+        weather = [column for column in WEATHER if column in design]  # a subclass may drop features
+        draws = design[weather].to_numpy()[rng.choice(len(design), p.weather_samples)]
         stacked = pd.concat([design] * p.weather_samples, ignore_index=True)
-        stacked[WEATHER] = np.repeat(draws, len(design), axis=0)
+        stacked[weather] = np.repeat(draws, len(design), axis=0)
         deweathered = forest.predict(stacked).reshape(p.weather_samples, len(design)).mean(axis=0)
         kinds = self._fit_rows["day_type"].to_numpy()
         level = np.array(

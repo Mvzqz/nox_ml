@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from hypothesis import settings
+from threadpoolctl import threadpool_limits
 
 from nox_ml.data.inputs import Inputs
 from nox_ml.inversion.jacobian import Receptors
@@ -17,6 +18,15 @@ settings.register_profile("nox", deadline=None)
 settings.load_profile("nox")
 
 HOURS = 6  # afternoon hours per day
+
+
+@pytest.fixture(scope="session", autouse=True)
+def single_thread_native_pools():
+    """One OpenMP/BLAS thread per test process: the fixtures are tiny, and under xdist every worker spawning
+    a thread per core (the forest's `n_jobs=-1` on top of boosting's OpenMP) oversubscribes the machine and a
+    suite of minutes takes much longer. Only the tests are limited; the models keep their defaults."""
+    with threadpool_limits(limits=1):
+        yield
 
 
 def hourly_series(
