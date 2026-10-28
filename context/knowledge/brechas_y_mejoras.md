@@ -15,7 +15,8 @@ Valor = qué tan importante es la pregunta para quien la hace × cuántos usuari
 | 5 | CU3. Planear un piloto | Barato de construir y cambia cómo se diseñan las medidas: cuánto tiempo mantenerlas antes de juzgarlas | Media |
 | 6 | CU4. Seguimiento de la emisión | Valor continuo, pero depende de tener datos actualizados | Baja |
 | 7 | CU5. Contrastar el inventario | Valioso para pocos usuarios; exige detalle espacial y nivel absoluto | Baja–media |
-| 8 | CU6. Concentración sin estación | Hay alternativas mejores para concentración sola (interpolación, modelos de pronóstico) | Baja |
+| 8 | CU9. Simular un escenario | Responde la pregunta previa a decidir; es lo que la concentración sola no puede hacer. Requiere ancla del nivel absoluto y más detalle espacial | Baja |
+| 9 | CU6. Concentración sin estación | Hay alternativas mejores para concentración sola (interpolación, modelos de pronóstico) | Baja |
 
 ## Qué impide satisfacerlos
 
