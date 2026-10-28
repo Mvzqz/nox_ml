@@ -50,8 +50,9 @@ Factibilidad: alta (técnica conocida y datos disponibles), media (hay que proba
 | 11 | Separar orígenes (vialidades frente a industria) con trazadores (CO, SO₂) y perfiles horarios | B7 | Baja–media | 5+ días | Alto si funciona | CU5, CU8 |
 | 12 | Campo de viento variable (malla de viento o un modelo meteorológico) en lugar de un viento uniforme | B3 | Baja–media (una PINN del campo completo es mucho más cara) | 10+ días | Alto, en todos | Todos |
 | 13 | Replicar en otra ciudad con cobertura de TEMPO | — | Media | 3–5 días por ciudad | Medio (amplía usuarios) | Otras ciudades |
+| 14 | Total de la ciudad con el método de divergencia de flujo o el ajuste de pluma sobre TEMPO, como ancla del nivel absoluto y comparación independiente ([alternativas.md](alternativas.md)) | B4 | Alta (método publicado, datos ya descargados) | 2–3 días | Alto: resuelve el nivel absoluto a nivel ciudad y nos compara con el método que podría sustituirnos | CU5, CU8, credibilidad |
 
-Ruta sugerida: las mejoras 1 a 3 son baratas y convierten capacidades que ya existen en herramientas (una semana de trabajo en total con la 4). Con la 6 llegan a usuarios. La 5 y la 8 son las que más amplían el valor después; la 11 y la 12 son investigación.
+Ruta sugerida: la mejora 14 es la ancla del nivel absoluto más barata y conviene adelantarla a la 7. Las mejoras 1 a 3 son baratas y convierten capacidades que ya existen en herramientas (una semana de trabajo en total con la 4). Con la 6 llegan a usuarios. La 5 y la 8 son las que más amplían el valor después; la 11 y la 12 son investigación.
 
 ## Riesgos de la ruta
 
