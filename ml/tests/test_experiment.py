@@ -163,6 +163,7 @@ def test_the_stored_config_includes_the_defaults(tmp_path, fake_data):
             "u_min_ms": 1.0,
             "bootstrap_n": 8,
             "bootstrap_level": 0.9,
+            "bootstrap_block_days": 7,
             "tempo_sigma_mult": 1.0,
             "traffic_constraint": False,
             "traffic_sd": 0.04,
