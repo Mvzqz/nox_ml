@@ -104,3 +104,35 @@ def test_a_measure_in_an_atypical_period_carries_a_warning(base):
     assert result["atypical_share"] == 1.0
     assert "Advertencia" in products.render_measure(result, "Fin de año", ("2023-11-06", "2023-12-31"))
     assert sheet(base)["atypical_share"] == 0.0
+
+
+def test_a_few_atypical_days_get_a_note_not_a_warning(base):
+    result = products.measure_result(base, make_model, WEEK, BUSINESS_MEASURES, PLACEBO) | {
+        "atypical_share": 0.2
+    }
+
+    text = products.render_measure(result, "Prueba", ("2023-11-06", "2023-12-31"))
+
+    assert "Nota: 20%" in text and "Advertencia" not in text
+
+
+def test_two_equal_seasons_keep_the_change_and_narrow_the_range():
+    season = {"change": -0.2, "range": (-0.35, -0.02), "n_days": 9, "atypical_share": 0.0}
+
+    one = products.combine_seasons([season])
+    two = products.combine_seasons([season, season], claim=-0.2)
+
+    assert two["change"] == pytest.approx(-0.2) and two["weights"] == [0.5, 0.5]
+    assert two["range"][1] - two["range"][0] < one["range"][1] - one["range"][0]
+    assert two["detectable_drop"] < one["detectable_drop"]
+    assert two["claim"] == {"change": -0.2, "fits": True}
+    text = products.render_seasons(
+        [season, season], two, "Dos temporadas", [("2023-11-01", "2023-12-31"), ("2024-11-01", "2024-12-31")]
+    )
+    assert "18 días hábiles en 2 temporadas" in text and "| 2024-11-01 a 2024-12-31 | 9 |" in text
+
+
+def test_seasons_after_2024_read_openaq():
+    assert products.sources_for("2024-11-01", "2024-12-31").wind == "network"
+    later = products.sources_for("2025-02-15", "2025-05-31")
+    assert later.simat_nox == "openaq_nox_2025-02-15_2025-06-01.parquet" and later.wind == "airports"

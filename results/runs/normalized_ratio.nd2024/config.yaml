@@ -1,0 +1,19 @@
+name: normalized_ratio.nd2024
+period:
+  start: '2024-11-01'
+  end: '2024-12-31'
+simat_hours:
+- 12
+- 17
+data_dir: data
+model:
+  name: normalized_ratio
+  params:
+    seed: 7
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.9
+  refits: 8
+exclude_atypical: true
+stations: simat

@@ -62,12 +62,15 @@ def qc_tempo(
     raw_dir: Annotated[Path, typer.Option(help="TEMPO granule subsets.")] = RAW / "tempo",
     simat_dir: Annotated[Path, typer.Option(help="SIMAT raw files (station catalog).")] = RAW / "simat",
     out_dir: Annotated[Path, typer.Option(help="Where tables are read and written.")] = INTERIM,
+    stations: Annotated[
+        str, typer.Option(help="Station table in out_dir: simat_nox.parquet, or an OpenAQ one after 2024.")
+    ] = "simat_nox.parquet",
 ) -> None:
     """Check TEMPO NO2 pixels against the domain, clouds and station NO2; write tempo_pixels parquet.
 
-    Needs simat_nox.parquet in out_dir (run qc-simat first).
+    Needs the station table in out_dir (run qc-simat, or fetch-openaq after 2024, first).
     """
-    checks = tempo.run_qc(raw_dir, out_dir, simat.load_catalog(simat_dir), start, end)
+    checks = tempo.run_qc(raw_dir, out_dir, simat.load_catalog(simat_dir), start, end, stations)
     typer.echo(render(checks))
 
 
@@ -375,30 +378,56 @@ def lockdown(
     typer.echo(f"Written to {out}/")
 
 
+def _window(span: str) -> tuple[str, str]:
+    """``START:END`` as two ISO dates."""
+    start, end = span.split(":")
+    return pd.Timestamp(start).date().isoformat(), pd.Timestamp(end).date().isoformat()
+
+
 @app.command("ficha-medida")
 def ficha_medida(
     days: Annotated[
         list[str], typer.Option(help="Days of the measure, YYYY-MM-DD[:YYYY-MM-DD] (repeatable).")
     ],
-    data: Annotated[str, typer.Option(help="Season window START:END, e.g. 2023-11-01:2023-12-31.")],
+    data: Annotated[
+        list[str],
+        typer.Option(
+            help="Season window START:END (repeatable: one per season), e.g. 2023-11-01:2023-12-31."
+        ),
+    ],
     title: Annotated[str, typer.Option(help="Title of the sheet (Spanish), e.g. 'Hoy No Circula sabatino'.")],
     claim: Annotated[float | None, typer.Option(help="Announced change as a fraction, e.g. -0.2.")] = None,
     data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
     out_dir: Annotated[Path, typer.Option(help="Where the sheet is written.")] = Path("runs/fichas"),
 ) -> None:
-    """Sheet: did the emission change on these days? With the estimator validated for changes (E7)."""
+    """Sheet: did the emission change on these days? With the estimator validated for changes (E7).
+
+    With several seasons, each one's days are compared with its own normal days and the changes are
+    combined; seasons after 2024 read the OpenAQ tables (`fetch-openaq`)."""
     try:
         event = parse_days(days)
-        start, end = (pd.Timestamp(day).date().isoformat() for day in data.split(":"))
+        windows = [_window(span) for span in data]
     except ValueError as error:
-        typer.echo(f"Invalid days {days} or window {data}: {error}", err=True)
+        typer.echo(f"Invalid days {days} or windows {data}: {error}", err=True)
         raise typer.Exit(2) from error
-    inputs = products.season_inputs(data_dir, start, end)
-    excluded = products.reference_exclusions(data_dir, start, end, event)
-    result = products.measure_result(inputs, products.estimator("change"), event, excluded, claim=claim)
+    results = []
+    for start, end in windows:
+        season = event[(event >= start) & (event <= end)]
+        if season.empty:
+            typer.echo(f"No measure day in {start}:{end}", err=True)
+            raise typer.Exit(2)
+        inputs = products.season_inputs(data_dir, start, end, products.sources_for(start, end))
+        excluded = products.reference_exclusions(data_dir, start, end, season)
+        results.append(
+            products.measure_result(inputs, products.estimator("change"), season, excluded, claim=claim)
+        )
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"medida_{event[0]:%Y-%m-%d}_{event[-1]:%Y-%m-%d}.md"
-    out.write_text(products.render_measure(result, title, (start, end)))
+    if len(results) == 1:
+        out.write_text(products.render_measure(results[0], title, windows[0]))
+    else:
+        combined = products.combine_seasons(results, claim=claim)
+        out.write_text(products.render_seasons(results, combined, title, windows))
     typer.echo(out.read_text())
     typer.echo(f"Written to {out}")
 
@@ -412,7 +441,7 @@ def ficha_dias(
 ) -> None:
     """Sheet: how many business days a measure needs to show a drop, from the variation of the season."""
     start, end = (pd.Timestamp(day).date().isoformat() for day in data.split(":"))
-    inputs = products.season_inputs(data_dir, start, end)
+    inputs = products.season_inputs(data_dir, start, end, products.sources_for(start, end))
     normal = events.split_days(
         inputs,
         pd.DatetimeIndex([]),

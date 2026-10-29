@@ -1,4 +1,4 @@
-# pinn_puff frozen (configs/experiments/pinn_puff.yaml) on nov-dec 2024: a season not used to choose anything.
+# pinn_puff frozen (configs/experiments/pinn_puff.yaml) on nov-dec 2024: a season not used to choose anything; atypical periods left out.
 name: pinn_puff.nd2024
 period:
   start: '2024-11-01'
@@ -29,3 +29,4 @@ placebo:
   seed: 3
   level: 0.9
   refits: 8
+exclude_atypical: true

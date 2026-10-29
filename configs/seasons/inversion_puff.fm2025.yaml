@@ -1,0 +1,23 @@
+# inversion_puff frozen (configs/experiments/inversion_puff.yaml) on feb-may 2025, with OpenAQ stations and airport weather: a season not used to choose anything; atypical periods left out.
+name: inversion_puff.fm2025
+period:
+  start: '2025-02-15'
+  end: '2025-05-31'
+simat_hours:
+- 12
+- 17
+model:
+  name: inversion_puff
+  params:
+    max_age_h: 24
+    lifetime: oh
+    bootstrap_n: 200
+    bootstrap_level: 0.9
+    seed: 7
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.9
+  refits: 8
+exclude_atypical: true
+stations: openaq

@@ -1,13 +1,13 @@
 # Fichas: cada pregunta con su estimador, y su validación
 
-Fecha: 2026-10-29. Las capacidades únicas del sistema ([capacidades.md](capacidades.md), filas 1–3) ya existían en la línea de comandos; las fichas las presentan en una página en español, para alguien fuera del equipo. Código: `nox_ml.validation.products`.
+Fecha: 2026-10-29 (actualizado con las temporadas 2024–2026 y la calibración del rango). Las capacidades únicas del sistema ([capacidades.md](capacidades.md), filas 1–3) ya existían en la línea de comandos; las fichas las presentan en una página en español, para alguien fuera del equipo. Código: `nox_ml.validation.products`.
 
 ## Qué estimador responde cada pregunta
 
 | Pregunta | Estimador | Por qué |
 |---|---|---|
 | ¿Cambió la emisión entre periodos? (una medida, un anuncio) | E7, normalizado por meteorología | Midió el confinamiento de 2020 (−50 %, esperado −40 a −60 %) con el placebo de 2019 en 1; las inversiones sin TEMPO fallan ese placebo y con TEMPO tienen el sesgo del domingo ([sesgo_domingo.md](sesgo_domingo.md)). Solo usa estaciones: corre también donde falta TEMPO |
-| Ciclo semanal (domingo ÷ hábil) | E6, bosque aleatorio | Sin fin de año y en nov–dic 2024 queda en el rango del tráfico |
+| Ciclo semanal (domingo ÷ hábil) | X4, boosting | 0.57–0.58 en las cuatro temporadas de 2024–2026; el bosque (E6) varió entre 0.56 y 0.67 y las inversiones exageran el domingo ([temporadas.md](temporadas.md)) |
 | Concentración donde no hay estación | Regresión-kriging sobre E5b | 10.2 ppb, la mejor de la tabla |
 
 ## Las fichas
@@ -21,7 +21,7 @@ El rango sale de eventos falsos de la misma duración sacados de días normales 
 
 | Lo que afirma la ficha | Prueba | Resultado | ¿Pasa? |
 |---|---|---|---|
-| El rango contiene el cambio real | 200 conjuntos de 9 días normales de nov–dic 2023, con bajas inyectadas de 0, 10, 20, 30 y 36 % | Lo contiene 84–87 % de las veces (nominal 90 %) | En el borde: la ficha dice "~85 %" |
+| El rango contiene el cambio real | 200 conjuntos de 9 días normales de nov–dic 2023, con bajas inyectadas de 0, 10, 20, 30 y 36 % | Lo contenía 84–87 % de las veces (nominal 90 %) | Corregido: ver la calibración abajo |
 | El cambio mínimo detectable | Las mismas inyecciones, con la baja igual al mínimo que reporta la ficha (36 % con 9 días) | Se detecta 78 % de las veces (prometido: 80 %) | Sí |
 | Falsas alarmas | Inyección de 0 % | 4 % de "baja detectada" (esperado ~5 %) | Sí |
 | Veredicto en un cambio real | Confinamiento de 2020 (fases 2 y 3 frente a la base; 42 días contra 29, modo extrapolado) | Baja detectada: −50 % (−57 a −41 %) | Sí |
@@ -30,7 +30,32 @@ El rango sale de eventos falsos de la misma duración sacados de días normales 
 | Periodos atípicos | Vacaciones de fin de año de 2023 | La ficha mide +40 % y advierte que es un periodo donde el método confunde acumulación con emisión | Sí, con la advertencia |
 | Pruebas automáticas | Datos sintéticos con baja impuesta y sin cambio; modo extrapolado; advertencia; inversión de la calculadora | 9 pruebas | Sí |
 
-Pendiente: mostrar dos fichas a alguien fuera del equipo y pedirle que explique qué concluye (comprensión).
+### Calibración del rango
+
+En 960 inyecciones (4 temporadas: nov–dic 2023, nov–dic 2024, feb–may 2025 y nov–dic 2025; 120 conjuntos de 9 días por temporada con bajas de 0 y 20 %), el rango del placebo contenía la verdad el 88 % de las veces, con 6.5 % de falsas alarmas. Ensanchado 5 % en escala logarítmica alrededor de su centro (`products.RANGE_WIDENING`):
+
+| Ensanchamiento | Contiene la verdad | Falsas alarmas | Detecta una baja de 20 % |
+|---|---|---|---|
+| Ninguno | 88 % | 6.5 % | 48 % |
+| **5 % (el de la ficha)** | **91 %** (89–92 % por temporada) | **5.0 %** | 46 % |
+| 10 % | 92 % | 4.0 % | 44 % |
+
+Aplica al modo placebo; el modo extrapolado no se pudo calibrar así (no hay días normales suficientes).
+
+### Varias temporadas
+
+`ficha-medida` acepta varias temporadas (`--data` repetido): cada una se compara con sus propios días normales y los cambios se combinan pesando cada temporada por su precisión (inverso de la varianza en escala logarítmica). Validación con inyecciones en nov–dic 2023 y nov–dic 2024 (150 repeticiones, 9 días por temporada):
+
+| Baja inyectada | El rango combinado contiene la verdad | Se detecta la baja |
+|---|---|---|
+| 0 % | 87 % | 6 % (falsa alarma) |
+| 10 % | 88 % | 37 % |
+| 20 % (el mínimo que reporta la ficha combinada) | 89 % | 78 % |
+| 30 % | 87 % | 99 % |
+
+Con dos temporadas, el mínimo detectable con 9 días por temporada baja de 36 % y 26 % (cada una sola) a 20 %; con las seis de 2023–2026, a 14 % ([temporadas.md](temporadas.md)). Las temporadas desde 2025 leen las estaciones de OpenAQ y el viento de los aeropuertos (`sources_for`).
+
+Pendiente: la prueba de comprensión con tres personas fuera del equipo; protocolo, fichas y registro en `context/management/prueba_fichas/`.
 
 ## Lo que muestran las fichas de ejemplo
 

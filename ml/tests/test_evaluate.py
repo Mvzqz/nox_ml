@@ -36,7 +36,7 @@ def loaded(monkeypatch, make_inputs):
     """The periods `load_inputs` is asked for, with the synthetic inputs in place of the real data."""
     asked = []
 
-    def load(data_dir, start, end, hours):
+    def load(data_dir, start, end, hours, sources):
         asked.append((start, end))
         return make_inputs()
 

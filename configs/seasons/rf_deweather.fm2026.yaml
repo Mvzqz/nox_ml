@@ -1,0 +1,27 @@
+# rf_deweather frozen (configs/experiments/rf_deweather.yaml) on feb-may 2026, with OpenAQ stations and airport weather: a season not used to choose anything; atypical periods left out.
+name: rf_deweather.fm2026
+period:
+  start: '2026-02-15'
+  end: '2026-05-31'
+simat_hours:
+- 12
+- 17
+model:
+  name: rf_deweather
+  params:
+    n_estimators: 200
+    max_depth: null
+    min_samples_leaf: 3
+    max_features: 1.0
+    seed: 7
+    background_ppb: 5.0
+    weather_samples: 20
+    bootstrap_n: 10
+    bootstrap_level: 0.9
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.9
+  refits: 8
+exclude_atypical: true
+stations: openaq

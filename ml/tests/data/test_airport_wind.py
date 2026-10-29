@@ -24,6 +24,23 @@ def test_the_reports_of_an_hour_are_averaged_per_airport_then_over_airports_and_
     assert wind.loc["2025-03-01 18:00", "v"] == pytest.approx(-speed / 2 * 0.5)
 
 
+def test_an_hour_of_calm_reports_only_has_no_direction_and_is_left_out():
+    calm = pd.DataFrame(
+        {"valid": ["2025-03-25 17:46", "2025-03-25 18:46"], "sknt": [0.0, 4.0], "drct": [0.0, 180.0]}
+    )
+
+    wind = airport_wind([calm, calm.assign(sknt=[0.0, 0.0])])
+
+    assert list(wind.index) == [pd.Timestamp("2025-03-25 18:00")]  # one calm airport only halves it
+    assert wind.loc["2025-03-25 18:00", "v"] > 0
+
+
+def test_two_airports_blowing_against_each_other_give_no_direction():
+    south = pd.DataFrame({"valid": ["2025-03-25 17:46"], "sknt": [3.0], "drct": [170.0]})
+
+    assert airport_wind([south, south.assign(drct=[350.0])]).empty
+
+
 def test_the_airport_chemistry_takes_ozone_from_the_stations_and_weather_from_the_airports():
     stations = pd.DataFrame(
         {
