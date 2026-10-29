@@ -270,7 +270,8 @@ def domain_wind(wind: pd.DataFrame, stations: Sequence[str]) -> pd.DataFrame:
 def airport_wind(metar: Sequence[pd.DataFrame], factor: float = AIRPORT_WIND_FACTOR) -> pd.DataFrame:
     """Hourly wind of the domain from airport METAR reports (``valid`` UTC, ``sknt`` knots, ``drct``
     degrees from): the vector mean of each airport's reports of the hour, averaged over airports and scaled
-    by `factor` (``u``, ``v`` in m/s, blowing towards), indexed by ``h``, the start of the hour."""
+    by `factor` (``u``, ``v`` in m/s, blowing towards), indexed by ``h``, the start of the hour. Hours without
+    a direction (calm, or opposite winds that cancel) are left out."""
     hourly = []
     for reports in metar:
         m = reports.dropna(subset=["sknt", "drct"])
@@ -283,7 +284,10 @@ def airport_wind(metar: Sequence[pd.DataFrame], factor: float = AIRPORT_WIND_FAC
             }
         )
         hourly.append(frame.groupby("h")[["u", "v"]].mean())
-    return pd.concat(hourly).groupby(level=0).mean() * factor
+    wind = pd.concat(hourly).groupby(level=0).mean() * factor
+    # an hour of calm reports, or of airports blowing exactly against each other, has no direction, and a
+    # plume without one reaches every station
+    return wind[np.hypot(wind["u"], wind["v"]) > 1e-6]
 
 
 def airport_chemistry(
@@ -435,7 +439,9 @@ def load_inputs(
         else:  # the reference April from SIMAT, the window from the station table and the airports
             reference = load_chemistry(data_dir / "raw" / "simat", [CHEMISTRY_REF_YEAR], ids)
             metar = [pd.read_csv(data_dir / "raw" / "metar" / name) for name in sources.metar]
-            raw = pd.concat([reference, airport_chemistry(station_table, metar, ids)]).sort_index()
+            airports = airport_chemistry(station_table, metar, ids)
+            # the airport reports span 2024-2026: SIMAT keeps the reference year
+            raw = pd.concat([reference, airports[~airports.index.isin(reference.index)]]).sort_index()
         chem = fill_chemistry(raw)
         chemistry, loss_rate = chem.loc[window], chemistry_loss_rate(chem).loc[window]
     return Inputs(

@@ -1,4 +1,4 @@
-# normalized_ratio frozen (configs/experiments/normalized_ratio.yaml) on nov-dec 2024: a season not used to choose anything.
+# normalized_ratio frozen (configs/experiments/normalized_ratio.yaml) on nov-dec 2024: a season not used to choose anything; atypical periods left out.
 name: normalized_ratio.nd2024
 period:
   start: '2024-11-01'
@@ -15,3 +15,4 @@ placebo:
   seed: 3
   level: 0.9
   refits: 8
+exclude_atypical: true
