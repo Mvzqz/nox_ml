@@ -187,17 +187,25 @@ def load_pixels(raw_dir: Path, start: str, end: str) -> pd.DataFrame:
     return clean_pixels(pd.concat([read_granule(f) for f in files], ignore_index=True))
 
 
-def run_qc(raw_dir: Path, out_dir: Path, catalog: pd.DataFrame, start: str, end: str) -> list[Check]:
+def run_qc(
+    raw_dir: Path,
+    out_dir: Path,
+    catalog: pd.DataFrame,
+    start: str,
+    end: str,
+    stations_file: str = "simat_nox.parquet",
+) -> list[Check]:
     """Check TEMPO pixels and write `tempo_pixels_<start>_<end>.parquet` to `out_dir`.
 
-    The station comparison needs `simat_nox.parquet` in `out_dir` (from `nox-ml qc-simat`) and the SIMAT
-    catalog for station coordinates.
+    The station comparison needs the station table `stations_file` in `out_dir` (`simat_nox.parquet` from
+    `nox-ml qc-simat`, or an OpenAQ table from `nox-ml fetch-openaq` after 2024) and the SIMAT catalog for
+    station coordinates.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     px = load_pixels(raw_dir, start, end)
     checks = [Check(None, f"TEMPO NO2 L2 V04, {start} to {end}"), *pixel_checks(px)]
 
-    no2 = pd.read_parquet(out_dir / "simat_nox.parquet", columns=["id_station", "utc", "NO2"])
+    no2 = pd.read_parquet(out_dir / stations_file, columns=["id_station", "utc", "NO2"])
     stations = catalog[catalog["in_domain"]]
     checks += pair_checks(match_stations(px[px["valid"]], no2, stations))
 

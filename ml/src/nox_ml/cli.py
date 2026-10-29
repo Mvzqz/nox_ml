@@ -62,12 +62,15 @@ def qc_tempo(
     raw_dir: Annotated[Path, typer.Option(help="TEMPO granule subsets.")] = RAW / "tempo",
     simat_dir: Annotated[Path, typer.Option(help="SIMAT raw files (station catalog).")] = RAW / "simat",
     out_dir: Annotated[Path, typer.Option(help="Where tables are read and written.")] = INTERIM,
+    stations: Annotated[
+        str, typer.Option(help="Station table in out_dir: simat_nox.parquet, or an OpenAQ one after 2024.")
+    ] = "simat_nox.parquet",
 ) -> None:
     """Check TEMPO NO2 pixels against the domain, clouds and station NO2; write tempo_pixels parquet.
 
-    Needs simat_nox.parquet in out_dir (run qc-simat first).
+    Needs the station table in out_dir (run qc-simat, or fetch-openaq after 2024, first).
     """
-    checks = tempo.run_qc(raw_dir, out_dir, simat.load_catalog(simat_dir), start, end)
+    checks = tempo.run_qc(raw_dir, out_dir, simat.load_catalog(simat_dir), start, end, stations)
     typer.echo(render(checks))
 
 
