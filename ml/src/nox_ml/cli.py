@@ -441,7 +441,7 @@ def ficha_dias(
 ) -> None:
     """Sheet: how many business days a measure needs to show a drop, from the variation of the season."""
     start, end = (pd.Timestamp(day).date().isoformat() for day in data.split(":"))
-    inputs = products.season_inputs(data_dir, start, end)
+    inputs = products.season_inputs(data_dir, start, end, products.sources_for(start, end))
     normal = events.split_days(
         inputs,
         pd.DatetimeIndex([]),
