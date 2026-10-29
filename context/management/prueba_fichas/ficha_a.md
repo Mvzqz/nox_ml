@@ -7,7 +7,7 @@ Días evaluados: 42 días hábiles, del 2020-03-30 al 2020-05-29. Referencia: 29
 | | |
 |---|---|
 | Cambio de la emisión de NOₓ, descontado el clima | −50% |
-| Rango compatible (contiene el cambio real ~85 % de las veces) | −57% a −41% |
+| Rango compatible (contiene el cambio real ~90 % de las veces) | −57% a −41% |
 | Cambio mínimo que este análisis puede ver con 42 días | bajas de 21% o más |
 | Cambio anunciado | −50%: **cabe** en el rango compatible |
 

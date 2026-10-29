@@ -7,7 +7,7 @@ Días evaluados: 42 días hábiles, del 2019-04-01 al 2019-05-31. Referencia: 30
 | | |
 |---|---|
 | Cambio de la emisión de NOₓ, descontado el clima | −7% |
-| Rango compatible (contiene el cambio real ~85 % de las veces) | −17% a +3% |
+| Rango compatible (contiene el cambio real ~90 % de las veces) | −17% a +3% |
 | Cambio mínimo que este análisis puede ver con 42 días | bajas de 15% o más |
 | Cambio anunciado | −30%: **no cabe** en el rango compatible |
 

@@ -1,0 +1,19 @@
+# normalized_ratio frozen (configs/experiments/normalized_ratio.yaml) on feb-may 2026, with OpenAQ stations and airport weather: a season not used to choose anything; atypical periods left out.
+name: normalized_ratio.fm2026
+period:
+  start: '2026-02-15'
+  end: '2026-05-31'
+simat_hours:
+- 12
+- 17
+model:
+  name: normalized_ratio
+  params:
+    seed: 7
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.9
+  refits: 8
+exclude_atypical: true
+stations: openaq

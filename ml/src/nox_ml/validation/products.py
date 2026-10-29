@@ -11,8 +11,9 @@ Which estimator answers which question (`ESTIMATORS`):
   its 2019 placebo at 1; the inversions without TEMPO failed that placebo, and with TEMPO they carry a Sunday
   bias (``context/knowledge/sesgo_domingo.md``). It needs only the stations, so it also runs where TEMPO is
   missing;
-- **the weekly cycle** (Sunday or Saturday over weekday): the deweathering forest (E6, ``rf_deweather``),
-  within the traffic range without the year-end and in nov-dec 2024;
+- **the weekly cycle** (Sunday or Saturday over weekday): the deweathering boosting (X4, ``gb_deweather``),
+  0.57 in nov-dec 2024, feb-may 2025 and nov-dec 2025 without the atypical periods, where the forest moved
+  between 0.56 and 0.67 and the inversions fell to 0.36-0.47 in nov-dec 2025;
 - **concentration where there is no station**: the regression-kriging on E5b (``residual_kriging``).
 
 `measure_sheet` evaluates a set of days against normal days (`events.calendar_effect`) and reads the result
@@ -39,13 +40,16 @@ from nox_ml.validation.experiment import Placebo, read_config
 
 ESTIMATORS = {
     "change": "normalized_ratio",
-    "weekly_cycle": "rf_deweather",
+    "weekly_cycle": "gb_deweather",
     "concentration": "residual_kriging",
 }
 CONFIGS = Path("configs/experiments")
 POWER = events.DETECTION_POWER
 LAST_SIMAT_YEAR = 2024  # the last year SIMAT has published its yearly tables
 MOSTLY_ATYPICAL = 0.5  # share of atypical measure days from which the sheet warns instead of noting
+# the placebo range widened in log around its center: with 9-day fake events in four seasons (960 injections
+# of 0 and 20 %) it held the truth 88 % of the time at 90 %; widened by 5 %, 91 %, with 5 % false alarms
+RANGE_WIDENING = 1.05
 PLACEBO = Placebo(n=2000, seed=3, level=0.90, refits=200)  # E7 fits in a second: hundreds of fake events
 
 
@@ -96,7 +100,7 @@ def measure_result(
             inputs, make_model, groups.normal, groups.normal, k, config.refits, config.seed
         )
         center = float(np.median(ratios))
-        lo, hi = interval(ratios, config.level)
+        lo, hi = (center * (bound / center) ** RANGE_WIDENING for bound in interval(ratios, config.level))
         detectable = 1 - lo / float(np.quantile(ratios, power))
     else:
         method = "extrapolated"
@@ -216,7 +220,7 @@ def render_measure(result: dict[str, Any], title: str, period: tuple[str, str]) 
         "| | |",
         "|---|---|",
         f"| Cambio de la emisión de NOₓ, descontado el clima | {pct(result['change'])} |",
-        f"| Rango compatible (contiene el cambio real ~85 % de las veces) | {pct(low)} a {pct(high)} |",
+        f"| Rango compatible (contiene el cambio real ~90 % de las veces) | {pct(low)} a {pct(high)} |",
         f"| Cambio mínimo que este análisis puede ver con {len(result['days']['event'])} días | "
         f"bajas de {result['detectable_drop']:.0%} o más |",
     ]
@@ -301,7 +305,7 @@ def render_seasons(
         "| | |",
         "|---|---|",
         f"| Cambio de la emisión de NOₓ, descontado el clima | {pct(combined['change'])} |",
-        f"| Rango compatible (contiene el cambio real ~85 % de las veces) | {pct(low)} a {pct(high)} |",
+        f"| Rango compatible (contiene el cambio real ~90 % de las veces) | {pct(low)} a {pct(high)} |",
         f"| Cambio mínimo que este análisis puede ver | bajas de {combined['detectable_drop']:.0%} o más |",
     ]
     if combined["claim"] is not None:

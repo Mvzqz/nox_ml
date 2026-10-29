@@ -1,0 +1,43 @@
+name: residual_kriging.nd2025
+period:
+  start: '2025-11-01'
+  end: '2025-12-31'
+simat_hours:
+- 12
+- 17
+data_dir: data
+model:
+  name: residual_kriging
+  params:
+    seed: 7
+    base:
+      name: pinn_puff
+      params:
+        seed: 0
+        bootstrap_n: 200
+        bootstrap_level: 0.9
+        bootstrap_block_days: 7
+        tempo_sigma_mult: 1.0
+        traffic_constraint: false
+        traffic_sd: 0.04
+        layers: 4
+        width: 64
+        learning_rate: 0.002
+        physics_weight: 1.0
+        adam_steps: 3000
+        lbfgs_rounds: 15
+        kappa: 1500.0
+        tau_h: 12.0
+        u_min: 2.0
+        kernel_dir: .cache/pinn
+        max_age_h: 24
+        lifetime: oh
+    length_scale_km: null
+    nugget: null
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.9
+  refits: 8
+exclude_atypical: true
+stations: openaq

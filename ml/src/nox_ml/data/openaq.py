@@ -3,11 +3,14 @@
 # (pandas typing infers unions for `df[...]`; behavior is covered by the tests instead)
 """Station NOx from OpenAQ, for the years SIMAT has not published (2025 onward).
 
-SIMAT publishes its yearly hourly tables up to 2024. OpenAQ (API v3, a free key in ``OPENAQ_API_KEY``)
-relays the same stations through SINAICA, the national system: hourly, unvalidated. Against the validated
-SIMAT tables of nov-dec 2024 they agree (r 0.97, the same mean, 4.5-5 ppb mean absolute difference) and carry
-60-65 % of the hours. OpenAQ has no wind, temperature or humidity of these stations: the wind comes from the
-airports (`inputs.airport_wind`).
+SIMAT publishes its yearly hourly tables up to 2024. OpenAQ (API v3, a free key in ``OPENAQ_API_KEY``) relays
+the same stations through SINAICA, the national system: hourly, unvalidated. Against the validated SIMAT
+tables of nov-dec 2024 they agree (r 0.97, the same mean, 4.5-5 ppb mean absolute difference) and carry 60-65
+% of the hours. Up to 16 nov 2024 the feed was an hour late (a value stamped at the hour SIMAT stamps the next
+one), which raised the afternoon mean by ~6 % as NOx falls through the afternoon; from 17 nov 2024, 99 % of
+the afternoon hours equal SIMAT's and the mean is within 1 %. The 2025-2026 seasons keep SIMAT's daily cycle
+(morning peak at 8 h local, no lag fits better). OpenAQ has no wind, temperature or humidity of these
+stations: the wind comes from the airports (`inputs.airport_wind`).
 
 `fetch` writes the raw measurements (``raw/openaq/``) and `simat_table` turns them into the table of
 `qc-simat` (``id_station``, ``local``, ``utc`` stamped at the end of the hour as SIMAT does, ``NO``, ``NO2``,
