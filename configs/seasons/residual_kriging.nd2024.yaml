@@ -1,4 +1,4 @@
-# residual_kriging frozen (configs/experiments/residual_kriging.yaml) on nov-dec 2024: a season not used to choose anything.
+# residual_kriging frozen (configs/experiments/residual_kriging.yaml) on nov-dec 2024: a season not used to choose anything; atypical periods left out.
 name: residual_kriging.nd2024
 period:
   start: '2024-11-01'
@@ -34,3 +34,4 @@ placebo:
   seed: 3
   level: 0.9
   refits: 8
+exclude_atypical: true

@@ -49,6 +49,13 @@ def test_config_rejects_unknown_fields_so_a_typo_does_not_run_the_baseline():
         config(sigma_thetta=30)
 
 
+def test_config_reads_simat_by_default_and_the_openaq_tables_of_its_window_when_asked():
+    assert config().sources().simat_nox == "simat_nox.parquet"
+    after = config(period={"start": "2025-11-01", "end": "2025-12-31"}, stations="openaq").sources()
+    assert after.simat_nox == "openaq_nox_2025-11-01_2026-01-01.parquet"  # fetch-openaq END is exclusive
+    assert after.wind == "airports"
+
+
 @pytest.mark.parametrize(
     "changes",
     [

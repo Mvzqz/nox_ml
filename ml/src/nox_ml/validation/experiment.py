@@ -27,9 +27,9 @@ import subprocess
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -37,7 +37,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 from nox_ml.data import calendar
-from nox_ml.data.inputs import Inputs, load_inputs
+from nox_ml.data.inputs import DEFAULT_SOURCES, Inputs, Sources, load_inputs, openaq_sources
 from nox_ml.inversion.jacobian import HourJacobian, plume_transport
 from nox_ml.inversion.linear import HOLIDAYS, SIGMA_THETA, U_MIN, HourSystem, hour_systems
 from nox_ml.inversion.normalized import SUNDAY_HOLIDAY, WEEKDAY, day_type, interval
@@ -116,6 +116,14 @@ class ExperimentConfig(Strict):
     # leave the atypical periods (`data.calendar`: year-end, Easter) out of the fit, so the weekday is a
     # normal one
     exclude_atypical: bool = False
+    # the station network: SIMAT up to 2024; OpenAQ with the airport weather after it (`openaq_sources`)
+    stations: Literal["simat", "openaq"] = "simat"
+
+    def sources(self) -> Sources:
+        if self.stations == "simat":
+            return DEFAULT_SOURCES
+        after = self.period.end + timedelta(days=1)
+        return openaq_sources(self.period.start.isoformat(), after.isoformat())
 
     @model_validator(mode="after")
     def hours_ordered(self) -> "ExperimentConfig":
@@ -329,7 +337,11 @@ def run_experiment(
     models, ``emissions.parquet``. `evaluation` is stored in ``metrics.json`` (see `run_on_test_period`).
     Returns the folder."""
     inputs = load_inputs(
-        config.data_dir, config.period.start.isoformat(), config.period.end.isoformat(), config.simat_hours
+        config.data_dir,
+        config.period.start.isoformat(),
+        config.period.end.isoformat(),
+        config.simat_hours,
+        config.sources(),
     )
     if config.exclude_atypical:
         days = pd.DatetimeIndex(sorted({local_day(h.hour) for h in inputs.hours}))
