@@ -1,12 +1,12 @@
 # Qué puede hacer el sistema (y qué no)
 
-Fecha: 2026-10-28. Base: resultados de los avances 4 y 5 en `results/runs/` (noviembre–diciembre de 2023 y febrero–mayo de 2024). Sirve para diseñar la experiencia de usuario: cada capacidad dice qué pregunta responde, con qué precisión y con qué límites. Casos de uso: [casos_de_uso.md](casos_de_uso.md).
+Fecha: 2026-10-29 (actualizado con [verificaciones_nivel1.md](verificaciones_nivel1.md), [controles_de_verdad.md](controles_de_verdad.md) y [sesgo_domingo.md](sesgo_domingo.md)). Base: resultados en `results/runs/` (noviembre–diciembre de 2023, febrero–mayo de 2024, el confinamiento de 2020 y gemelos). Sirve para diseñar la experiencia de usuario: cada capacidad dice qué pregunta responde, con qué precisión y con qué límites. Casos de uso: [casos_de_uso.md](casos_de_uso.md).
 
 ## Qué datos usa (sin captura del usuario)
 
 | Dato | Fuente | Resolución |
 |---|---|---|
-| NOₓ y NO₂ en superficie, viento | SIMAT (red de monitoreo de la CDMX), ~24 estaciones | Horaria |
+| NOₓ y NO₂ en superficie, viento | SIMAT (red de monitoreo de la CDMX), ~24 estaciones, hasta 2024; desde 2025, las mismas estaciones vía OpenAQ (SINAICA, sin validar, ~60–65 % de las horas) con el viento de los aeropuertos | Horaria |
 | Columna de NO₂ | Satélite TEMPO (NASA) | Horaria de día, píxeles de ~2 × 4.5 km |
 | Altura de la capa de mezcla | ERA5; MERRA-2 corregido donde ERA5 no llega (enero–junio 2024) | Horaria |
 | Química (ozono, temperatura, humedad) | SIMAT | Horaria |
@@ -16,16 +16,22 @@ Todo el análisis usa las tardes (12–17 h), cuando la capa de mezcla está des
 
 ## Capacidades
 
-| # | Pregunta que responde | Respuesta | Precisión actual | Límites |
-|---|---|---|---|---|
-| 1 | ¿Cuánto cambió la emisión de NOₓ entre dos tipos de día o periodos? | Cociente de emisión (p. ej., domingo ÷ hábil) con intervalo del 90 % | Con ~9 días por grupo: ±12 % con la inversión (E5b, placebo de domingos falsos en nov–dic); con el estimador normalizado (E7), ±17 % en feb–may y ±29 % en nov–dic | Mejora con la raíz del número de días; depende de la temporada (el invierno varía más) |
-| 2 | ¿El cambio de concentración de un episodio fue por el clima o por la emisión? | Descomposición: concentración = clima × emisión (más el fondo regional) | La del punto 1 para la parte de emisión | El factor clima depende del modelo de transporte; un día suelto es ruidoso |
-| 3 | ¿Una medida redujo la emisión? | Cociente de los días con la medida frente a días comparables, con placebo y límite de detección | 9 días hábiles (contingencias 2024): detecta bajas de ~20 % o más; no detecta 10 % | Las medidas cortas con efecto chico (5–10 %) no se pueden evaluar; las sostenidas sí |
-| 4 | ¿Cuántos días necesita una medida para poder evaluarla? | Límite de detección por número de días (`nox-ml detection`: placebo de k días falsos; prueba de inyección en datos reales) | Con E7 y 9 días: ~20 % en feb–may; en nov–dic 29 % la mitad de las veces y 37 % con 80 % de potencia. Extrapolado con la variación de nov–dic y 80 % de potencia: ~19 % con una temporada (~60 días hábiles), ~10 % con un año | Depende de la temporada y de la potencia que se pida; las cifras de temporada y año son extrapolaciones contra una referencia del mismo tamaño ([verificaciones_nivel1.md](verificaciones_nivel1.md)) |
-| 5 | ¿El método inventa cambios? | Placebo: días sin cambio reetiquetados al azar | Centro en 1 ± 0.15 obligatorio; E5b 1.01 ± 0.12 | Es la compuerta de calidad de todo resultado |
-| 6 | ¿Qué concentración de NOₓ hay donde no hay estación? | Predicción con la física y las emisiones estimadas, más el kriging de sus residuos (regresión-kriging) | 10.2 ppb de error en estación oculta (E5b solo 11.9; kriging de las estaciones 10.3) | Piso de ~4 ppb entre estaciones casi en el mismo punto; la red, a 5–8 km, no resuelve estructura más fina |
-| 7 | ¿Cómo se reparte la emisión vial en la ciudad? | Emisión relativa por región (9 regiones de ~18 km) y por tipo de día | Cocientes entre regiones con intervalos amplios | Las regiones con pocas estaciones a favor del viento quedan mal determinadas (algunas salen negativas) |
-| 8 | ¿Cuántas toneladas se emiten? | Nivel absoluto indicativo | Cambia hasta un factor de 2 según el modelo de transporte (30 frente a 60 kt/año de emisión vial en día hábil, E5b frente a E2) | No es un dato confiable sin una referencia externa; se reporta como orden de magnitud, no como número |
+Para cada capacidad: estado y precisión, cómo se compara con las alternativas ([alternativas.md](alternativas.md)), para qué uso alcanza hoy y si ese uso aporta valor.
+
+| # | Capacidad | Estado y precisión | Frente a las alternativas | Uso para el que alcanza hoy | ¿Ese uso aporta valor? |
+|---|---|---|---|---|---|
+| 1 | **Cambio de emisión entre periodos** | Validado para cambios grandes: confinamiento de 2020, −50 % con E7 (esperado −40 a −60 %) y placebo de 2019 en 1 | Normalización estadística (rmweather): equivalente para toda la ciudad, más simple. Econometría cuasi-experimental: más aceptada, pero mide concentración. Satélite (divergencia de flujo): total de la ciudad, sin placebo. **Lo propio:** emisión, placebo y límite de detección juntos | Medidas o choques grandes y sostenidos (≥ 20–30 %) | **Alto:** "¿funcionó?" descontando el clima, con límite de detección |
+| 2 | **No inventar cambios** | Validado: placebos en 1 ± 0.15 en 2019, 2023 y 2024; gemelos con verdad conocida | Pocas alternativas reportan placebo; la econometría usa grupos de control | Respaldar o refutar afirmaciones públicas | **Alto** para verificación: medios, evaluadores, organizaciones civiles |
+| 3 | **Límite de detección por número de días** (`nox-ml detection`) | Con 9 días hábiles: ~20 % en feb–may, 28–37 % en invierno; ~19 % con una temporada y ~10 % con un año (80 % de potencia, extrapolado) | Ninguna alternativa lo ofrece de forma explícita | Planear pilotos: cuánto tiempo mantener una medida | **Medio–alto:** útil aunque no se use el resto |
+| 4 | **Incertidumbre honesta** | Bootstrap por bloques de 7 días: el intervalo del 90 % cubre la verdad el 85 % de las veces en gemelos (antes, ~60 %) | Muchos estudios no validan la cobertura de sus intervalos | Todo reporte con intervalos | **Medio** por sí sola; da confianza a las demás |
+| 5 | **Diagnóstico de episodios** (`nox-ml episode`) | Pista, no veredicto: separa bien el clima; confundió acumulación con emisión antes de Navidad de 2023 (el tráfico de esas fechas en 2018 fue normal) | Los reportes oficiales explican por meteorología sin separar la emisión; un modelo químico con asimilación lo haría mejor, a mucho mayor costo | Episodios dominados por el clima | **Medio:** pregunta frecuente y puerta de entrada, pero sin veredicto firme sobre la emisión |
+| 6 | **Cambios moderados (domingo ÷ hábil)** | E7 y E6 sin fin de año: 0.63–0.75, cerca del tráfico; E5b 0.53 frente a 0.76–0.81 del tráfico de nov–dic 2018 | Inventario con perfiles de tráfico; normalización estadística | Dirección y orden de magnitud de cambios de 5–20 % | **Bajo hoy:** las medidas reales mueven 5–10 % |
+| 7 | **Concentración sin estación** | 10.2 ppb con la regresión-kriging (kriging solo 10.3, E5b 11.9); piso de ~4 ppb | Kriging, modelos de satélite y uso de suelo, pronósticos químicos: iguales o mejores | Mapas aproximados por hora | **Bajo como producto aparte;** su valor es salir del mismo modelo que explica la emisión |
+| 8 | **Emisión por zona (9 regiones de ~18 km)** | Débil: regiones mal determinadas (algunas negativas) | Inventario: mucho más detalle; modelo químico: mejor física | Comparación cualitativa entre grandes zonas | **Bajo hoy;** el valor alto exige 10–15 zonas confiables, sin probar |
+| 9 | **Toneladas absolutas** | No confiable: ×2 según el transporte (30 frente a 60 kt/año viales en día hábil) | Inventario, EDGAR, satélite con divergencia de flujo (~20–30 %): mejores | Orden de magnitud | **Bajo hoy;** con un ancla externa serviría para contrastar inventarios |
+| 10 | **Calendario y contingencias** (`nox-ml calendar`, `contingencies`) | Funciona, con periodos atípicos fuera de la referencia; contingencias 2024 sin efecto detectable (límite ~20 %) | La econometría hace lo mismo con concentraciones | Eventos de varios días con efecto grande | **Medio:** el resultado típico es "no detectable", pero evita conclusiones falsas |
+
+**Lectura.** El nicho son las filas 1–3: emisión descontando el clima, con placebo y límite de detección, con datos públicos y bajo costo, validado con un cambio real. Para concentración y toneladas (7 y 9) hay alternativas mejores. El cuello de botella del valor es la fila 6: las medidas que más interesan mueven 5–10 %, así que el sistema necesita medir cambios moderados con confianza (sesgo del domingo y más temporadas).
 
 ## Qué no hace
 
