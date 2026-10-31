@@ -31,6 +31,14 @@ def model_cls(request, monkeypatch):
         from test_pinn_seeds import SmallPinnSeeds
 
         monkeypatch.setitem(REGISTRY, "pinn_seeds", SmallPinnSeeds)
+    if request.param == "bagged_inversion":  # the default base needs the OH loss rate of the real inputs
+        from test_bagged import SmallBagged
+
+        monkeypatch.setitem(REGISTRY, "bagged_inversion", SmallBagged)
+    if request.param == "wind_ensemble":  # same: a fixed-lifetime E2 over two winds
+        from test_wind_ensemble import SmallWindEnsemble
+
+        monkeypatch.setitem(REGISTRY, "wind_ensemble", SmallWindEnsemble)
     return REGISTRY[request.param]
 
 
