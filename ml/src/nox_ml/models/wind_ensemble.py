@@ -18,7 +18,7 @@ emissions are absolute (the members' transports differ, but not the physics; see
 """
 
 import dataclasses
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import ClassVar, Self
 
@@ -27,7 +27,8 @@ import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from nox_ml.data.inputs import MAX_CACHED_TRANSPORTS
-from nox_ml.inversion.linear import History, HourData
+from nox_ml.inversion.jacobian import HourJacobian, Sources
+from nox_ml.inversion.linear import History, HistoryTransport, HourData
 from nox_ml.models.base import EmissionEstimate, ModelParams
 from nox_ml.models.ensemble import ConvexEnsemble, MemberConfig
 from nox_ml.models.inversion_puff import InversionPuff, InversionPuffParams, PuffTransport
@@ -90,7 +91,9 @@ class WindPerturbedTransport:
     inner: PuffTransport
     perturbation: WindPerturbation
 
-    def for_hours(self, hours: Sequence[HourData], history: History):
+    def for_hours(
+        self, hours: Sequence[HourData], history: History
+    ) -> Callable[[HourData, Sources, float], HourJacobian]:
         # without the period's wind, the puffs are followed with the winds of the hours (`PuffTransport`)
         wind = history.wind
         if wind is None:
@@ -123,7 +126,7 @@ class WindMember(InversionPuff):
     name: ClassVar[str] = "wind_member"
     Params: ClassVar[type[ModelParams]] = WindMemberParams
 
-    def transport(self):
+    def transport(self) -> HistoryTransport:
         p = self.params
         assert isinstance(p, WindMemberParams)
         inner = super().transport()

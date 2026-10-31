@@ -27,7 +27,7 @@ from nox_ml.inversion.jacobian import (
     jacobian_hour_puff,
     road_emission_profile,
 )
-from nox_ml.inversion.linear import HOLIDAYS, History, HourData
+from nox_ml.inversion.linear import HOLIDAYS, History, HistoryTransport, HourData
 from nox_ml.models.base import ModelParams
 from nox_ml.models.inversion_plume import InversionPlume, PlumeInversionParams
 from nox_ml.physics.puff import (
@@ -108,7 +108,7 @@ class InversionPuff(InversionPlume):
     name: ClassVar[str] = "inversion_puff"
     Params: ClassVar[type[ModelParams]] = InversionPuffParams
 
-    def transport(self) -> PuffTransport:
+    def transport(self) -> HistoryTransport:
         p = self.params
         assert isinstance(p, InversionPuffParams)
         return PuffTransport(p.max_age_h, p.lifetime, p.tau_h, p.wind_field)
