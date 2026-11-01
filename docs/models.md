@@ -207,6 +207,21 @@ A subclass of `ConvexEnsemble` (`nox_ml.models.pinn.seeds`): E5b (`base`, an exp
 - **Cache.** `seeds` is validated against `MAX_CACHED_TRANSPORTS` (16, `nox_ml.data.inputs`): with more members than slots every fold would evict and rebuild the Jacobians (~11 min per member). New networks are trained once (~3 min) and stored in `kernel_dir`.
 - **Cost.** The sum of its members: ~1.5-2 h in nov–dec 2023 with 4 seeds.
 
+### `bagged_inversion` (X1)
+
+A subclass of `ConvexEnsemble` (`nox_ml.models.bagged`): the base inversion (`base`, default E2; the experiment config names E5b) is fitted once, and each of `n_bags` bags solves the same system again with whole days drawn with replacement, **within each day type** (so every bag keeps its Sundays). The bags are shallow copies of the fitted base with their own posterior, so they share the transport and the Jacobians: the cost is one fit plus cheap solves.
+
+- **Emissions are absolute**: the members share `transport_key()`, so the contract rule gives the mean of the bags' means and the sd of their mixture.
+- **Stratified on purpose.** A plain draw of days can leave a bag without any Sunday; in the contract's fixture (two Sundays) the Sunday level of the bags then went to 14 434 t/yr, against 10 861 for the base and 10 800 of truth. The day-type ratio is the target, so the draw is stratified.
+
+### `wind_ensemble` (X2)
+
+A subclass of `ConvexEnsemble` (`nox_ml.models.wind_ensemble`): `n_members` puff inversions (E2), each over its own perturbation of the wind. A member perturbs the direction (normal, `sigma_dir_deg`), the speed and the boundary layer height (log-normal, `sigma_speed`, `sigma_pbl`) of every hour, with one draw per timestamp, the same for the hours and for the whole-period wind the puffs follow (`WindPerturbedTransport`). The members' Jacobians are cached under their own keys, so placebo refits and leave-one-station-out folds reuse them; `n_members` is limited to the cache of `Inputs` (16).
+
+- **Emissions are absolute**: the members are the same inversion over other draws of the wind (`WindEnsemble.shares_absolute_level`).
+- **With the unperturbed wind as the truth**, the average over winds moves the levels: on the contract's fixture, 30° perturbations change the zone levels by 10–15 %. That is the smoothing the ensemble is for, and the notebook reports it; the contract test uses small perturbations so that it checks the machinery.
+- With all sigmas at 0 each member is E2 (`ml/tests/models/test_wind_ensemble.py`).
+
 ### Tests
 
 `convex_ensemble` is in `REGISTRY`, so `test_contract` runs on it. `tests/models/test_ensemble.py` covers members, convex weights and the emission rule; `tests/test_stacking.py` covers convex weights and that a station never sets its own; `tests/test_evaluate.py` covers the test-period mode. `tests/models/test_pinn_seeds.py` covers `pinn_seeds`; `test_contract` runs it with tiny networks (same class, small defaults) so that it trains in seconds.
