@@ -50,6 +50,7 @@ KNOT_MS = 0.5144
 AIRPORT_WIND_FACTOR = 0.393
 MIN_PBL_M = 200.0  # floor of the boundary layer height after averaging with the next hour
 LABEL_SHIFT = pd.Timedelta(hours=1)  # SIMAT labels the end of the hour
+MIN_RATIO_STATIONS = 5  # stations with NO2 and NOx an hour needs for its own NO2/NOx ratio
 CHEMISTRY_GAP_H = 6  # longest gap of the chemistry variables that is interpolated (the rest: climatology)
 # April of this year sets the reference OH production (`physics.chemistry.reference_production`). It is not
 # the 2024 of the standard variant because feb-may 2024 is the held-out test period.
@@ -362,6 +363,8 @@ def assemble(
         xy = station_xy.loc[rows["id_station"].to_numpy()]
         px = pixels_by_hour.get(h, empty)
         u, v = wind.loc[h, ["u", "v"]]
+        both = rows[rows["NOX"].notna() & rows["NO2"].notna()] if "NO2" in rows else rows.iloc[:0]
+        ratio = float(both["NO2"].sum() / both["NOX"].sum()) if len(both) >= MIN_RATIO_STATIONS else None
         data.append(
             HourData(
                 hour=h,
@@ -371,6 +374,7 @@ def assemble(
                 nox=rows["NOX"].to_numpy(float),
                 pixels=Receptors(px["x"].to_numpy(float), px["y"].to_numpy(float)),
                 no2=px["vcd"].to_numpy(float),
+                no2_nox=ratio,
             )
         )
         ids.append(rows["id_station"].to_numpy())

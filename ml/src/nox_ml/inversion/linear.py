@@ -124,7 +124,8 @@ def baseline_point_sources() -> pd.DataFrame:
 class HourData:
     """What one hour contributes: the wind (u, v) in m/s of the domain, the boundary layer height in m and the
     observations at the stations (NOx, ppb) and TEMPO pixels (NO2 column, molecules/cm2). `hour` is the
-    start of the hour, UTC. Absent receptors are empty arrays."""
+    start of the hour, UTC. Absent receptors are empty arrays. `no2_nox` is the NO2/NOx ratio the stations
+    measured in that hour (None: too few stations with both)."""
 
     hour: pd.Timestamp
     wind: tuple[float, float]
@@ -133,6 +134,7 @@ class HourData:
     nox: Array
     pixels: Receptors
     no2: Array
+    no2_nox: float | None = None
 
 
 @dataclass(frozen=True)
@@ -288,6 +290,7 @@ def hour_systems(
     jacobians: Sequence[HourJacobian] | None = None,
     jacobian: HourTransport | None = None,
     tempo_sigma_mult: float = 1.0,
+    hourly_no2_nox: bool = False,
 ) -> list[HourSystem]:
     """The `HourSystem` of every hour. The Jacobians dominate the cost of an inversion; the systems can be
     solved again with other weights by `solve`. `sigma_theta` (rad) and `u_min` (m/s) are the plume
@@ -295,7 +298,10 @@ def hour_systems(
     are the ones of `hours` already computed with the transport (row for row), to skip building them;
     otherwise `jacobian` (a `HourJacobianFn` or `HistoryTransport`, default: the stationary plume with
     `sigma_theta` and `u_min`) builds them. `tempo_sigma_mult` multiplies the error of every TEMPO pixel
-    (1 is the nominal weight); it does not touch the Jacobians."""
+    (1 is the nominal weight); it does not touch the Jacobians. With `hourly_no2_nox`, the pixel rows of
+    each hour are rescaled from `no2_nox_ratio` to the ratio the stations measured in that hour
+    (`HourData.no2_nox`): the NO2 that TEMPO sees of the same NOx is higher on Sundays and later in the
+    afternoon."""
     n_points = len(points)
     sigma_pixel = SIGMA_PIXEL * tempo_sigma_mult
     days = pd.DatetimeIndex([local_day(h.hour) for h in hours])
@@ -312,9 +318,12 @@ def hour_systems(
         columns = np.r_[np.arange(n_points), n_points + n_regions * kind + np.arange(n_regions)]
         info = np.zeros((len(columns), len(columns)))
         gradient = np.zeros(len(columns))
+        pixels = jac.pixels
+        if hourly_no2_nox and data.no2_nox is not None:
+            pixels = pixels * (data.no2_nox / no2_nox_ratio)
         for k, y, sigma, background in (
             (jac.stations, data.nox, SIGMA_STATION, BACKGROUND_STATION),
-            (jac.pixels, data.no2, sigma_pixel, BACKGROUND_PIXEL),
+            (pixels, data.no2, sigma_pixel, BACKGROUND_PIXEL),
         ):
             if len(y):
                 block_info, block_gradient = marginalized_block(k, y, sigma, background)

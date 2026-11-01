@@ -57,6 +57,12 @@ class PlumeInversionParams(ModelParams):
     traffic_constraint: bool = Field(
         default=False, description="hold the Saturday and Sunday road totals at their traffic ratios"
     )
+    # the stations measure 0.76 on weekdays and 0.84 on Sundays, 0.68 at 12 h and 0.84 at 17 h (nov-dec 2023):
+    # with the period's ratio for every hour, TEMPO sees a Sunday NOx 11 % too high
+    hourly_no2_nox: bool = Field(
+        default=False, description="convert TEMPO with each hour's measured NO2/NOx instead of the period's"
+    )
+
     traffic_sd: float = Field(
         default=TRAFFIC_RATIO_SD, gt=0, description="standard deviation of those ratios (traffic constraint)"
     )
@@ -182,6 +188,7 @@ class InversionPlume:
             day_kinds=data.day_kinds,
             jacobians=data.jacobians_without_stations(exclude_stations, key, transport),
             tempo_sigma_mult=p.tempo_sigma_mult,
+            hourly_no2_nox=p.hourly_no2_nox,
         )
         post = solve(systems, data.points, data.n_regions, constraints=self.constraints(data))
         self._fitted = (data, systems, post, frozenset(exclude_stations))

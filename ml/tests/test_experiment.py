@@ -174,6 +174,7 @@ def test_the_stored_config_includes_the_defaults(tmp_path, fake_data):
             "tempo_sigma_mult": 1.0,
             "traffic_constraint": False,
             "traffic_sd": 0.04,
+            "hourly_no2_nox": False,
         },
     }
 

@@ -1,0 +1,23 @@
+# inversion_puff with TEMPO converted with each hour's measured NO2/NOx (0.78 weekday, 0.85 Sunday) instead of the
+# period's 0.774: improvement H3 of the adversarial review. Otherwise identical to inversion_puff.yaml.
+name: inversion_puff_no2nox
+period:
+  start: 2023-11-01
+  end: 2023-12-31
+simat_hours:
+- 12
+- 17
+model:
+  name: inversion_puff
+  params:
+    max_age_h: 24
+    lifetime: oh
+    bootstrap_n: 200
+    bootstrap_level: 0.9
+    seed: 7
+    hourly_no2_nox: true
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.9
+  refits: 8
