@@ -24,8 +24,8 @@ El rango sale de eventos falsos de la misma duración sacados de días normales 
 | El rango contiene el cambio real | 200 conjuntos de 9 días normales de nov–dic 2023, con bajas inyectadas de 0, 10, 20, 30 y 36 % | Lo contenía 84–87 % de las veces (nominal 90 %) | Corregido: ver la calibración abajo |
 | El cambio mínimo detectable | Las mismas inyecciones, con la baja igual al mínimo que reporta la ficha (36 % con 9 días) | Se detecta 78 % de las veces (prometido: 80 %) | Sí |
 | Falsas alarmas | Inyección de 0 % | 4 % de "baja detectada" (esperado ~5 %) | Sí |
-| Veredicto en un cambio real | Confinamiento de 2020 (fases 2 y 3 frente a la base; 42 días contra 29, modo extrapolado) | Baja detectada: −50 % (−57 a −41 %) | Sí |
-| Veredicto sin cambio | Mismas fechas de 2019 | No detectable: −7 % (−17 a +3 %) | Sí |
+| Veredicto en un cambio real | Confinamiento de 2020 (fases 2 y 3 frente a la base; 42 días contra 29, modo extrapolado) | Baja detectada: −50 % (−62 a −33 %, con la deriva) | Sí |
+| Veredicto sin cambio | Mismas fechas de 2019 | No detectable: −7 % (−29 a +21 %, con la deriva) | Sí |
 | ¿El anuncio cabe? | Confinamiento con anuncios de −50 % y −10 % | −50 % cabe; −10 % no | Sí |
 | Periodos atípicos | Vacaciones de fin de año de 2023 | La ficha mide +40 % y advierte que es un periodo donde el método confunde acumulación con emisión | Sí, con la advertencia |
 | Pruebas automáticas | Datos sintéticos con baja impuesta y sin cambio; modo extrapolado; advertencia; inversión de la calculadora | 9 pruebas | Sí |
@@ -40,7 +40,23 @@ En 960 inyecciones (4 temporadas: nov–dic 2023, nov–dic 2024, feb–may 2025
 | **5 % (el de la ficha)** | **91 %** (89–92 % por temporada) | **5.0 %** | 46 % |
 | 10 % | 92 % | 4.0 % | 44 % |
 
-Aplica al modo placebo; el modo extrapolado no se pudo calibrar así (no hay días normales suficientes).
+Esta calibración usa eventos falsos de días sueltos al azar; para medidas de días seguidos, ver la deriva lenta abajo.
+
+### La deriva lenta: medidas de días seguidos
+
+Una medida real ocupa días seguidos (semanas o meses), no días sueltos. Dentro de cada temporada, E7 tiene una deriva lenta: semanas más altas o más bajas que el clima no explica (noviembre frente a diciembre, febrero frente a mayo). Los eventos falsos de días sueltos la promedian y no la ven.
+
+| Prueba (sin cambio real, salvo la inyectada) | Sin la deriva | Con la deriva (`DRIFT_SD` = 0.15) |
+|---|---|---|
+| Media temporada contra la otra media (6 temporadas, 72 casos, modo extrapolado) | Contiene la verdad 50 %, falsas alarmas 50 % | 92 %, 8 % |
+| Bloques de 9 y 20 días seguidos (feb–may 2025, lluvias 2025, feb–may 2026; 96 casos) | 65 %, 35 % | 98 %, 2 % |
+
+- La dispersión real de media temporada contra la otra media es 0.19 (escala logarítmica); la ficha decía 0.09.
+- Las lluvias (junio–octubre) casi no tienen deriva (0.05); feb–may y nov–dic, sí (0.12–0.23).
+- Un placebo de bloques continuos de la misma temporada no la corrige (50–78 %): los extremos de la temporada, donde la deriva es mayor, no tienen bloques de referencia.
+- La ficha ahora detecta si los días de la medida son seguidos (modo `drift`) y suma la deriva al rango; con días sueltos (contingencias) usa el placebo de siempre. El costo: el mínimo detectable de una medida de días seguidos sube a 39–47 % con 9 días y 32–34 % con 60, en una temporada.
+- El confinamiento sigue siendo detectado (−50 %, mucho mayor que la deriva) y su placebo de 2019 (−7 %) cabe en el rango.
+- Las dos calibraciones salen de los mismos datos que validan (no hay temporadas aparte): son estimaciones dentro de la muestra.
 
 ### Varias temporadas
 
@@ -53,14 +69,14 @@ Aplica al modo placebo; el modo extrapolado no se pudo calibrar así (no hay dí
 | 20 % (el mínimo que reporta la ficha combinada) | 89 % | 78 % |
 | 30 % | 87 % | 99 % |
 
-Con dos temporadas, el mínimo detectable con 9 días por temporada baja de 36 % y 26 % (cada una sola) a 20 %; con las seis de 2023–2026, a 14 % ([temporadas.md](temporadas.md)). Las temporadas desde 2025 leen las estaciones de OpenAQ y el viento de los aeropuertos (`sources_for`).
+Con dos temporadas, el mínimo detectable con 9 días por temporada baja de 36 % y 26 % (cada una sola) a 20 %; con las seis de 2023–2026 y la deriva incluida, a 20 % ([temporadas.md](temporadas.md)). La combinación supone que la deriva de cada temporada es independiente: lo es entre feb–may 2025 y 2026, pero los inviernos de 2023 y 2025 se parecen. Las temporadas desde 2025 leen las estaciones de OpenAQ y el viento de los aeropuertos (`sources_for`).
 
 Pendiente: la prueba de comprensión con tres personas fuera del equipo; protocolo, fichas y registro en `context/management/prueba_fichas/`.
 
 ## Lo que muestran las fichas de ejemplo
 
 - **Días necesarios en invierno (nov–dic 2023):** 19 días hábiles para una baja de 30 %, 48 para 20 %, 214 para 10 % y ~900 para 5 %. Con la variación del invierno, las medidas de 5–10 % no se pueden evaluar en una temporada; en feb–may la variación es menor. Es el argumento cuantitativo para sumar temporadas (2024–2026).
-- La cobertura del modo extrapolado no se pudo validar con inyecciones en datos reales (justo porque no hay días normales suficientes); se apoya en la regla de los placebos cortos y en el confinamiento, que la ficha reproduce.
+- La cobertura de las medidas de días seguidos se validó con bloques continuos de días reales (ver la deriva lenta): sin la deriva, la ficha prometía 90 % y cumplía 50–65 %.
 
 ## Reproducir
 

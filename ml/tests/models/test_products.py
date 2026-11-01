@@ -94,6 +94,19 @@ def test_a_measure_as_long_as_the_reference_uses_the_extrapolated_spread(base):
     assert result["verdict"] == "decrease"
     low, high = result["range"]
     assert low < result["change"] < high and 0 < result["detectable_drop"] < 1
+    # the drift of the season is in the spread even with many days
+    assert result["placebo"]["lo"] <= np.exp(-norm.ppf(0.95) * products.DRIFT_SD) + 1e-9
+
+
+def test_consecutive_days_add_the_drift_and_scattered_days_do_not(base):
+    scattered = pd.DatetimeIndex(["2023-11-13", "2023-11-22", "2023-12-01", "2023-12-12", "2023-12-20"])
+
+    consecutive = sheet(base)  # WEEK, Monday to Friday
+    spread = products.measure_result(base, make_model, scattered, BUSINESS_MEASURES, PLACEBO)
+
+    assert (consecutive["method"], spread["method"]) == ("drift", "placebo")
+    assert consecutive["placebo"]["lo"] <= np.exp(-norm.ppf(0.95) * products.DRIFT_SD) + 1e-9
+    assert consecutive["detectable_drop"] > spread["detectable_drop"]
 
 
 def test_a_measure_in_an_atypical_period_carries_a_warning(base):

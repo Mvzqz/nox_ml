@@ -51,6 +51,12 @@ MOSTLY_ATYPICAL = 0.5  # share of atypical measure days from which the sheet war
 # of 0 and 20 %) it held the truth 88 % of the time at 90 %; widened by 5 %, 91 %, with 5 % false alarms
 RANGE_WIDENING = 1.05
 PLACEBO = Placebo(n=2000, seed=3, level=0.90, refits=200)  # E7 fits in a second: hundreds of fake events
+# slow drift of E7 within a season (sd, log), which day-to-day variation misses: a contiguous half of a season
+# against the other half, with no change, spread 0.19 where the extrapolation said 0.09 (6 seasons, 2023-26).
+# Added in quadrature, the range held the truth 92 % of the time with 8 % false alarms; on runs of 9 and 20
+# consecutive days (3 seasons, 96 injections of 0 and 20 %), 98 % and 2 %, where the random-day placebo alone
+# held it 65 % of the time
+DRIFT_SD = 0.15
 
 
 def estimator(question: str, configs: Path = CONFIGS) -> Callable[[], Model]:
@@ -84,35 +90,46 @@ def measure_result(
     the bootstrap of the estimator are narrower), the change the analysis can detect with `power`, the verdict
     and, with a `claim` (a fraction, -0.2 for a 20 % drop), whether the claim falls in the range.
 
-    ``method`` says where the spread comes from: ``placebo``, fake events of as many days drawn from the
-    normal days; or ``extrapolated`` when the measure has as many days as the reference or more (a sustained
-    measure: months against weeks) and fake events of its length cannot be drawn. Then the day-to-day
-    variation of the season (`events.detection_curve` on short fake events) gives a log-normal spread with sd
-    ``cv sqrt(1/k + 1/n)`` for k measure days and n normal ones, the rule the detection curve follows."""
+    ``method`` says where the spread comes from:
+
+    - ``placebo``: scattered days (a few contingency days), fake events of as many days drawn at random from
+      the normal days;
+    - ``drift``: consecutive business days (a measure that runs for weeks): the same fake events, plus the
+      slow drift of the season (`DRIFT_SD`) that days drawn at random average out;
+    - ``extrapolated``: a measure as long as the reference or more (months against weeks), where fake events
+      of its length cannot be drawn. The day-to-day variation of the season (`events.detection_curve` on
+      short fake events) gives a log-normal spread with sd ``cv sqrt(1/k + 1/n)`` for k measure days and n
+      normal ones, the rule the detection curve follows, plus the drift."""
     groups = events.split_days(inputs, days, days.union(excluded))
     if groups.event.empty:
         raise ValueError("no day of the measure is a business day with data")
     k, n = len(groups.event), len(groups.normal)
     ratio, _ = events._fit_ratio(inputs.on_days(groups.event.union(groups.normal)), make_model, groups.event)
+    business = groups.normal.union(groups.event)
+    within = business[(business > groups.event.min()) & (business < groups.event.max())]
+    contiguous = k > 1 and not within.isin(groups.normal).any()
+    z = float(norm.ppf(0.5 + config.level / 2))
     if k < n - 1:
-        method = "placebo"
+        method = "drift" if contiguous else "placebo"
         ratios = events._fake_ratios(
             inputs, make_model, groups.normal, groups.normal, k, config.refits, config.seed
         )
         center = float(np.median(ratios))
         lo, hi = (center * (bound / center) ** RANGE_WIDENING for bound in interval(ratios, config.level))
-        detectable = 1 - lo / float(np.quantile(ratios, power))
+        if contiguous:
+            sd = float(np.hypot(np.log(hi / lo) / (2 * z), DRIFT_SD))
+            lo, hi = center * float(np.exp(-z * sd)), center * float(np.exp(z * sd))
+            detectable = float(1 - np.exp(-(z + norm.ppf(power)) * sd))
+        else:
+            detectable = 1 - lo / float(np.quantile(ratios, power))
     else:
         method = "extrapolated"
         short = [c for c in (3, 5, 9) if c < n // 2] or [1]
         cv = events.detection_curve(inputs, make_model, groups.normal, short, config, power)["cv"]
-        sd = cv * np.sqrt(1 / k + 1 / n)
+        sd = float(np.hypot(cv * np.sqrt(1 / k + 1 / n), DRIFT_SD))
         center = 1.0
-        lo, hi = (
-            float(np.exp(-norm.ppf(0.5 + config.level / 2) * sd)),
-            float(np.exp(norm.ppf(0.5 + config.level / 2) * sd)),
-        )
-        detectable = float(1 - np.exp(-(norm.ppf(0.5 + config.level / 2) + norm.ppf(power)) * sd))
+        lo, hi = float(np.exp(-z * sd)), float(np.exp(z * sd))
+        detectable = float(1 - np.exp(-(z + norm.ppf(power)) * sd))
     atypical = calendar.atypical_days(groups.event.min(), groups.event.max())
     out = {
         "method": method,
@@ -248,8 +265,15 @@ def render_measure(result: dict[str, Any], title: str, period: tuple[str, str]) 
     if result["method"] == "extrapolated":
         lines += [
             "",
-            "La medida dura tanto como la referencia o más: el rango y el mínimo detectable salen de la "
-            "variación de un día a otro de la temporada, no de repetir el análisis con días al azar.",
+            "La medida dura demasiado para repetir el análisis con otros periodos de su duración: el rango "
+            "y el mínimo detectable salen de la variación de un día a otro de la temporada más la deriva "
+            "lenta que tiene a lo largo de los meses.",
+        ]
+    elif result["method"] == "drift":
+        lines += [
+            "",
+            "Los días de la medida son seguidos: el rango incluye, además, la deriva lenta de la temporada "
+            "(semanas más altas o más bajas que el clima no explica), que no se ve con días sueltos.",
         ]
     lines += [
         "",
@@ -257,8 +281,8 @@ def render_measure(result: dict[str, Any], title: str, period: tuple[str, str]) 
         "",
         "- El cambio compara los días evaluados con días hábiles normales de la misma temporada, después de "
         "descontar el efecto del clima (ventilación) con el estimador normalizado del sistema.",
-        "- El rango compatible sale de repetir el análisis con días normales elegidos al azar, donde no hubo "
-        "ningún cambio: es la incertidumbre honesta del resultado.",
+        "- El rango compatible sale de repetir el análisis con días normales donde no hubo ningún cambio: es "
+        "la incertidumbre honesta del resultado.",
         '- "No se detecta" no quiere decir que la medida no funcionó: puede haber un cambio menor al mínimo '
         "detectable. Más días bajan ese mínimo.",
         "- El método se validó con el confinamiento de 2020: midió una caída de ~50 % de la emisión vial, "

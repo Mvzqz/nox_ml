@@ -13,8 +13,8 @@ import typer
 from pydantic import ValidationError
 
 from nox_ml import __version__
-from nox_ml.data import openaq, pbl, simat, tempo
-from nox_ml.data.inputs import load_inputs
+from nox_ml.data import openaq, pbl, simat, tempo, weather
+from nox_ml.data.inputs import load_inputs, openaq_sources
 from nox_ml.data.qc import render
 from nox_ml.validation import compare as comparison
 from nox_ml.validation import diagnostics, episodes, events, experiment, products, twins
@@ -99,6 +99,20 @@ def fetch_openaq(
     (the table of qc-simat). Takes about a second per request (the key's rate limit)."""
     raw, interim = openaq.run_fetch(start, end, data_dir)
     typer.echo(f"Written to {raw} and {interim}")
+
+
+@app.command("fetch-weather")
+def fetch_weather(
+    start: Annotated[str, typer.Argument(help="First day, YYYY-MM-DD (UTC).")],
+    end: Annotated[str, typer.Argument(help="Day after the last one, YYYY-MM-DD (UTC, exclusive).")],
+    data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
+) -> None:
+    """Download the airport reports (IEM) and ERA5 (Open-Meteo) of a window and merge them into the files the
+    seasons after 2024 read, for the months the downloads of 2024-2026 did not reach. No key needed."""
+    sources = openaq_sources(start, end)
+    covered = weather.run_fetch(start, end, data_dir / "raw", sources.metar, sources.era5)
+    for name, (first, last) in covered.items():
+        typer.echo(f"{name}: {first} to {last}")
 
 
 @app.command("fill-pbl")
