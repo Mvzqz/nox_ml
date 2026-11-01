@@ -196,6 +196,7 @@ frozen = stacking.fit_weights(observed, oof, rule="stack")  # weights on all sta
 
 - `rule="stack"`: least squares on the simplex (stacking, X5).
 - `rule="likelihood"`: weights proportional to the Gaussian likelihood of the held-out rows (Bayesian model averaging, X6). Hours of one station are correlated, so it concentrates on the best model faster than the data justify.
+- `rule="pseudo_bma"`: pseudo-BMA+ (Yao et al. 2018): the same likelihood summed by local day, with a Bayesian bootstrap over the days and the weights averaged over the draws, so a lead within the noise of the days does not take all the weight. In nov–dec 2023 it still gives E5b ~1 (nested 11.88 ppb): E5b is better on almost every day ([`context/knowledge/ensambles.md`](../context/knowledge/ensambles.md)).
 
 `nested_oof` gives the ensemble's out-of-fold RMSE (`stacking.loo_rmse`) for the nov–dec 2023 table without refitting any base model. The weights of the final ensemble (`frozen`) go into the `weights` of its config before `evaluate`. One leak remains and is documented in ADR 0007.
 

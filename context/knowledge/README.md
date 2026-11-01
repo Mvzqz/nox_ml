@@ -13,3 +13,4 @@ Se migra por partes desde la carpeta de investigación (`reports/RESUMEN.md`, `r
 - [`controles_de_verdad.md`](controles_de_verdad.md): controles con verdad conocida: el confinamiento de 2020 frente a 2019 (cambio real) y gemelos con emisión conocida sobre los receptores reales (origen del sesgo del domingo).
 - [`sesgo_domingo.md`](sesgo_domingo.md): el sesgo del domingo: qué lo explica (fin de año, transporte) y qué no (el método, el peso de TEMPO, la ponderación de Infovial).
 - [`fichas.md`](fichas.md): las fichas (evaluar una medida o verificar un anuncio; días necesarios), qué estimador responde cada pregunta y su validación.
+- [`ensambles.md`](ensambles.md): los ensambles del avance 5 (X1, X2, X5, X6): resultados frente a su base, error anidado del stacking, colapso del promedio bayesiano y por qué ninguno mejora a E5b.
