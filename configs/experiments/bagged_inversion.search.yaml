@@ -1,0 +1,11 @@
+# Tuning of X1 (bagged_inversion) on nov-dec 2023 (`nox-ml tune`): random search over the number of bags and the
+# block of days, scored by leave-one-station-out RMSE. The bags do not change the transport, so the trials are cheap.
+# Run: uv run nox-ml tune configs/experiments/bagged_inversion.search.yaml  ->  runs/bagged_inversion/trials.csv
+config: bagged_inversion.yaml
+model: bagged_inversion
+search: random
+n_trials: 8
+seed: 7
+space:
+  n_bags: [10, 50]
+  block_days: [1, 3]
