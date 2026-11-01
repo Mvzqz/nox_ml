@@ -10,7 +10,7 @@ Fecha: 2026-10-29; actualizado el 2026-11-01 (ver «La referencia del tráfico e
 | Días hábiles de fin de año en la referencia (acumulación que los modelos atribuyen a la emisión; el tráfico de esas fechas es normal) | **Sí, en parte** | Sin el 18–29 de diciembre: E7 0.56 → 0.63–0.65, E6 0.53 → 0.75, E2 0.52 → 0.59, E5b 0.48 → 0.53 |
 | Peso de TEMPO | No como causa principal | Bajarlo de ×1 a ×10 no sube el domingo; solo quitarlo casi del todo, y entonces la inversión queda mal condicionada |
 | Referencia de tráfico mal ponderada | No | Con cualquier ponderación de los pesados, Infovial da ≥ 0.64 en el día completo y ≥ 0.72 en la tarde |
-| **Infovial como referencia de la emisión** (2026-11-01) | **Sí, en parte** | El satélite da 0.58 (0.54–0.61) con las 6 temporadas juntas, igual con o sin corrección por viento y capa de mezcla; el CO como trazador, 0.56–0.74. Las dos excluyen 0.76–0.81, pero son métodos de concentración o columna: no se descarta un sesgo común (ver «Revisión adversarial») |
+| **Infovial como referencia de la emisión** (2026-11-01) | **Sí, en parte** | El satélite da 0.58 (0.54–0.61) con las 6 temporadas juntas, igual con o sin corrección por viento y capa de mezcla; el CO como trazador, 0.56–0.74 en 2023–2024 y 0.66–0.81 en 2025–2026. El satélite excluye 0.76–0.81 en todas las temporadas; el CO, solo en 2023–2024. Las dos son métodos de concentración o columna: no se descarta un sesgo común (ver «Revisión adversarial») |
 | NO₂/NOₓ fijo, fondo, perfil horario, piso de viento (2026-11-01) | No | Ninguno sube el domingo de E2 o E5b; los cuatro lo dejan igual o lo bajan |
 | Transporte equivocado | Sí, para la pluma | En gemelos generados con puffs, la pluma da 0.51–0.65; los puffs, no |
 
@@ -122,12 +122,15 @@ El NOₓ cae solo ~5–15 % más que el CO en domingo: el diésel baja más que 
 | nov–dic 2023 (7 domingos) | 0.82 (0.64–1.04) | 0.76 | 0.71 | 0.59 |
 | feb–may 2024 | 0.80 (0.68–0.90) | 0.71 | 0.70 | 0.51 |
 | nov–dic 2024 | 0.70 (0.59–0.84) | 0.62 | 0.66 | 0.54 |
+| feb–may 2025 (OpenAQ) | 0.90 (0.80–1.03) | 0.82 | 0.75 | 0.62 |
+| nov–dic 2025 (OpenAQ, 7 domingos) | 0.87 (0.67–1.12) | 0.78 | 0.66 | 0.47 |
+| feb–may 2026 (OpenAQ) | 0.81 (0.74–0.88) | 0.73 | 0.59 | 0.43 |
 
-La emisión de CO cae a 0.70–0.82 en domingo ya descontado el clima, contra 0.89–0.96 de los autos contados en Infovial: la actividad de toda la zona metropolitana cae más que la de las vialidades primarias. Con el factor del diésel (×0.9), la emisión de NOₓ del domingo queda en **0.56–0.74**, según el fondo que se suponga (el factor mismo varía de 0.65 a 0.97 entre temporadas y horarios). Es independiente de Infovial y del modelo de NOₓ, pero usa el mismo transporte y un fondo supuesto. Es de la misma magnitud que la caída de las concentraciones matutinas del domingo en la ciudad durante 1986–2007 (0.53–0.72; promedio de los tres valores más altos de 7 a 12 h, Stephens et al., 2008, ACP 8:5313); aquellas son concentraciones, no emisiones.
+La emisión de CO cae a 0.70–0.82 en domingo en 2023–2024 y a 0.73–0.90 en 2025–2026 (OpenAQ), ya descontado el clima, contra 0.89–0.96 de los autos contados en Infovial: la actividad de toda la zona metropolitana cae más que la de las vialidades primarias. Con el factor del diésel (×0.9), la emisión de NOₓ del domingo queda en **0.56–0.74 en 2023–2024 y 0.66–0.81 en 2025–2026**, según el fondo que se suponga (el factor mismo varía de 0.65 a 0.97 entre temporadas y horarios). Es independiente de Infovial y del modelo de NOₓ, pero usa el mismo transporte y un fondo supuesto. Es de la misma magnitud que la caída de las concentraciones matutinas del domingo en la ciudad durante 1986–2007 (0.53–0.72; promedio de los tres valores más altos de 7 a 12 h, Stephens et al., 2008, ACP 8:5313); aquellas son concentraciones, no emisiones.
 
 **Lectura:**
 
-| Estimador | Domingo ÷ hábil (2023–2026) | Frente a 0.56–0.74 |
+| Estimador | Domingo ÷ hábil (2023–2026) | Frente a 0.56–0.74 (CO, 2023–2024) |
 |---|---|---|
 | X4 | 0.57–0.58 | En el borde inferior |
 | E7 | 0.47–0.64 (0.47 en feb–may 2026, por una corrección excesiva del clima) | Casi siempre dentro o en el borde |
@@ -154,11 +157,17 @@ Parte del «sesgo del domingo» era la referencia. El de las inversiones con puf
 - **Corrección por clima:** con log(columna) ~ temporada + log(viento) + log(capa de mezcla) ajustado en los días hábiles, el domingo queda igual: 0.58 (0.54–0.61) sin corregir y 0.58 (0.54–0.61) corregido, con las 6 temporadas juntas (47 domingos, bootstrap por semanas); por temporada, 0.55–0.67 corregido. En promedio el domingo tiene el mismo viento (0.99 del hábil) y la misma capa de mezcla (1.02).
 - **La divergencia sola** (τ = ∞, la parte que sí usa el viento) es ruidosa por temporada (0.29–0.72), pero junta da 0.54 (0.39–0.70): también excluye 0.76–0.81.
 
-**Lo que no se probó:** una vida media distinta por tipo de día. La química del OH no es lineal; si el NOₓ del domingo vive menos, la emisión sería mayor que la columna (con τ del domingo 0.8 del hábil, 0.58 pasaría a ~0.73), y al revés si vive más. El signo no se conoce con estos datos.
+**Vida media por tipo de día: no se puede medir con este dominio.** La química del OH no es lineal. Si el NOₓ del domingo vive menos, la emisión es mayor que la columna: con τ del domingo de 0.8 la del hábil, 0.58 pasaría a ~0.73. Si vive más, pasa lo contrario; físicamente, menos NOₓ alarga la vida. Se intentaron tres métodos con TEMPO (scripts en el scratchpad de la sesión):
+
+- **Ajuste EMG (Beirle et al. 2011)** de la densidad de línea a favor del viento, con días compuestos y viento ≥ 2 m/s. Da τ de 1.40 h (1.21–1.63) en hábil y 1.43 h (1.04–1.85) en domingo; τ_hábil/τ_domingo = 0.98 (0.74–1.38), con 131 y 38 días. Pero el resultado cambia con el umbral de viento (1.14 con 1.5 m/s, 1.88 con 3 m/s) y los τ quedan bajo lo plausible. El dominio deja solo ~27 km a sotavento y el perfil sigue en ~65 % del máximo a 25 km, así que la cola exponencial no se ve y el EMG no queda identificado.
+- **Modelo de caja** V = E/(u/L + 1/τ): no es identificable; τ va de 0.2 a 30 h.
+- **Pendiente de log V contra log u:** −0.37 en hábil y −0.23 en domingo, diferencia +0.14 (−0.03 a +0.31). Insinúa un τ dominical algo mayor, lo que bajaría el cociente, pero no es concluyente.
+
+Con el EMG, la corrección sería 0.58 × 0.98 ≈ 0.57 (0.43–0.80); llegar a 0.7 exige τ_hábil/τ_domingo = 1.21. No hay evidencia de esa diferencia, pero tampoco se descarta. Decidirlo pide descargar TEMPO con un recorte de ≥ 60 km a sotavento, o un OH modelado (GEOS-CF).
 
 **La magnitud no valida nada.** 79–132 kt/año con τ de 2–4 h frente a 144 kt/año del inventario 2018 es el mismo orden de magnitud, pero el valor cambia ×1.9 con τ y ×1.7 con el fondo, y extrapola la tarde a todo el día.
 
-**Referencia del domingo: 0.58 (0.54–0.61) por el satélite y 0.56–0.74 por el CO.** Las dos excluyen el tráfico contado (0.76–0.81): Infovial (26 vialidades primarias de 2017–2018) no se ajusta a la emisión total de NOₓ en domingo. Las tres referencias que lo excluyen (satélite, CO y los estimadores) son métodos de concentración o columna, así que no se descarta del todo un sesgo común; separarlo pide un ancla de emisión que no sea concentración (ventas de combustible, aforos recientes). Frente al satélite, temporada por temporada:
+**Referencia del domingo: 0.58 (0.54–0.61) por el satélite y 0.56–0.81 por el CO (0.56–0.74 en 2023–2024, 0.66–0.81 en 2025–2026).** El satélite excluye el tráfico contado (0.76–0.81) en todas las temporadas; el CO, solo en 2023–2024. En 2025–2026 el CO queda arriba del satélite (0.66–0.81 frente a 0.53–0.61), con la red de OpenAQ sin validar. No es el factor del diésel: la pendiente ΔNOₓ/ΔCO de la tarde con OpenAQ da 0.81–0.88 en nov–dic 2024, feb–may 2025 y nov–dic 2025, como en 2023–2024; en feb–may 2026 no se identifica (0.05–6.0). La diferencia está en el CO mismo, que en OpenAQ cae menos en domingo (0.80–0.87 en concentración por la tarde, frente al NOₓ 0.60–0.71). Las dos referencias no coinciden del todo: Infovial (26 vialidades primarias de 2017–2018) no se ajusta a la emisión total de NOₓ en domingo. Las tres referencias que lo excluyen (satélite, CO y los estimadores) son métodos de concentración o columna, así que no se descarta del todo un sesgo común; separarlo pide un ancla de emisión que no sea concentración (ventas de combustible, aforos recientes). Frente al satélite, temporada por temporada:
 
 | Temporada | TEMPO | E5b | E2 | E7 | X4 |
 |---|---|---|---|---|---|
@@ -173,7 +182,7 @@ Parte del «sesgo del domingo» era la referencia. El de las inversiones con puf
 - E5b queda en promedio ~0.07 por debajo del satélite y es inestable entre temporadas (0.36 en nov–dic 2025).
 - Una parte importante del «sesgo del domingo» del avance 4 se explica porque la referencia de tráfico mide otra cosa. La brecha restante de E5b sigue sin explicación.
 - Sábado: con las 6 temporadas juntas, 0.86 (0.81–0.92; 42 sábados), igual en invierno (0.86) y en feb–may (0.87). Con una sola temporada no se estima.
-- Combinar el satélite con E7 (pesos de mínima varianza, elegidos con los mismos datos) baja el límite de detección de 9 días de 23–31 % (E7) a 15–25 %. Las dos series diarias se correlacionan (+0.3 a +0.6), por variación real de la emisión o por clima compartido. Antes de usarlo en las fichas hay que fijar los pesos de antemano.
+- Combinar el satélite con E7 (pesos de mínima varianza, elegidos con los mismos datos) baja el límite de detección de 9 días de 23–31 % (E7) a 15–25 %. Las dos series diarias se correlacionan (+0.3 a +0.6), por variación real de la emisión o por clima compartido. Con pesos fijados de antemano el resultado se mantiene. Ajustados con 2023–24 (0.65 para E7) o mitad y mitad, sin ajuste, dan 20–24 % en las cuatro temporadas de 2024–2026, frente a 23–31 % de E7 y 15–22 % del satélite. Mitad y mitad es igual de bueno y no tiene nada que ajustar. La combinación casi nunca queda peor que el mejor de los dos y gana sobre todo cuando E7 es ruidoso (nov–dic 2025: 31 % → 20 %).
 - El satélite también ve el aumento antes de Navidad (18–22 de diciembre: +26 % en 2023, +27 % en 2025). Como el cociente es casi el de la columna, no separa más emisión de acumulación: no confirma ni descarta la explicación de la acumulación.
 
 ### Revisión adversarial (2026-11-01)
