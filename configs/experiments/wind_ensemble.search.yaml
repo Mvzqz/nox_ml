@@ -4,7 +4,7 @@
 config: wind_ensemble.yaml
 model: wind_ensemble
 search: random
-n_trials: 6
+n_trials: 4
 seed: 7
 space:
   sigma_dir_deg: [15.0, 30.0]
