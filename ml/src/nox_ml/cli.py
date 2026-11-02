@@ -13,11 +13,12 @@ import typer
 from pydantic import ValidationError
 
 from nox_ml import __version__
+from nox_ml.data import calendar as calendar_days
 from nox_ml.data import openaq, pbl, simat, tempo
 from nox_ml.data.inputs import load_inputs
 from nox_ml.data.qc import render
 from nox_ml.validation import compare as comparison
-from nox_ml.validation import diagnostics, episodes, events, experiment, products, twins
+from nox_ml.validation import diagnostics, divergence, episodes, events, experiment, products, twins
 from nox_ml.validation import lockdown as lockdown_validation
 from nox_ml.validation import tune as tuning
 
@@ -430,6 +431,52 @@ def ficha_medida(
         out.write_text(products.render_seasons(results, combined, title, windows))
     typer.echo(out.read_text())
     typer.echo(f"Written to {out}")
+
+
+@app.command("flux-divergence")
+def flux_divergence(
+    start: Annotated[str, typer.Argument(help="First local day, YYYY-MM-DD.")],
+    end: Annotated[str, typer.Argument(help="Last local day, YYYY-MM-DD.")],
+    wind_scale: Annotated[float, typer.Option(help="Surface wind -> wind that carries the plume.")] = 1.0,
+    data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
+    out_dir: Annotated[Path, typer.Option(help="Where the result goes.")] = Path("runs/flux_divergence"),
+) -> None:
+    """Saturday and Sunday over weekday NOx emission of the city from TEMPO alone (flux divergence), without
+    the atypical periods: a reference for every estimator, with no station NOx, traffic or transport model.
+    Also its placebo and detection limit on the business days without contingency nor atypical period, and
+    the daily series (with the atypical days flagged) for other analyses. Seasons after 2024 read the OpenAQ
+    tables and the airport wind (`fetch-openaq`, `fetch-weather`)."""
+    inputs = load_inputs(data_dir, start, end, (12, 17), products.sources_for(start, end))
+    daily = divergence.daily_emission(inputs, wind_scale=wind_scale)
+    days = pd.DatetimeIndex(daily.index)
+    daily["atypical"] = days.isin(calendar_days.atypical_days(start, end))
+    ratios = divergence.day_type_ratios(pd.DataFrame(daily[~daily["atypical"]]).drop(columns="atypical"))
+    left_out = products.reference_exclusions(data_dir, start, end, pd.DatetimeIndex([]))
+    normal = days[(daily["kind"] == 0).to_numpy() & ~days.isin(left_out)]
+    placebos = {
+        c: divergence.placebo(pd.Series(daily[c]), normal) for c in ("tau_2h", "tau_4h")
+    }  # tau_infh: too noisy
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / f"{start}_{end}.json"
+    record = {"start": start, "end": end, "wind_scale": wind_scale, "ratios": ratios, "placebo": placebos}
+    out.write_text(json.dumps(record, indent=2) + "\n")
+    daily.rename_axis("day").to_csv(out.with_suffix(".csv"))
+    for column, by_kind in ratios.items():
+        shown = [
+            f"{kind} {r['ratio']:.2f} ({r['lo']:.2f}-{r['hi']:.2f}, {r['n_days']} days)"
+            for kind, r in by_kind.items()
+            if isinstance(r, dict)
+        ]
+        typer.echo(f"{column}: " + "; ".join(shown) + f" over {by_kind['n_weekdays']} weekdays")
+        if column not in placebos:
+            continue
+        p = placebos[column]
+        shown = [
+            f"{r['days']} days {r['center']:.2f} ({r['lo']:.2f}-{r['hi']:.2f}) mdc {r['mdc']:.0%}"
+            for r in p["rows"]
+        ]
+        typer.echo(f"  placebo over {p['n_normal']} normal days: " + "; ".join(shown))
+    typer.echo(f"Written to {out} and {out.with_suffix('.csv')}")
 
 
 @app.command("ficha-dias")
