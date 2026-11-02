@@ -151,6 +151,11 @@ Parte del «sesgo del domingo» era la referencia. El de las inversiones con puf
 | feb–may 2025 | 0.61 (0.54–0.69) | 0.61 (0.53–0.71) | 0.90 | 0.99 (0.85–1.18) | 22 % |
 | nov–dic 2025 | 0.57 (0.46–0.69) | 0.58 (0.46–0.71) | 1.00 | 1.00 (0.91–1.10) | 14 % |
 | feb–may 2026 | 0.53 (0.46–0.60) | 0.49 (0.41–0.60) | 0.85 | 0.99 (0.85–1.15) | 21 % |
+| jun–oct 2024 (lluvias) | 0.55 (0.46–0.64) | 0.53 (0.44–0.62) | 0.81 | 0.99 (0.78–1.25) | 30 % |
+| jun–oct 2025 (lluvias) | 0.50 (0.43–0.58) | 0.52 (0.43–0.61) | 0.62 | 0.99 (0.82–1.24) | 26 % |
+| jun–oct 2026 (lluvias) | 0.53 (0.48–0.59) | 0.54 (0.48–0.61) | 0.77 | 1.00 (0.82–1.19) | 25 % |
+
+En lluvias, las nubes dejan solo ~45 días hábiles por temporada con escaneos útiles, de ~105. Aun así, el domingo del satélite (0.50–0.55) coincide con E7 (0.50 en las tres temporadas) y el placebo queda en 1. Con E7 mitad y mitad, el límite de 9 días baja a 20–22 % (E7 solo: 23–25 %).
 
 **Qué mide en realidad.** El término químico pesa 77–91 % del total con τ = 2 h, así que el cociente es casi el de la columna de NO₂ sobre el fondo: por eso no cambia con τ (escala igual a todos los días) ni con la altura del viento (×1 o ×2.5). No es una prueba de robustez del flujo. Dos pruebas de que aun así refleja la emisión y no el clima:
 
@@ -163,7 +168,15 @@ Parte del «sesgo del domingo» era la referencia. El de las inversiones con puf
 - **Modelo de caja** V = E/(u/L + 1/τ): no es identificable; τ va de 0.2 a 30 h.
 - **Pendiente de log V contra log u:** −0.37 en hábil y −0.23 en domingo, diferencia +0.14 (−0.03 a +0.31). Insinúa un τ dominical algo mayor, lo que bajaría el cociente, pero no es concluyente.
 
-Con el EMG, la corrección sería 0.58 × 0.98 ≈ 0.57 (0.43–0.80); llegar a 0.7 exige τ_hábil/τ_domingo = 1.21. No hay evidencia de esa diferencia, pero tampoco se descarta. Decidirlo pide descargar TEMPO con un recorte de ≥ 60 km a sotavento, o un OH modelado (GEOS-CF).
+Con el EMG, la corrección sería 0.58 × 0.98 ≈ 0.57 (0.43–0.80); llegar a 0.7 exige τ_hábil/τ_domingo = 1.21. No hay evidencia de esa diferencia, pero tampoco se descarta.
+
+**Con un recorte amplio (2026-11-01).** Se descargó TEMPO con ~65 km más de margen para nov–dic 2023 y 2024, con 3 escaneos por día de 13 a 15 h. Se ajustaron perfiles a lo largo del viento de −80 a +120 km, con el fondo a barlovento y con Toluca, Puebla, Cuernavaca y Pachuca enmascaradas:
+
+- La cola ya se ve: la columna cae de 15 a 3 × 10¹⁵ entre +12 y +42 km.
+- τ queda en 1.3–2.7 h, un rango plausible.
+- τ_hábil/τ_domingo da 0.80 (0.53–1.35) con viento ≥ 1 m/s, 0.95 (0.69–1.52) con ≥ 1.5 y 1.03 (0.77–1.50) con ≥ 2. Sin máscara da 0.83–1.13.
+- **No hay diferencia detectable.** Corregido, el domingo queda en 0.46–0.60, y ningún ajuste llega a la razón de 1.21 que lo subiría a 0.7.
+- Límites: hay solo 5–14 domingos, y una meseta de ~3 × 10¹⁵ hasta +62 km, probablemente fuentes regionales, entra en el ajuste. Una vida media del hábil 20 % mayor no queda del todo excluida, pero no hay evidencia de ella.
 
 **La magnitud no valida nada.** 79–132 kt/año con τ de 2–4 h frente a 144 kt/año del inventario 2018 es el mismo orden de magnitud, pero el valor cambia ×1.9 con τ y ×1.7 con el fondo, y extrapola la tarde a todo el día.
 

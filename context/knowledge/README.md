@@ -12,4 +12,5 @@ Se migra por partes desde la carpeta de investigación (`reports/RESUMEN.md`, `r
 - [`verificaciones_nivel1.md`](verificaciones_nivel1.md): verificaciones y herramientas del nivel 1: convenciones, festivos y días de fin de año (sesgo del domingo), piso de ruido, control con calendario, curva de detección, diagnóstico de episodios y regresión-kriging.
 - [`controles_de_verdad.md`](controles_de_verdad.md): controles con verdad conocida: el confinamiento de 2020 frente a 2019 (cambio real) y gemelos con emisión conocida sobre los receptores reales (origen del sesgo del domingo).
 - [`sesgo_domingo.md`](sesgo_domingo.md): el sesgo del domingo: qué lo explica (fin de año, transporte) y qué no (el método, el peso de TEMPO, la ponderación de Infovial).
+- [`deriva.md`](deriva.md): la deriva lenta de E7 dentro de cada temporada: el satélite ve la misma, qué la acompaña y por qué la columna lejana no sirve para corregirla.
 - [`fichas.md`](fichas.md): las fichas (evaluar una medida o verificar un anuncio; días necesarios), qué estimador responde cada pregunta y su validación.
