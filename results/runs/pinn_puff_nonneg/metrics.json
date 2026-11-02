@@ -366,8 +366,8 @@
     "placebo_center": 0.9911633795233414,
     "placebo_halfwidth": 0.1083570348573728,
     "eligible": true,
-    "fit_seconds": 506.73845014401013,
-    "predict_seconds": 0.09846246801316738,
+    "fit_seconds": 557.8969797319733,
+    "predict_seconds": 0.14273248403333127,
     "n_params": 12832
   }
 }
