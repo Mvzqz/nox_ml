@@ -30,6 +30,34 @@ def test_a_tempo_error_without_limit_leaves_the_pixels_out(make_inputs):
         assert_allclose(with_error.gradient, no_pixels.gradient, rtol=1e-8, atol=1e-12)
 
 
+def test_each_hour_s_no2_nox_converts_tempo_as_if_the_period_had_that_ratio(make_inputs):
+    inputs = make_inputs()
+    doubled = [replace(h, no2_nox=2 * inputs.no2_nox_ratio) for h in inputs.hours]
+
+    hourly = hour_systems(
+        doubled, inputs.zones, inputs.points, inputs.no2_nox_ratio, N_REGIONS, hourly_no2_nox=True
+    )
+    period = hour_systems(inputs.hours, inputs.zones, inputs.points, 2 * inputs.no2_nox_ratio, N_REGIONS)
+
+    for a, b in zip(hourly, period, strict=True):
+        assert_allclose(a.info, b.info, rtol=1e-8)
+        assert_allclose(a.gradient, b.gradient, rtol=1e-8)
+
+
+def test_an_hour_without_its_own_ratio_keeps_the_period_s(make_inputs):
+    inputs = make_inputs()
+    unknown = [replace(h, no2_nox=None) for h in inputs.hours]
+
+    for a, b in zip(
+        systems_of(inputs),
+        hour_systems(
+            unknown, inputs.zones, inputs.points, inputs.no2_nox_ratio, N_REGIONS, hourly_no2_nox=True
+        ),
+        strict=True,
+    ):
+        assert_allclose(a.info, b.info)
+
+
 def test_the_traffic_constraint_sets_the_road_totals_of_the_day_types():
     prior = np.array([700.0, 500.0])  # t/yr of each region
     points = pd.DataFrame({"name": ["P0"], "x": [0.0], "y": [0.0], "prior": [100.0], "sd": [100.0]})

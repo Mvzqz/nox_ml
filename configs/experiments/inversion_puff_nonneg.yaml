@@ -1,0 +1,23 @@
+# inversion_puff with the most probable state with every source >= 0 instead of the Gaussian mean, which gives
+# some regions a negative emission. Otherwise identical to inversion_puff.yaml.
+name: inversion_puff_nonneg
+period:
+  start: 2023-11-01
+  end: 2023-12-31
+simat_hours:
+- 12
+- 17
+model:
+  name: inversion_puff
+  params:
+    max_age_h: 24
+    lifetime: oh
+    bootstrap_n: 200
+    bootstrap_level: 0.9
+    seed: 7
+    nonnegative: true
+placebo:
+  n: 2000
+  seed: 3
+  level: 0.9
+  refits: 8

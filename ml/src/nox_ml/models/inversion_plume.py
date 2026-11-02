@@ -57,6 +57,15 @@ class PlumeInversionParams(ModelParams):
     traffic_constraint: bool = Field(
         default=False, description="hold the Saturday and Sunday road totals at their traffic ratios"
     )
+    # the stations measure 0.76 on weekdays and 0.84 on Sundays, 0.68 at 12 h and 0.84 at 17 h (nov-dec 2023):
+    # with the period's ratio for every hour, TEMPO sees a Sunday NOx 11 % too high
+    hourly_no2_nox: bool = Field(
+        default=False, description="convert TEMPO with each hour's measured NO2/NOx instead of the period's"
+    )
+
+    # the unconstrained mean gives some regions a negative emission (nov-dec 2023: region 0, -1 780 t/yr)
+    nonnegative: bool = Field(default=False, description="the most probable state with every source >= 0")
+
     traffic_sd: float = Field(
         default=TRAFFIC_RATIO_SD, gt=0, description="standard deviation of those ratios (traffic constraint)"
     )
@@ -88,6 +97,7 @@ def ratio_intervals(
     seed: int,
     constraints: Sequence[tuple[np.ndarray, float, float]] = (),
     block: int = 1,
+    nonnegative: bool = False,
 ) -> pd.DataFrame:
     """Interval of each day type's road total over the weekday's (columns ``day_type``, ``lo``, ``hi``,
     ``level``): `n` replicates that solve the systems again on whole days drawn with replacement, in blocks
@@ -97,7 +107,9 @@ def ratio_intervals(
     boot = []
     for _ in range(n):
         weights = block_draw(len(days), block, rng)[day_index]
-        boot.append(solve(systems, points, n_regions, weights, constraints).road_factors() @ prior)
+        boot.append(
+            solve(systems, points, n_regions, weights, constraints, nonnegative).road_factors() @ prior
+        )
     totals = np.array(boot)
     return pd.DataFrame(
         [
@@ -182,8 +194,15 @@ class InversionPlume:
             day_kinds=data.day_kinds,
             jacobians=data.jacobians_without_stations(exclude_stations, key, transport),
             tempo_sigma_mult=p.tempo_sigma_mult,
+            hourly_no2_nox=p.hourly_no2_nox,
         )
-        post = solve(systems, data.points, data.n_regions, constraints=self.constraints(data))
+        post = solve(
+            systems,
+            data.points,
+            data.n_regions,
+            constraints=self.constraints(data),
+            nonnegative=p.nonnegative,
+        )
         self._fitted = (data, systems, post, frozenset(exclude_stations))
         return self
 
@@ -238,6 +257,7 @@ class InversionPlume:
             p.seed,
             self.constraints(data),
             p.bootstrap_block_days,
+            p.nonnegative,
         )
         return EmissionEstimate("absolute", table, ci)
 

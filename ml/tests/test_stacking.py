@@ -78,6 +78,31 @@ def test_likelihood_weights_favor_the_model_with_the_smaller_error():
     assert weights.sum() == pytest.approx(1.0)
 
 
+def test_pseudo_bma_shares_the_weight_when_the_lead_is_within_the_noise_of_the_days():
+    rng = np.random.default_rng(5)
+    days = np.repeat(np.arange(40), 100)  # 40 days of 100 rows
+    truth = rng.uniform(5, 50, len(days))
+    shared = rng.normal(0, 3, len(days))
+    # a lead of 1 % in error that changes sign from day to day: the plain likelihood still picks a winner
+    day_scale = np.where(rng.random(40) < 0.5, 1.02, 0.98)[days]
+    predictions = np.c_[truth + shared, truth + shared * day_scale]
+
+    plain = stacking.likelihood_weights(predictions, truth)
+    pseudo = stacking.pseudo_bma_weights(predictions, truth, days)
+
+    assert plain.max() > pseudo.max()
+    assert 0.1 < pseudo[0] < 0.9 and pseudo.sum() == pytest.approx(1.0)
+
+
+def test_pseudo_bma_still_picks_a_model_that_is_better_every_day():
+    rng = np.random.default_rng(6)
+    days = np.repeat(np.arange(30), 50)
+    truth = rng.uniform(5, 50, len(days))
+    predictions = np.c_[truth + rng.normal(0, 2, len(days)), truth + rng.normal(0, 4, len(days))]
+
+    assert stacking.pseudo_bma_weights(predictions, truth, days)[0] > 0.99
+
+
 def test_the_weights_of_a_station_do_not_use_that_station():
     observed, oof = frames()
     scrambled_obs = observed.assign(obs=np.where(observed["station"] == "BBB", 1000.0, observed["obs"]))
