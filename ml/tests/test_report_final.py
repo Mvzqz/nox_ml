@@ -175,3 +175,54 @@ def test_the_figures_of_the_final_model_draw(tmp_path):
 def test_missing_runs_and_data_give_no_observations(tmp_path, capsys):
     assert rf.observed_or_none(tmp_path / "none", tmp_path) is None
     assert "Sin corrida" in capsys.readouterr().out
+
+
+def zone_emissions(weekday):
+    rows = [
+        {"zone": z, "day_type": "weekday", "mean": v, "sd": 50.0, "kind": "absolute"}
+        for z, v in enumerate(weekday)
+    ]
+    return pd.DataFrame(rows)
+
+
+def test_the_zone_shares_merge_the_periphery_clip_negative_regions_and_add_up_to_one(tmp_path):
+    run = write_run(tmp_path, "a", "pinn_puff", 1.0, emissions=zone_emissions([-100, 2, 1, 3, 4, 1, 2, 2, 1]))
+
+    shares = dict(zip(rf.zone_shares({"a": run})["zone"], rf.zone_shares({"a": run})["share"], strict=True))
+
+    assert sum(shares.values()) == pytest.approx(1.0)
+    assert shares["SO"] == 0.0  # the negative region counts as nothing
+    assert shares["Oriente"] == pytest.approx(3 / 16)  # regions 2, 5 and 8
+    assert shares["Norte"] == pytest.approx(4 / 16)  # regions 6 and 7
+
+
+def test_a_zone_is_model_dependent_when_two_models_split_the_city_differently(tmp_path):
+    same = [1, 2, 1, 3, 4, 1, 2, 2, 1]
+    runs = {
+        "a": write_run(tmp_path, "a", "pinn_puff", 1.0, emissions=zone_emissions([0, *same[1:]])),
+        "b": write_run(tmp_path, "b", "inversion_puff", 1.0, emissions=zone_emissions([3, *same[1:]])),
+    }
+    prior = pd.Series([1.0] * 9, index=range(9))
+
+    shares = rf.zone_shares(runs, prior)
+
+    assert "SO" in rf.model_dependent(shares)
+    assert "Centro" not in rf.model_dependent(shares)
+    assert isinstance(rf.plot_emission_zones(runs, prior, {"pinn_puff": "E5b"}), Figure)
+
+
+def test_the_day_type_figure_reads_the_satellite_of_the_same_period(tmp_path):
+    run = write_run(tmp_path, "final", "pinn_puff", 1.0)
+    (run / "config.yaml").write_text(
+        "model:\n  name: pinn_puff\nperiod: {start: '2023-11-01', end: '2023-12-31'}\n"
+    )
+    folder = tmp_path / rf.SATELLITE_DIR
+    folder.mkdir()
+    ratio = {"ratio": 0.56, "lo": 0.47, "hi": 0.68, "n_days": 5}
+    (folder / "2023-11-01_2023-12-31.json").write_text(
+        json.dumps({"ratios": {"tau_2h": {"sunday": ratio, "saturday": ratio, "n_weekdays": 18}}})
+    )
+
+    assert rf.satellite_day_types(run)["domingo / hábil"] == (0.56, 0.47, 0.68)
+    assert rf.satellite_day_types(write_run(tmp_path, "other", "pinn_puff", 1.0)) == {}
+    assert isinstance(rf.plot_day_types({"nov–dic 2023": run}), Figure)

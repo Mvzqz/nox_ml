@@ -50,6 +50,10 @@ PLANNED = INDIVIDUAL + ENSEMBLES
 TEST_SUFFIX = ".test"  # `nox-ml evaluate` writes runs/<name>.test/
 DAY_ORDER = ("weekday", "saturday", "sunday_holiday")
 REGION_NAMES = ("SO", "S", "SE", "O", "Centro", "E", "NO", "N", "NE")  # 0 = SW ... 8 = NE (data.roads)
+# The zones the data resolve: the regions with one station each (the east column and the north row) are
+# merged; their shares of the city then hold within 0.02 between seasons and models (2023-2026)
+ZONES = {"SO": (0,), "S": (1,), "O": (3,), "Centro": (4,), "Norte": (6, 7), "Oriente": (2, 5, 8)}
+MODEL_GAP = 0.05  # share of the city two transports may differ by before a zone is called model-dependent
 
 
 def _figure(nrows: int = 1, ncols: int = 1, figsize: tuple[float, float] = (8, 4), **kwargs: Any):
@@ -304,6 +308,106 @@ def plot_emission_map(run: Path) -> Figure:
     return fig
 
 
+def region_prior(data_dir: Path) -> pd.Series:
+    """Prior road emission of each region (t/yr), the inventory the inversions start from."""
+    from nox_ml.data.roads import read_roads, road_emission_cells
+
+    cells = road_emission_cells(read_roads(data_dir / "interim" / "roads.gpkg"))
+    return cells.groupby("region")["weight"].sum()
+
+
+def zone_shares(runs: dict[str, Path], prior: pd.Series | None = None) -> pd.DataFrame:
+    """Share of the city's weekday road emission in each of `ZONES`, one row per labelled run with zones and
+    zone (columns ``run``, ``model``, ``zone``, ``share``, ``kt``); the regions are clipped at 0 before
+    summing. With `prior`, rows with ``run`` = ``inventario`` hold the shares of the inventory."""
+    rows = []
+    for label, run in runs.items():
+        table = emissions(run)
+        weekday = table[(table["day_type"] == "weekday") & table["zone"].notna()]
+        if weekday.empty:
+            continue
+        region = weekday.set_index(weekday["zone"].astype(int))["mean"].clip(lower=0)
+        for zone, members in ZONES.items():
+            value = float(region.reindex(members).sum())
+            rows.append({"run": label, "model": config_model(run), "zone": zone, "kt": value / 1000,
+                         "share": value / float(region.sum())})  # fmt: skip
+    if prior is not None:
+        for zone, members in ZONES.items():
+            value = float(prior.reindex(members).sum())
+            rows.append({"run": "inventario", "model": "inventario", "zone": zone, "kt": value / 1000,
+                         "share": value / float(prior.sum())})  # fmt: skip
+    return pd.DataFrame(rows, columns=["run", "model", "zone", "kt", "share"])
+
+
+def model_dependent(shares: pd.DataFrame) -> list[str]:
+    """The zones whose mean share differs by more than `MODEL_GAP` between two models of `zone_shares`."""
+    by_model = shares[shares["model"] != "inventario"].groupby(["zone", "model"])["share"].mean().unstack()
+    if by_model.shape[1] < 2:
+        return []
+    gap = by_model.max(axis=1) - by_model.min(axis=1)
+    return [zone for zone in ZONES if zone in gap.index and float(gap[zone]) > MODEL_GAP]
+
+
+def plot_emission_zones(
+    runs: dict[str, Path], prior: pd.Series | None = None, labels: dict[str, str] | None = None
+) -> Figure:
+    """The share of the city's weekday road emission in each zone the data resolve (`ZONES`): left, the map
+    with the mean share and its factor over the inventory; right, the share of every run (season and
+    model) against the inventory. The map is the mean of the first model of `runs` (the final one); zones
+    where the models disagree are marked."""
+    shares = zone_shares(runs, prior)
+    estimated = shares[shares["model"] != "inventario"]
+    names = labels or {}
+    disputed = model_dependent(shares)
+    fig, axes = _figure(1, 2, figsize=(12, 4.8), gridspec_kw={"width_ratios": [1, 1.3]})
+    models = list(dict.fromkeys(estimated["model"]))
+    mean = (
+        estimated[estimated["model"] == models[0]].groupby("zone")["share"].mean()
+    )  # the first: the final model
+    inventory = shares[shares["model"] == "inventario"].set_index("zone")["share"]
+    grid = np.full((N_SPLIT, N_SPLIT), np.nan)
+    for zone, members in ZONES.items():
+        for region in members:
+            row, col = divmod(region, N_SPLIT)
+            grid[row, col] = mean.get(zone, np.nan)
+    image = axes[0].imshow(grid, origin="lower", cmap="YlOrRd", vmin=0)
+    fig.colorbar(image, ax=axes[0], label="proporción de la emisión vial (día hábil)")
+    for zone, members in ZONES.items():
+        rows_cols = [divmod(region, N_SPLIT) for region in members]
+        row = float(np.mean([r for r, _ in rows_cols]))
+        col = float(np.mean([c for _, c in rows_cols]))
+        text = f"{zone}\n{mean.get(zone, np.nan):.0%}"
+        if zone in inventory and inventory[zone] > 0:
+            text += f"\n×{mean.get(zone, np.nan) / inventory[zone]:.1f} inv."
+        if zone in disputed:
+            text += "\n(depende\ndel modelo)"
+        axes[0].text(col, row, text, ha="center", va="center", fontsize=8)
+    axes[0].set_xticks([])
+    axes[0].set_yticks([])
+    axes[0].set_title(f"{names.get(models[0], models[0])}: emisión vial por zona (norte arriba)", fontsize=10)
+    zones = list(ZONES)
+    y = np.arange(len(zones))
+    colors, markers = [BLUE, ORANGE, GREEN, RED], ["o", "s", "^", "D"]
+    for k, model in enumerate(models):
+        part = estimated[estimated["model"] == model]
+        offset = (k - (len(models) - 1) / 2) * 0.18
+        for _, row in part.iterrows():
+            ax_y = zones.index(row["zone"]) + offset
+            axes[1].scatter(row["share"], ax_y, color=colors[k % 4], marker=markers[k % 4], s=22, alpha=0.8)
+        axes[1].scatter([], [], color=colors[k % 4], marker=markers[k % 4], label=names.get(model, model))
+    if not inventory.empty:
+        axes[1].scatter(inventory.reindex(zones), y, marker="|", s=300, color=GREY, label="inventario")
+    axes[1].set_yticks(y, zones)
+    axes[1].invert_yaxis()
+    axes[1].set(
+        xlabel="proporción de la emisión vial de la ciudad (cada punto, una temporada)", xlim=(-0.02, None)
+    )
+    axes[1].legend(fontsize=8, loc="lower right")
+    axes[1].set_title("Reparto entre zonas: temporadas y modelos")
+    fig.tight_layout()
+    return fig
+
+
 def _plot_relative_index(table: pd.DataFrame) -> Figure:
     pooled = table[table["zone"].isna()].set_index("day_type").reindex(list(DAY_ORDER)).dropna(how="all")
     fig, ax = _figure(figsize=(6, 3.5))
@@ -327,13 +431,36 @@ def _metrics(run: Path) -> dict[str, Any]:
     return json.loads((run / "metrics.json").read_text())
 
 
+SATELLITE_DIR = "flux_divergence"  # `nox-ml flux-divergence` results, <start>_<end>.json, next to the runs
+
+
+def satellite_day_types(run: Path) -> dict[str, tuple[float, float, float]]:
+    """Saturday and Sunday over weekday from TEMPO alone (flux divergence, lifetime 2 h) for the period of
+    `run`, as (value, lo, hi) by row name of `plot_day_types`; empty when that period was not computed."""
+    config = run / "config.yaml"
+    if not config.is_file():
+        return {}
+    period = yaml.safe_load(config.read_text()).get("period", {})
+    path = run.parent / SATELLITE_DIR / f"{period.get('start')}_{period.get('end')}.json"
+    if not path.is_file():
+        return {}
+    ratios = json.loads(path.read_text())["ratios"]["tau_2h"]
+    names = {"saturday": "sábado / hábil", "sunday": "domingo / hábil"}
+    return {names[k]: (r["ratio"], r["lo"], r["hi"]) for k, r in ratios.items() if k in names}
+
+
 def plot_day_types(runs: dict[str, Path]) -> Figure:
     """Saturday and Sunday over weekday with their intervals and the placebo, for each labelled run (for
-    example the final model on the tuning and on the test period), against the traffic counts and the
-    placebo gate."""
-    fig, ax = _figure(figsize=(8.5, 1.2 + 1.1 * len(runs) * 1.5))
+    example the final model on the tuning and on the test period), each next to the satellite's value for
+    the same period (`satellite_day_types`), with the placebo gate and, faded, the traffic counts the earlier
+    reports compared with."""
+    fig, ax = _figure(figsize=(8.5, 2.2 + 1.1 * len(runs) * 1.5))
     lo, hi = TRAFFIC_SUNDAY_RATIO
-    ax.axvspan(lo, hi, color=GREEN, alpha=0.2, label=f"domingo según el tráfico ({lo}–{hi})")
+    ax.axvspan(
+        lo, hi, facecolor="none", edgecolor=GREY, hatch="///", alpha=0.5,
+        label=f"tráfico contado en vialidades primarias ({lo}–{hi}; no es la emisión total)",
+    )  # fmt: skip
+    shown_satellite = False
     ax.axvspan(
         1 - PLACEBO_TOLERANCE, 1 + PLACEBO_TOLERANCE, color=GREY, alpha=0.15, label="compuerta del placebo"
     )
@@ -350,6 +477,7 @@ def plot_day_types(runs: dict[str, Path]) -> Figure:
         if s.get("placebo_center") is not None:
             c, w = s["placebo_center"], s["placebo_halfwidth"]
             rows.append(("placebo", c, c - w, c + w))
+        satellite = satellite_day_types(run)
         for name, value, low, high in rows:
             if value is None:
                 continue
@@ -359,13 +487,21 @@ def plot_day_types(runs: dict[str, Path]) -> Figure:
                 value, y, xerr=[[value - low], [high - value]], fmt="o", capsize=4, color=colors[k % 4]
             )
             ax.text(high + 0.02, y, f"{value:.2f}", va="center", fontsize=8)
+            if name in satellite:
+                v, sl, sh = satellite[name]
+                ax.errorbar(
+                    v, y + 0.3, xerr=[[v - sl], [sh - v]], fmt="D", capsize=3, color="black", ms=4,
+                    label=None if shown_satellite else "satélite solo, mismo periodo (divergencia de flujo)",
+                )  # fmt: skip
+                shown_satellite = True
             labels.append(f"{label}: {name}")
             y += 1
     ax.set_yticks(range(len(labels)), labels, fontsize=8)
     ax.invert_yaxis()
     ax.set(xlabel="cociente de emisión (intervalo del 90 %)", xlim=(0.2, 1.6))
-    ax.legend(fontsize=7, loc="lower left")
+    ax.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=1, frameon=False)
     ax.set_title("Cambios de emisión que el modelo ve, y el que no debe ver (placebo)")
+    fig.tight_layout()
     return fig
 
 
