@@ -63,6 +63,9 @@ class PlumeInversionParams(ModelParams):
         default=False, description="convert TEMPO with each hour's measured NO2/NOx instead of the period's"
     )
 
+    # the unconstrained mean gives some regions a negative emission (nov-dec 2023: region 0, -1 780 t/yr)
+    nonnegative: bool = Field(default=False, description="the most probable state with every source >= 0")
+
     traffic_sd: float = Field(
         default=TRAFFIC_RATIO_SD, gt=0, description="standard deviation of those ratios (traffic constraint)"
     )
@@ -94,6 +97,7 @@ def ratio_intervals(
     seed: int,
     constraints: Sequence[tuple[np.ndarray, float, float]] = (),
     block: int = 1,
+    nonnegative: bool = False,
 ) -> pd.DataFrame:
     """Interval of each day type's road total over the weekday's (columns ``day_type``, ``lo``, ``hi``,
     ``level``): `n` replicates that solve the systems again on whole days drawn with replacement, in blocks
@@ -103,7 +107,9 @@ def ratio_intervals(
     boot = []
     for _ in range(n):
         weights = block_draw(len(days), block, rng)[day_index]
-        boot.append(solve(systems, points, n_regions, weights, constraints).road_factors() @ prior)
+        boot.append(
+            solve(systems, points, n_regions, weights, constraints, nonnegative).road_factors() @ prior
+        )
     totals = np.array(boot)
     return pd.DataFrame(
         [
@@ -190,7 +196,13 @@ class InversionPlume:
             tempo_sigma_mult=p.tempo_sigma_mult,
             hourly_no2_nox=p.hourly_no2_nox,
         )
-        post = solve(systems, data.points, data.n_regions, constraints=self.constraints(data))
+        post = solve(
+            systems,
+            data.points,
+            data.n_regions,
+            constraints=self.constraints(data),
+            nonnegative=p.nonnegative,
+        )
         self._fitted = (data, systems, post, frozenset(exclude_stations))
         return self
 
@@ -245,6 +257,7 @@ class InversionPlume:
             p.seed,
             self.constraints(data),
             p.bootstrap_block_days,
+            p.nonnegative,
         )
         return EmissionEstimate("absolute", table, ci)
 

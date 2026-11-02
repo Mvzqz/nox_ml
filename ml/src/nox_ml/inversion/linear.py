@@ -23,6 +23,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
+from scipy.optimize import lsq_linear
 
 from nox_ml.data.roads import UTM
 from nox_ml.data.traffic import Infovial
@@ -357,10 +358,13 @@ def solve(
     n_regions: int,
     weights: Sequence[float] | None = None,
     constraints: Sequence[tuple[Array, float, float]] = (),
+    nonnegative: bool = False,
 ) -> Posterior:
     """Posterior from the hour systems. `weights` (one per hour, default 1) multiply the information of
     each hour: an hour with weight 2 counts as if it were repeated, as a bootstrap over days needs. The
-    `constraints` (``(row, target, sd)``, `traffic_constraints`) are added once, whatever the weights."""
+    `constraints` (``(row, target, sd)``, `traffic_constraints`) are added once, whatever the weights.
+    `nonnegative` replaces the mean by the most probable state with every source >= 0 (`nonnegative_mode`);
+    the covariance stays the Gaussian one."""
     mean, sd, labels = prior_state(points, n_regions)
     precision = np.diag(1 / sd**2)
     rhs = mean / sd**2
@@ -373,7 +377,17 @@ def solve(
         precision += np.outer(row, row) / noise**2
         rhs += row * target / noise**2
     cov = np.linalg.inv(precision)
-    return Posterior(labels, cov @ rhs, cov, mean, sd, len(points), n_regions)
+    state = cov @ rhs
+    if nonnegative and (state < 0).any():
+        state = nonnegative_mode(state, precision)
+    return Posterior(labels, state, cov, mean, sd, len(points), n_regions)
+
+
+def nonnegative_mode(mean: Array, precision: Array) -> Array:
+    """The most probable state >= 0 of the Gaussian N(`mean`, `precision`^-1): the minimum of
+    ``(x - mean)' precision (x - mean)`` with ``x >= 0``, a bounded least squares on its Cholesky factor."""
+    factor = np.linalg.cholesky(precision).T  # precision = factor' factor
+    return lsq_linear(factor, factor @ mean, bounds=(0, np.inf), method="bvls").x
 
 
 def invert(
