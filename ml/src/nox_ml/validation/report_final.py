@@ -34,6 +34,7 @@ from nox_ml.validation.report_baseline import BLUE, DAY_LABELS, GREEN, GREY, ORA
 # (id, experiment config = run name, kind) of every model the comparison expects (avance5_arranque.md)
 INDIVIDUAL = [
     ("E5b", "pinn_puff", "individual"),
+    ("E5b≥0", "pinn_puff_nonneg", "individual"),  # E5b with every emission >= 0 (avance 5)
     ("E2", "inversion_puff", "individual"),
     ("E5a", "pinn_plume", "individual"),
     ("E6", "rf_deweather", "individual"),
