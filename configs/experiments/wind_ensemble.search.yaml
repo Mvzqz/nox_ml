@@ -1,0 +1,12 @@
+# Tuning of X2 (wind_ensemble) on nov-dec 2023 (`nox-ml tune`): random search over the wind uncertainties, scored by
+# leave-one-station-out RMSE. Each trial builds the matrices of its members (~5 min each): keep n_trials small.
+# Run: uv run nox-ml tune configs/experiments/wind_ensemble.search.yaml  ->  runs/wind_ensemble/trials.csv
+config: wind_ensemble.yaml
+model: wind_ensemble
+search: random
+n_trials: 4
+seed: 7
+space:
+  sigma_dir_deg: [15.0, 30.0]
+  sigma_pbl: [0.1, 0.3]
+  sigma_speed: [0.1, 0.3]

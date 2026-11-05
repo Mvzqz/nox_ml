@@ -17,6 +17,7 @@ stations: the wind comes from the airports (`inputs.airport_wind`).
 ``NOX``, ``O3`` in ppb), so `inputs.load_inputs` reads it like SIMAT's.
 """
 
+import http.client
 import json
 import os
 import time
@@ -62,7 +63,12 @@ def api_get(path: str, params: dict[str, Any]) -> dict[str, Any]:
             if error.code not in (429, 500, 502, 503, 504) or attempt == RETRIES - 1:
                 raise
             time.sleep(30 * (attempt + 1))
-        except (urllib.error.URLError, TimeoutError):  # the network, not the request: wait and try again
+        except (
+            urllib.error.URLError,
+            TimeoutError,
+            ConnectionError,
+            http.client.IncompleteRead,
+        ):  # the network
             if attempt == RETRIES - 1:
                 raise
             time.sleep(30 * (attempt + 1))

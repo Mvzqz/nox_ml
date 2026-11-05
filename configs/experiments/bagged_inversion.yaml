@@ -1,0 +1,33 @@
+# X1, bagged_inversion (frente A): 20 inversions of E5b (pinn_puff) on resampled days, drawn within each day type
+# (nox_ml.models.bagged). The base is the configuration of pinn_puff.yaml; the bags share its transport and Jacobians.
+# Run: uv run nox-ml run configs/experiments/bagged_inversion.yaml  ->  runs/bagged_inversion/
+name: bagged_inversion
+period:
+  start: 2023-11-01
+  end: 2023-12-31
+simat_hours: [12, 17]
+model:
+  name: bagged_inversion
+  params:
+    base:
+      name: pinn_puff
+      params:
+        layers: 4
+        width: 64
+        learning_rate: 0.002
+        physics_weight: 1.0
+        adam_steps: 3000
+        lbfgs_rounds: 15
+        kappa: 1500.0
+        seed: 0
+        tau_h: 12.0
+        u_min: 2.0
+        max_age_h: 24
+        lifetime: oh
+        bootstrap_n: 200
+        bootstrap_level: 0.90
+        kernel_dir: .cache/pinn
+    n_bags: 20
+    block_days: 1
+    seed: 0
+placebo: {n: 2000, seed: 3, level: 0.90, refits: 8}

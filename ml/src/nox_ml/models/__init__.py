@@ -1,5 +1,6 @@
 """Models and references behind one contract (``docs/models.md``). Register a class in `REGISTRY`."""
 
+from nox_ml.models.bagged import BaggedInversion
 from nox_ml.models.base import Dataset, EmissionEstimate, Model, ModelParams
 from nox_ml.models.ensemble import ConvexEnsemble
 from nox_ml.models.gb_deweather import GbDeweather
@@ -11,9 +12,12 @@ from nox_ml.models.references import Idw, Kriging
 from nox_ml.models.regularized_ls import RegularizedLs
 from nox_ml.models.residual_kriging import ResidualKriging
 from nox_ml.models.rf_deweather import RfDeweather
+from nox_ml.models.wind_ensemble import WindEnsemble
 
 REGISTRY: dict[str, type[Model]] = {
     ConvexEnsemble.name: ConvexEnsemble,
+    BaggedInversion.name: BaggedInversion,
+    WindEnsemble.name: WindEnsemble,
     GbDeweather.name: GbDeweather,
     InversionPlume.name: InversionPlume,
     InversionPuff.name: InversionPuff,

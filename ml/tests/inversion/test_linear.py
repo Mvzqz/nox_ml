@@ -268,3 +268,23 @@ def test_twin_recovers_the_known_road_factors():
     assert_allclose(post.road_factors()[0], truth[road][:3], atol=0.15)
     assert np.all(np.abs(post.mean - truth) < 4 * post.sd)
     assert np.all(post.sd[road] < 0.5)  # the data informed every factor
+
+
+def test_the_nonnegative_mode_is_the_gaussian_mean_when_it_is_already_nonnegative():
+    from nox_ml.inversion.linear import nonnegative_mode
+
+    precision = np.array([[2.0, 0.5], [0.5, 1.0]])
+
+    assert_allclose(nonnegative_mode(np.array([1.0, 3.0]), precision), [1.0, 3.0], atol=1e-9)
+
+
+def test_the_nonnegative_mode_sets_a_negative_unknown_to_zero_and_moves_the_correlated_one():
+    from nox_ml.inversion.linear import nonnegative_mode
+
+    # correlated unknowns: with the first held at 0, the second moves by -(P01 / P11) * (0 - m0)
+    precision = np.array([[2.0, 0.5], [0.5, 1.0]])
+    mean = np.array([-1.0, 3.0])
+
+    mode = nonnegative_mode(mean, precision)
+
+    assert_allclose(mode, [0.0, 3.0 - 0.5 * 1.0], atol=1e-9)

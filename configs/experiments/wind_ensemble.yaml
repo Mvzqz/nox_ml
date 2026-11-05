@@ -1,0 +1,20 @@
+# X2, wind_ensemble (frente A): 8 inversions of E2 (inversion_puff) over perturbed winds: direction 30 degrees,
+# speed and boundary layer height 20 % (nox_ml.models.wind_ensemble). Same data, priors and metrics as inversion_puff.yaml.
+# Run: uv run nox-ml run configs/experiments/wind_ensemble.yaml  ->  runs/wind_ensemble/
+name: wind_ensemble
+period:
+  start: 2023-11-01
+  end: 2023-12-31
+simat_hours: [12, 17]
+model:
+  name: wind_ensemble
+  params:
+    base:
+      name: inversion_puff
+      params: {max_age_h: 24, lifetime: oh, bootstrap_n: 200, bootstrap_level: 0.90, seed: 7}
+    n_members: 8
+    sigma_dir_deg: 30.0
+    sigma_speed: 0.2
+    sigma_pbl: 0.2
+    seed: 0
+placebo: {n: 2000, seed: 3, level: 0.90, refits: 8}

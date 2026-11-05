@@ -1,5 +1,7 @@
 """OpenAQ station data: matching to SIMAT stations, paging and the qc-simat table."""
 
+import http.client
+import io
 import urllib.error
 from email.message import Message
 
@@ -86,6 +88,23 @@ def test_the_key_is_required(monkeypatch):
 
     with pytest.raises(RuntimeError, match=openaq.KEY_VARIABLE):
         openaq.api_get("/locations", {})
+
+
+def test_a_dropped_connection_is_retried(monkeypatch):
+    monkeypatch.setenv(openaq.KEY_VARIABLE, "test")
+    monkeypatch.setattr(openaq.time, "sleep", lambda s: None)
+    calls = []
+
+    def urlopen(request, timeout):
+        calls.append(request)
+        if len(calls) == 1:
+            raise http.client.RemoteDisconnected("Remote end closed connection without response")
+        return io.BytesIO(b'{"results": []}')
+
+    monkeypatch.setattr(openaq.urllib.request, "urlopen", urlopen)
+
+    assert openaq.api_get("/locations", {}) == {"results": []}
+    assert len(calls) == 2
 
 
 def test_a_sensor_the_server_keeps_failing_on_is_skipped_with_a_warning():
