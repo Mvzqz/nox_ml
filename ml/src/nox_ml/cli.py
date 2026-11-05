@@ -14,8 +14,8 @@ from pydantic import ValidationError
 
 from nox_ml import __version__
 from nox_ml.data import calendar as calendar_days
-from nox_ml.data import openaq, pbl, simat, tempo
-from nox_ml.data.inputs import load_inputs
+from nox_ml.data import openaq, pbl, simat, tempo, weather
+from nox_ml.data.inputs import load_inputs, openaq_sources
 from nox_ml.data.qc import render
 from nox_ml.validation import compare as comparison
 from nox_ml.validation import diagnostics, divergence, episodes, events, experiment, products, twins
@@ -100,6 +100,20 @@ def fetch_openaq(
     (the table of qc-simat). Takes about a second per request (the key's rate limit)."""
     raw, interim = openaq.run_fetch(start, end, data_dir)
     typer.echo(f"Written to {raw} and {interim}")
+
+
+@app.command("fetch-weather")
+def fetch_weather(
+    start: Annotated[str, typer.Argument(help="First day, YYYY-MM-DD (UTC).")],
+    end: Annotated[str, typer.Argument(help="Day after the last one, YYYY-MM-DD (UTC, exclusive).")],
+    data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
+) -> None:
+    """Download the airport reports (IEM) and ERA5 (Open-Meteo) of a window and merge them into the files the
+    seasons after 2024 read, for the months the downloads of 2024-2026 did not reach. No key needed."""
+    sources = openaq_sources(start, end)
+    covered = weather.run_fetch(start, end, data_dir / "raw", sources.metar, sources.era5)
+    for name, (first, last) in covered.items():
+        typer.echo(f"{name}: {first} to {last}")
 
 
 @app.command("fill-pbl")
@@ -401,7 +415,9 @@ def ficha_medida(
     data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
     out_dir: Annotated[Path, typer.Option(help="Where the sheet is written.")] = Path("runs/fichas"),
 ) -> None:
-    """Sheet: did the emission change on these days? With the estimator validated for changes (E7).
+    """Sheet: did the emission change on these days? With the estimator validated for changes (E7), and the
+    satellite alone (flux divergence) as a second opinion where the season has TEMPO pixels (`qc-tempo`).
+    Writes the sheet (Markdown) and its numbers (JSON, for other programs).
 
     With several seasons, each one's days are compared with its own normal days and the changes are
     combined; seasons after 2024 read the OpenAQ tables (`fetch-openaq`)."""
@@ -419,18 +435,24 @@ def ficha_medida(
             raise typer.Exit(2)
         inputs = products.season_inputs(data_dir, start, end, products.sources_for(start, end))
         excluded = products.reference_exclusions(data_dir, start, end, season)
+        satellite = products.satellite_daily(data_dir, start, end)
         results.append(
-            products.measure_result(inputs, products.estimator("change"), season, excluded, claim=claim)
+            products.measure_result(
+                inputs, products.estimator("change"), season, excluded, claim=claim, satellite=satellite
+            )
         )
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"medida_{event[0]:%Y-%m-%d}_{event[-1]:%Y-%m-%d}.md"
+    combined = None
     if len(results) == 1:
         out.write_text(products.render_measure(results[0], title, windows[0]))
     else:
         combined = products.combine_seasons(results, claim=claim)
         out.write_text(products.render_seasons(results, combined, title, windows))
+    record = {"title": title, "windows": windows, "seasons": results, "combined": combined}
+    out.with_suffix(".json").write_text(json.dumps(record, indent=2, default=float) + "\n")
     typer.echo(out.read_text())
-    typer.echo(f"Written to {out}")
+    typer.echo(f"Written to {out} and {out.with_suffix('.json')}")
 
 
 @app.command("flux-divergence")
@@ -483,10 +505,12 @@ def flux_divergence(
 def ficha_dias(
     data: Annotated[str, typer.Option(help="Season window START:END whose day-to-day variation is used.")],
     drops: Annotated[list[float] | None, typer.Option(help="Drops as fractions (repeatable).")] = None,
+    days_per_season: Annotated[int, typer.Option(help="Business days of the measure in each season.")] = 20,
     data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
     out_dir: Annotated[Path, typer.Option(help="Where the sheet is written.")] = Path("runs/fichas"),
 ) -> None:
-    """Sheet: how many business days a measure needs to show a drop, from the variation of the season."""
+    """Sheet: how many consecutive business days a measure needs to show a drop in one season, from the
+    day-to-day variation and the slow drift of the season, and how many seasons when one is not enough."""
     start, end = (pd.Timestamp(day).date().isoformat() for day in data.split(":"))
     inputs = products.season_inputs(data_dir, start, end, products.sources_for(start, end))
     normal = events.split_days(
@@ -495,12 +519,28 @@ def ficha_dias(
         products.reference_exclusions(data_dir, start, end, pd.DatetimeIndex([])),
     ).normal
     curve = events.detection_curve(inputs, products.estimator("change"), normal, [5, 9, 15], products.PLACEBO)
-    table = [(d, products.days_needed(d, curve["cv"])) for d in (drops or [0.05, 0.1, 0.2, 0.3])]
+    cv = curve["cv"]
+    table = [
+        (
+            d,
+            products.days_needed(d, cv, drift=products.DRIFT_SD),
+            products.seasons_needed(d, cv, days_per_season),
+        )
+        for d in (drops or [0.05, 0.1, 0.2, 0.3])
+    ]
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"dias_{start}_{end}.md"
-    out.write_text(products.render_days(table, curve["cv"], (start, end)))
+    out.write_text(products.render_days(table, cv, (start, end), days_per_season))
+    record = {
+        "window": [start, end],
+        "cv": cv,
+        "drift_sd": products.DRIFT_SD,
+        "days_per_season": days_per_season,
+        "rows": [{"drop": d, "days_one_season": k, "seasons": n} for d, k, n in table],
+    }
+    out.with_suffix(".json").write_text(json.dumps(record, indent=2, default=float) + "\n")
     typer.echo(out.read_text())
-    typer.echo(f"Written to {out}")
+    typer.echo(f"Written to {out} and {out.with_suffix('.json')}")
 
 
 @app.command("compare")
