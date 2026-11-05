@@ -230,10 +230,16 @@ def satellite_result(
     }
 
 
-def agree(first: dict[str, Any], second: dict[str, Any]) -> bool:
-    """Whether two results (E7 and the satellite) tell the same: the same verdict and overlapping ranges."""
+def agreement(first: dict[str, Any], second: dict[str, Any]) -> str:
+    """How two results (E7 and the satellite) compare: ``agree`` (the same verdict), ``split`` (one detects a
+    change and the other not, with ranges that overlap) or ``apart`` (ranges that do not overlap: they
+    contradict each other). In injections (6 seasons, runs and random sets of 5-20 days) the verdicts split
+    6-21 % of the time with no change and 20-39 % with a drop of 20 %, near the detectable one; the ranges
+    never fell apart."""
     (a, b), (c, d) = first["range"], second["range"]
-    return first["verdict"] == second["verdict"] and a <= d and c <= b
+    if b < c or d < a:
+        return "apart"
+    return "agree" if first["verdict"] == second["verdict"] else "split"
 
 
 def combine_seasons(
@@ -406,11 +412,14 @@ def satellite_lines(satellite: dict[str, Any] | None, stations: dict[str, Any]) 
             "2 días de la medida sin nubes).",
         ]
     low, high = satellite["range"]
-    reading = (
-        "Coincide con las estaciones"
-        if agree(stations, satellite)
-        else "**No coincide** con las estaciones: lee el resultado con cautela"
-    )
+    reading = {
+        "agree": "Coincide con las estaciones",
+        "split": "**El veredicto no coincide** con el de las estaciones (uno ve un cambio y el otro no), "
+        "aunque sus rangos se cruzan: pasa en 6–21 % de los casos sin ningún cambio y en 20–40 % con "
+        "cambios cerca del mínimo detectable. Tómalo como indicio, no como resultado firme",
+        "apart": "**Contradice** a las estaciones (sus rangos no se cruzan): no leas el resultado como un "
+        "cambio de emisión sin revisar los datos",
+    }[agreement(stations, satellite)]
     return [
         "",
         f"**Segunda opinión, satélite TEMPO** (sin estaciones ni modelo de transporte; {satellite['n_days']} "

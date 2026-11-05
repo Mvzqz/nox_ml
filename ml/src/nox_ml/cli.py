@@ -417,6 +417,7 @@ def ficha_medida(
 ) -> None:
     """Sheet: did the emission change on these days? With the estimator validated for changes (E7), and the
     satellite alone (flux divergence) as a second opinion where the season has TEMPO pixels (`qc-tempo`).
+    Writes the sheet (Markdown) and its numbers (JSON, for other programs).
 
     With several seasons, each one's days are compared with its own normal days and the changes are
     combined; seasons after 2024 read the OpenAQ tables (`fetch-openaq`)."""
@@ -442,13 +443,16 @@ def ficha_medida(
         )
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"medida_{event[0]:%Y-%m-%d}_{event[-1]:%Y-%m-%d}.md"
+    combined = None
     if len(results) == 1:
         out.write_text(products.render_measure(results[0], title, windows[0]))
     else:
         combined = products.combine_seasons(results, claim=claim)
         out.write_text(products.render_seasons(results, combined, title, windows))
+    record = {"title": title, "windows": windows, "seasons": results, "combined": combined}
+    out.with_suffix(".json").write_text(json.dumps(record, indent=2, default=float) + "\n")
     typer.echo(out.read_text())
-    typer.echo(f"Written to {out}")
+    typer.echo(f"Written to {out} and {out.with_suffix('.json')}")
 
 
 @app.command("flux-divergence")
@@ -527,8 +531,16 @@ def ficha_dias(
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"dias_{start}_{end}.md"
     out.write_text(products.render_days(table, cv, (start, end), days_per_season))
+    record = {
+        "window": [start, end],
+        "cv": cv,
+        "drift_sd": products.DRIFT_SD,
+        "days_per_season": days_per_season,
+        "rows": [{"drop": d, "days_one_season": k, "seasons": n} for d, k, n in table],
+    }
+    out.with_suffix(".json").write_text(json.dumps(record, indent=2, default=float) + "\n")
     typer.echo(out.read_text())
-    typer.echo(f"Written to {out}")
+    typer.echo(f"Written to {out} and {out.with_suffix('.json')}")
 
 
 @app.command("compare")
