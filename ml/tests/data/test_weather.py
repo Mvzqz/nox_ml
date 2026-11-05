@@ -63,3 +63,22 @@ def test_run_fetch_merges_both_airports_and_era5_into_the_files_it_names(tmp_pat
     assert covered["A.csv"] == ("2026-05-31 23:50", "2026-06-01 00:50")
     assert set(pd.read_csv(tmp_path / "metar" / "B.csv")["station"]) == {"X", "MMSM"}
     assert covered["e.json"] == ("2026-05-31T23:00", "2026-06-01T00:00")
+
+
+def test_a_rate_limited_request_is_retried(monkeypatch):
+    import io
+    import urllib.error
+    from email.message import Message
+
+    calls = []
+
+    def urlopen(url, timeout):
+        calls.append(url)
+        if len(calls) == 1:
+            raise urllib.error.HTTPError(url, 429, "Too Many Requests", Message(), None)
+        return io.BytesIO(b"ok")
+
+    monkeypatch.setattr(weather.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(weather.time, "sleep", lambda s: None)
+
+    assert weather.http_get("https://example.org") == b"ok" and len(calls) == 2

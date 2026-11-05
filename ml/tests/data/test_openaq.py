@@ -121,3 +121,40 @@ def test_a_sensor_the_server_keeps_failing_on_is_skipped_with_a_warning():
         raw = openaq.fetch("2026-03-01", "2026-03-02", CATALOG, get)
 
     assert raw["parameter"].tolist() == ["no2"]
+
+
+def test_a_window_extends_the_files_of_the_full_season_and_replaces_the_hours_it_repeats(
+    tmp_path, monkeypatch
+):
+    import geopandas as gpd
+    from shapely.geometry import Point
+
+    (tmp_path / "interim").mkdir()
+    gpd.GeoDataFrame({"cve_estac": ["MER"]}, geometry=[Point(-99.12, 19.43)], crs=4326).to_file(
+        tmp_path / "interim" / "estaciones.gpkg"
+    )
+
+    def raw(hours, value):
+        h = pd.to_datetime(hours)
+        n = len(h)
+        return pd.DataFrame(
+            {"sensor": 1, "location": 1, "station": "MER", "parameter": "nox", "h": h, "value": [value] * n}
+        )
+
+    window = ("2026-11-01", "2027-01-01")
+    fetched = iter(
+        [
+            raw(["2026-11-01 10:00", "2026-11-02 10:00"], 0.01),
+            raw(["2026-11-02 10:00", "2026-11-03 10:00"], 0.02),
+        ]
+    )
+    monkeypatch.setattr(openaq, "fetch", lambda start, end, catalog: next(fetched))
+
+    openaq.run_fetch("2026-11-01", "2026-11-03", tmp_path, window)
+    raw_path, table_path = openaq.run_fetch("2026-11-02", "2026-11-04", tmp_path, window)
+
+    assert raw_path.name == "openaq_2026-11-01_2027-01-01.parquet"
+    assert table_path.name == "openaq_nox_2026-11-01_2027-01-01.parquet"
+    merged = pd.read_parquet(raw_path)
+    assert list(merged["value"]) == [0.01, 0.02, 0.02]  # the repeated hour is the new value
+    assert len(pd.read_parquet(table_path)) == 3

@@ -192,6 +192,45 @@ def satellite_daily(data_dir: Path, start: str, end: str) -> pd.Series | None:
     return divergence.daily_emission(inputs, taus=(2.0,))[SATELLITE_COLUMN]
 
 
+def flux_divergence_record(
+    data_dir: Path, start: str, end: str, wind_scale: float = 1.0
+) -> tuple[dict[str, Any], pd.DataFrame]:
+    """The flux-divergence reading of a window (`nox-ml flux-divergence`): the record (``ratios`` of Saturday
+    and Sunday over weekday without the atypical periods, and the ``placebo`` of the 2 h and 4 h lifetimes
+    on the normal business days) and the daily series with the atypical days flagged."""
+    inputs = load_inputs(data_dir, start, end, (12, 17), sources_for(start, end))
+    daily = divergence.daily_emission(inputs, wind_scale=wind_scale)
+    days = pd.DatetimeIndex(daily.index)
+    daily["atypical"] = days.isin(calendar.atypical_days(start, end))
+    ratios = divergence.day_type_ratios(pd.DataFrame(daily[~daily["atypical"]]).drop(columns="atypical"))
+    left_out = reference_exclusions(data_dir, start, end, pd.DatetimeIndex([]))
+    normal = days[(daily["kind"] == 0).to_numpy() & ~days.isin(left_out)]
+    placebos = {
+        c: divergence.placebo(pd.Series(daily[c]), normal) for c in ("tau_2h", "tau_4h")
+    }  # tau_infh: too noisy
+    record = {"start": start, "end": end, "wind_scale": wind_scale, "ratios": ratios, "placebo": placebos}
+    return record, daily
+
+
+def weekly_index(inputs: Inputs, make_model: Callable[[], Model], excluded: pd.DatetimeIndex) -> pd.DataFrame:
+    """The change of emission of each week (Monday to Sunday) over the normal business days of the season:
+    ``week`` (its Monday), ``n_days`` (business days of the week with data, not in `excluded`) and ``change``
+    (ratio - 1 of the estimator, as `measure_result` computes it, with no range). Weeks with no such day are
+    left out. The reference days of a week are those of the other weeks, never its own."""
+    groups = events.split_days(inputs, pd.DatetimeIndex([]), excluded)
+    business = groups.normal
+    weeks = business.to_period("W-SUN").start_time
+    rows = []
+    for monday in sorted(set(weeks)):
+        event = business[weeks == monday]
+        reference = business.difference(event)
+        if reference.empty:
+            continue
+        ratio, _ = events._fit_ratio(inputs.on_days(event.union(reference)), make_model, event)
+        rows.append({"week": monday.date().isoformat(), "n_days": len(event), "change": ratio - 1})
+    return pd.DataFrame(rows, columns=["week", "n_days", "change"])
+
+
 def satellite_result(
     daily: pd.Series,
     event: pd.DatetimeIndex,

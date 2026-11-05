@@ -31,13 +31,13 @@ Getter = Callable[[str], bytes]
 
 
 def http_get(url: str) -> bytes:
-    """GET `url`, retrying on server and network errors."""
+    """GET `url`, retrying on server and network errors and when rate limited."""
     for attempt in range(RETRIES):
         try:
             with urllib.request.urlopen(url, timeout=180) as response:
                 return response.read()
         except urllib.error.HTTPError as error:
-            if error.code < 500 or attempt == RETRIES - 1:
+            if (error.code < 500 and error.code != 429) or attempt == RETRIES - 1:  # 429: rate limited
                 raise
         except (urllib.error.URLError, TimeoutError, http.client.IncompleteRead):  # the network: wait, retry
             if attempt == RETRIES - 1:
