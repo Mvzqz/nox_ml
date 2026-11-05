@@ -13,7 +13,7 @@ Fecha: 2026-10-29 (actualizado con las temporadas 2024–2026 y la calibración 
 ## Las fichas
 
 - `nox-ml ficha-medida --days INICIO:FIN --data INICIO:FIN --title "..." [--claim -0.2]`: ¿cambió la emisión en esos días?, con el cambio, su rango, el cambio mínimo detectable con esos días, el veredicto (baja, aumento o no detectable) y, si se da, si el cambio anunciado cabe en el rango. Advierte cuando los días caen en un periodo atípico.
-- `nox-ml ficha-dias --data INICIO:FIN [--drops 0.1 ...]`: cuántos días hábiles necesita una medida para mostrar una baja dada, con la variación de la temporada.
+- `nox-ml ficha-dias --data INICIO:FIN [--drops 0.1 ...] [--days-per-season 20]`: cuántos días hábiles seguidos necesita una medida para mostrar una baja dada en una temporada, con la variación de un día a otro y la deriva lenta, y cuántas temporadas cuando una no alcanza. Con la deriva (0.15), ninguna baja menor a ~31 % se ve en una sola temporada; en feb–may 2025, con 20 días por temporada, una baja de 30 % pide 2 temporadas, 20 % 5, 10 % 20 y 5 % 84.
 
 El rango sale de eventos falsos de la misma duración sacados de días normales (placebo). Cuando la medida dura tanto como la referencia o más (una medida sostenida de meses), no hay suficientes días para el placebo: el rango y el mínimo detectable se extrapolan con la variación de un día a otro de la temporada, con la regla que siguen los placebos cortos (desviación ∝ √(1/k + 1/n), con k días de la medida y n de referencia). La ficha dice cuál de los dos usó.
 
@@ -84,3 +84,11 @@ Pendiente: la prueba de comprensión con tres personas fuera del equipo; protoco
 uv run nox-ml ficha-dias --data 2023-11-01:2023-12-31
 uv run nox-ml ficha-medida --days 2023-12-18:2023-12-29 --data 2023-11-01:2023-12-31 --title "Vacaciones de fin de año 2023"
 ```
+
+## Segunda opinión del satélite (2026-11-05)
+
+`ficha-medida` lee, en las temporadas con píxeles de TEMPO, la emisión de la ciudad del satélite solo (divergencia de flujo, vida media de 2 h; [sesgo_domingo.md](sesgo_domingo.md)) en los mismos días de la medida, con el mismo placebo, deriva y extrapolación que E7, y dice si coincide con las estaciones (mismo veredicto y rangos que se cruzan). Con varias temporadas, combina también las del satélite.
+
+- No se combina con E7: los dos ven la misma deriva, así que la combinación no baja el mínimo detectable de medidas de días seguidos (0.164 frente a 0.163 en bloques de 9 días; [deriva.md](deriva.md)). Su valor es ser independiente de las estaciones y del modelo de transporte.
+- Prueba con datos reales, días sin ninguna medida: 4 semanas de marzo de 2025 (E7 +23 %, satélite +15 %, coinciden, no detectable); 4 semanas en 3 temporadas (+9 % y +6 %, coinciden); 5 días sueltos de feb–may 2025, donde E7 dio una falsa alarma (+34 %, "aumento") y el satélite no (−17 %, no detectable): la ficha avisa que no coinciden.
+- Sin píxeles de TEMPO, o con menos de 2 días de la medida sin nubes, la ficha lo dice y no da segunda opinión.

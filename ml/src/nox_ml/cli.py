@@ -415,7 +415,8 @@ def ficha_medida(
     data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
     out_dir: Annotated[Path, typer.Option(help="Where the sheet is written.")] = Path("runs/fichas"),
 ) -> None:
-    """Sheet: did the emission change on these days? With the estimator validated for changes (E7).
+    """Sheet: did the emission change on these days? With the estimator validated for changes (E7), and the
+    satellite alone (flux divergence) as a second opinion where the season has TEMPO pixels (`qc-tempo`).
 
     With several seasons, each one's days are compared with its own normal days and the changes are
     combined; seasons after 2024 read the OpenAQ tables (`fetch-openaq`)."""
@@ -433,8 +434,11 @@ def ficha_medida(
             raise typer.Exit(2)
         inputs = products.season_inputs(data_dir, start, end, products.sources_for(start, end))
         excluded = products.reference_exclusions(data_dir, start, end, season)
+        satellite = products.satellite_daily(data_dir, start, end)
         results.append(
-            products.measure_result(inputs, products.estimator("change"), season, excluded, claim=claim)
+            products.measure_result(
+                inputs, products.estimator("change"), season, excluded, claim=claim, satellite=satellite
+            )
         )
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"medida_{event[0]:%Y-%m-%d}_{event[-1]:%Y-%m-%d}.md"
@@ -497,10 +501,12 @@ def flux_divergence(
 def ficha_dias(
     data: Annotated[str, typer.Option(help="Season window START:END whose day-to-day variation is used.")],
     drops: Annotated[list[float] | None, typer.Option(help="Drops as fractions (repeatable).")] = None,
+    days_per_season: Annotated[int, typer.Option(help="Business days of the measure in each season.")] = 20,
     data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
     out_dir: Annotated[Path, typer.Option(help="Where the sheet is written.")] = Path("runs/fichas"),
 ) -> None:
-    """Sheet: how many business days a measure needs to show a drop, from the variation of the season."""
+    """Sheet: how many consecutive business days a measure needs to show a drop in one season, from the
+    day-to-day variation and the slow drift of the season, and how many seasons when one is not enough."""
     start, end = (pd.Timestamp(day).date().isoformat() for day in data.split(":"))
     inputs = products.season_inputs(data_dir, start, end, products.sources_for(start, end))
     normal = events.split_days(
@@ -509,10 +515,18 @@ def ficha_dias(
         products.reference_exclusions(data_dir, start, end, pd.DatetimeIndex([])),
     ).normal
     curve = events.detection_curve(inputs, products.estimator("change"), normal, [5, 9, 15], products.PLACEBO)
-    table = [(d, products.days_needed(d, curve["cv"])) for d in (drops or [0.05, 0.1, 0.2, 0.3])]
+    cv = curve["cv"]
+    table = [
+        (
+            d,
+            products.days_needed(d, cv, drift=products.DRIFT_SD),
+            products.seasons_needed(d, cv, days_per_season),
+        )
+        for d in (drops or [0.05, 0.1, 0.2, 0.3])
+    ]
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"dias_{start}_{end}.md"
-    out.write_text(products.render_days(table, curve["cv"], (start, end)))
+    out.write_text(products.render_days(table, cv, (start, end), days_per_season))
     typer.echo(out.read_text())
     typer.echo(f"Written to {out}")
 

@@ -35,7 +35,7 @@ from nox_ml.data import calendar, contingencies
 from nox_ml.data.inputs import DEFAULT_SOURCES, Inputs, Sources, load_inputs, openaq_sources
 from nox_ml.inversion.normalized import interval
 from nox_ml.models import Model
-from nox_ml.validation import events
+from nox_ml.validation import divergence, events
 from nox_ml.validation.experiment import Placebo, read_config
 
 ESTIMATORS = {
@@ -57,6 +57,12 @@ PLACEBO = Placebo(n=2000, seed=3, level=0.90, refits=200)  # E7 fits in a second
 # consecutive days (3 seasons, 96 injections of 0 and 20 %), 98 % and 2 %, where the random-day placebo alone
 # held it 65 % of the time
 DRIFT_SD = 0.15
+# the satellite (flux divergence, `divergence.daily_emission`) as a second opinion: the 2 h afternoon
+# lifetime, whose placebo is centered on 1 in every season. Its drift within a season is about that of E7
+# (runs of 9 consecutive days, 6 seasons without feb-may 2024: 0.145 against 0.125) and shared with it: their
+# 0.5/0.5 combination lowers the spread of random days (0.116 to 0.096) but not that of runs (0.164 to
+# 0.163), so the sheet shows it beside E7 instead of combining them
+SATELLITE_COLUMN = "tau_2h"
 
 
 def estimator(question: str, configs: Path = CONFIGS) -> Callable[[], Model]:
@@ -84,6 +90,7 @@ def measure_result(
     config: Placebo = PLACEBO,
     claim: float | None = None,
     power: float = POWER,
+    satellite: pd.Series | None = None,
 ) -> dict[str, Any]:
     """The change of emission on `days` over the normal business days (ratio - 1), read for a sheet: its
     range (the ratio over the spread of fake events of as many days, the honest uncertainty: the intervals of
@@ -99,7 +106,10 @@ def measure_result(
     - ``extrapolated``: a measure as long as the reference or more (months against weeks), where fake events
       of its length cannot be drawn. The day-to-day variation of the season (`events.detection_curve` on
       short fake events) gives a log-normal spread with sd ``cv sqrt(1/k + 1/n)`` for k measure days and n
-      normal ones, the rule the detection curve follows, plus the drift."""
+      normal ones, the rule the detection curve follows, plus the drift.
+
+    With the `satellite` daily emission (`satellite_daily`), ``satellite`` holds the same reading of it on the
+    same days (`satellite_result`), a second opinion independent of the stations and the transport model."""
     groups = events.split_days(inputs, days, days.union(excluded))
     if groups.event.empty:
         raise ValueError("no day of the measure is a business day with data")
@@ -108,28 +118,17 @@ def measure_result(
     business = groups.normal.union(groups.event)
     within = business[(business > groups.event.min()) & (business < groups.event.max())]
     contiguous = k > 1 and not within.isin(groups.normal).any()
-    z = float(norm.ppf(0.5 + config.level / 2))
     if k < n - 1:
         method = "drift" if contiguous else "placebo"
         ratios = events._fake_ratios(
             inputs, make_model, groups.normal, groups.normal, k, config.refits, config.seed
         )
-        center = float(np.median(ratios))
-        lo, hi = (center * (bound / center) ** RANGE_WIDENING for bound in interval(ratios, config.level))
-        if contiguous:
-            sd = float(np.hypot(np.log(hi / lo) / (2 * z), DRIFT_SD))
-            lo, hi = center * float(np.exp(-z * sd)), center * float(np.exp(z * sd))
-            detectable = float(1 - np.exp(-(z + norm.ppf(power)) * sd))
-        else:
-            detectable = 1 - lo / float(np.quantile(ratios, power))
+        center, lo, hi, detectable = _read_placebo(ratios, contiguous, config.level, power)
     else:
         method = "extrapolated"
         short = [c for c in (3, 5, 9) if c < n // 2] or [1]
         cv = events.detection_curve(inputs, make_model, groups.normal, short, config, power)["cv"]
-        sd = float(np.hypot(cv * np.sqrt(1 / k + 1 / n), DRIFT_SD))
-        center = 1.0
-        lo, hi = float(np.exp(-z * sd)), float(np.exp(z * sd))
-        detectable = float(1 - np.exp(-(z + norm.ppf(power)) * sd))
+        center, lo, hi, detectable = _extrapolate(cv, k, n, config.level, power)
     atypical = calendar.atypical_days(groups.event.min(), groups.event.max())
     out = {
         "method": method,
@@ -142,11 +141,99 @@ def measure_result(
         "detectable_drop": detectable,
         "verdict": verdict(ratio, lo, hi),  # the extrapolated spread is centered on 1
         "claim": None,
+        "satellite": None
+        if satellite is None
+        else satellite_result(satellite, groups.event, groups.normal, method != "placebo", config, power),
     }
     if claim is not None:
         low, high = out["range"]
         out["claim"] = {"change": claim, "fits": bool(low <= claim <= high)}
     return out
+
+
+def _read_placebo(
+    ratios: np.ndarray, contiguous: bool, level: float, power: float
+) -> tuple[float, float, float, float]:
+    """Center, range and detectable drop from the ratios of fake events: their interval widened by
+    `RANGE_WIDENING` and, for consecutive days, the slow drift added in quadrature."""
+    z = float(norm.ppf(0.5 + level / 2))
+    center = float(np.median(ratios))
+    lo, hi = (center * (bound / center) ** RANGE_WIDENING for bound in interval(ratios, level))
+    if not contiguous:
+        return center, lo, hi, 1 - lo / float(np.quantile(ratios, power))
+    sd = float(np.hypot(np.log(hi / lo) / (2 * z), DRIFT_SD))
+    return (
+        center,
+        center * float(np.exp(-z * sd)),
+        center * float(np.exp(z * sd)),
+        _detectable(sd, level, power),
+    )
+
+
+def _extrapolate(cv: float, k: int, n: int, level: float, power: float) -> tuple[float, float, float, float]:
+    """Center, range and detectable drop of k measure days against n normal ones from the day-to-day
+    variation `cv`, plus the drift: for measures as long as the reference, where fake events cannot be
+    drawn."""
+    z = float(norm.ppf(0.5 + level / 2))
+    sd = float(np.hypot(cv * np.sqrt(1 / k + 1 / n), DRIFT_SD))
+    return 1.0, float(np.exp(-z * sd)), float(np.exp(z * sd)), _detectable(sd, level, power)
+
+
+def _detectable(sd: float, level: float, power: float) -> float:
+    return float(1 - np.exp(-(norm.ppf(0.5 + level / 2) + norm.ppf(power)) * sd))
+
+
+def satellite_daily(data_dir: Path, start: str, end: str) -> pd.Series | None:
+    """The city emission of each day from TEMPO alone (`divergence.daily_emission`, `SATELLITE_COLUMN`), or
+    None when the season has no TEMPO pixel table (`nox-ml qc-tempo`)."""
+    if not (data_dir / "interim" / f"tempo_pixels_{start}_{end}.parquet").exists():
+        return None
+    inputs = load_inputs(data_dir, start, end, (12, 17), sources_for(start, end))
+    return divergence.daily_emission(inputs, taus=(2.0,))[SATELLITE_COLUMN]
+
+
+def satellite_result(
+    daily: pd.Series,
+    event: pd.DatetimeIndex,
+    normal: pd.DatetimeIndex,
+    contiguous: bool,
+    config: Placebo = PLACEBO,
+    power: float = POWER,
+) -> dict[str, Any] | None:
+    """The change on the `event` days over the `normal` ones of the satellite's daily emission, read as
+    `measure_result` reads E7 (the same fake events, drift and extrapolation, without refits: the satellite
+    is a mean of days), or None with fewer than 2 event days seen through the clouds."""
+    values = daily.dropna()
+    on_event = values[values.index.isin(event)].to_numpy()
+    base = values[values.index.isin(normal)].to_numpy()
+    k, n = len(on_event), len(base)
+    if k < 2 or n < 3:
+        return None
+    ratio = float(on_event.mean() / base.mean())
+    if k < n - 1:
+        rng = np.random.default_rng(config.seed)
+        ratios = np.empty(config.n)
+        for i in range(config.n):
+            fake = rng.permutation(n) < k
+            ratios[i] = base[fake].mean() / base[~fake].mean()
+        center, lo, hi, detectable = _read_placebo(ratios, contiguous, config.level, power)
+    else:
+        cv = float(np.std(np.log(base / base.mean()), ddof=1))
+        center, lo, hi, detectable = _extrapolate(cv, k, n, config.level, power)
+    return {
+        "n_days": k,
+        "n_normal": n,
+        "change": ratio - 1,
+        "range": (ratio * center / hi - 1, ratio * center / lo - 1),
+        "detectable_drop": detectable,
+        "verdict": verdict(ratio, lo, hi),
+    }
+
+
+def agree(first: dict[str, Any], second: dict[str, Any]) -> bool:
+    """Whether two results (E7 and the satellite) tell the same: the same verdict and overlapping ranges."""
+    (a, b), (c, d) = first["range"], second["range"]
+    return first["verdict"] == second["verdict"] and a <= d and c <= b
 
 
 def combine_seasons(
@@ -184,12 +271,27 @@ def combine_seasons(
     }
 
 
-def days_needed(drop: float, cv: float, level: float = 0.90, power: float = POWER) -> int:
-    """Business days a measure needs, against a reference of as many days, to show a `drop` (0.1 for 10 %)
-    with `power`, given the day-to-day variation `cv` of the season (`events.detection_curve`): the inverse
-    of its extrapolation ``drop = 1 - exp(-z cv sqrt(2 / k))``."""
+def days_needed(
+    drop: float, cv: float, level: float = 0.90, power: float = POWER, drift: float = 0.0
+) -> int | None:
+    """Consecutive business days a measure needs in one season, against a reference of as many days, to show
+    a `drop` (0.1 for 10 %) with `power`, given the day-to-day variation `cv` of the season
+    (`events.detection_curve`) and the slow `drift` of the season (sd, log): the inverse of
+    ``drop = 1 - exp(-z sqrt(2 cv^2 / k + drift^2))``. None when the drift alone hides the drop."""
     z = float(norm.ppf(0.5 + level / 2) + norm.ppf(power))
-    return int(np.ceil(2 * (z * cv / -np.log(1 - drop)) ** 2))
+    room = (-np.log(1 - drop) / z) ** 2 - drift**2
+    return int(np.ceil(2 * cv**2 / room)) if room > 0 else None
+
+
+def seasons_needed(
+    drop: float, cv: float, days: int, level: float = 0.90, power: float = POWER, drift: float = DRIFT_SD
+) -> int:
+    """Seasons a measure needs, with `days` consecutive business days in each against as many normal ones,
+    to show a `drop` when their changes are combined (`combine_seasons`): the drift of each season is taken
+    as independent, so the spread falls with the square root of the number of seasons."""
+    z = float(norm.ppf(0.5 + level / 2) + norm.ppf(power))
+    variance = 2 * cv**2 / days + drift**2
+    return int(np.ceil(variance * (z / np.log(1 - drop)) ** 2))
 
 
 def sources_for(start: str, end: str) -> Sources:
@@ -246,6 +348,7 @@ def render_measure(result: dict[str, Any], title: str, period: tuple[str, str]) 
         lines.append(
             f"| Cambio anunciado | {pct(result['claim']['change'])}: **{fits}** en el rango compatible |"
         )
+    lines += satellite_lines(result.get("satellite"), result)
     share = result["atypical_share"]
     if share >= MOSTLY_ATYPICAL:
         lines += [
@@ -294,19 +397,51 @@ def render_measure(result: dict[str, Any], title: str, period: tuple[str, str]) 
     return "\n".join(lines) + "\n"
 
 
-def render_days(table: list[tuple[float, int]], cv: float, period: tuple[str, str]) -> str:
+def satellite_lines(satellite: dict[str, Any] | None, stations: dict[str, Any]) -> list[str]:
+    """The second opinion of the satellite under the table of a sheet, and whether it agrees with E7."""
+    if satellite is None:
+        return [
+            "",
+            "Segunda opinión del satélite: no disponible (sin datos de TEMPO para el periodo o con menos de "
+            "2 días de la medida sin nubes).",
+        ]
+    low, high = satellite["range"]
+    reading = (
+        "Coincide con las estaciones"
+        if agree(stations, satellite)
+        else "**No coincide** con las estaciones: lee el resultado con cautela"
+    )
+    return [
+        "",
+        f"**Segunda opinión, satélite TEMPO** (sin estaciones ni modelo de transporte; {satellite['n_days']} "
+        f"días de la medida sin nubes): cambio {pct(satellite['change'])}, rango {pct(low)} a {pct(high)}, "
+        f"bajas detectables de {satellite['detectable_drop']:.0%} o más. {reading}.",
+    ]
+
+
+def render_days(
+    table: list[tuple[float, int | None, int]], cv: float, period: tuple[str, str], days_per_season: int
+) -> str:
     lines = [
         "# ¿Cuántos días necesita una medida para poder evaluarla?",
         "",
-        f"Con la variación de un día a otro de la emisión en {period[0]} a {period[1]} ({cv:.2f}), "
-        "comparando contra un periodo de referencia de la misma duración, para detectar la baja el 80 % de "
-        "las veces:",
+        f"Con la variación de un día a otro de la emisión en {period[0]} a {period[1]} ({cv:.2f}) y la "
+        f"deriva lenta de la temporada ({DRIFT_SD:.2f}), comparando contra un periodo de "
+        "referencia de la misma duración, para detectar la baja el 80 % de las veces:",
         "",
-        "| Baja de la emisión | Días hábiles necesarios |",
-        "|---|---|",
-        *[f"| {drop:.0%} | {k} (unas {int(np.ceil(k / 5))} semanas) |" for drop, k in table],
+        f"| Baja de la emisión | Días hábiles seguidos en una temporada | Temporadas con "
+        f"{days_per_season} días cada una |",
+        "|---|---|---|",
+    ]
+    for drop, k, seasons in table:
+        one = "no se alcanza: la deriva la tapa" if k is None else f"{k} (unas {int(np.ceil(k / 5))} semanas)"
+        lines.append(f"| {drop:.0%} | {one} | {seasons} |")
+    lines += [
         "",
         "- Una medida que dure menos días que los de la tabla puede funcionar sin que el análisis lo vea.",
+        "- La deriva lenta (semanas enteras más altas o más bajas que el clima no explica) no baja con más "
+        "días en la misma temporada: por eso las bajas pequeñas solo se ven repitiendo la evaluación en "
+        "varias temporadas, que se combinan suponiendo que la deriva de cada una es independiente.",
         "- La variación cambia con la temporada: en invierno, con estancamientos, se necesitan más días.",
         "- Las cifras son una extrapolación del comportamiento de días normales; se confirman con más años "
         "de datos.",
@@ -337,6 +472,11 @@ def render_seasons(
         lines.append(
             f"| Cambio anunciado | {pct(combined['claim']['change'])}: **{fits}** en el rango compatible |"
         )
+    satellites = [r.get("satellite") for r in results]
+    if all(satellites):
+        lines += satellite_lines(combine_seasons(satellites), combined)
+    else:
+        lines += ["", "Segunda opinión del satélite: falta en alguna temporada; no se combina."]
     lines += ["", "| Temporada | Días | Cambio | Rango | Peso |", "|---|---|---|---|---|"]
     for (start, end), r, w in zip(periods, results, combined["weights"], strict=True):
         span = f"{pct(r['range'][0])} a {pct(r['range'][1])}"
