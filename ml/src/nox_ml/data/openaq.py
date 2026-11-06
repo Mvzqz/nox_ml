@@ -184,9 +184,21 @@ def simat_table(raw: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def run_fetch(start: str, end: str, data_dir: Path) -> tuple[Path, Path]:
+def merge_raw(old: pd.DataFrame, new: pd.DataFrame) -> pd.DataFrame:
+    """The measurements of both tables, one per sensor and hour (the new one where both have it), in order."""
+    both = pd.concat([old, new], ignore_index=True).drop_duplicates(subset=["sensor", "h"], keep="last")
+    return both.sort_values(["sensor", "h"], ignore_index=True)
+
+
+def run_fetch(
+    start: str, end: str, data_dir: Path, window: tuple[str, str] | None = None
+) -> tuple[Path, Path]:
     """`fetch` and `simat_table`, written to ``raw/openaq/openaq_<start>_<end>.parquet`` and
-    ``interim/openaq_nox_<start>_<end>.parquet``."""
+    ``interim/openaq_nox_<start>_<end>.parquet``.
+
+    With a `window` (first day, day after the last one) the files are named by it instead and extended: the
+    new measurements are merged into the raw file if there is one, which lets a season that is still running
+    keep the name of its full window (the one `inputs.openaq_sources` reads)."""
     import geopandas as gpd
 
     catalog = gpd.read_file(data_dir / "interim" / "estaciones.gpkg").to_crs(4326).set_index("cve_estac")
@@ -194,9 +206,12 @@ def run_fetch(start: str, end: str, data_dir: Path) -> tuple[Path, Path]:
     raw = fetch(start, end, catalog)
     if raw.empty:
         raise RuntimeError(f"OpenAQ returned no measurements for {start} to {end}")
-    raw_path = data_dir / "raw" / "openaq" / f"openaq_{start}_{end}.parquet"
-    interim_path = data_dir / "interim" / f"openaq_nox_{start}_{end}.parquet"
+    first, last = window or (start, end)
+    raw_path = data_dir / "raw" / "openaq" / f"openaq_{first}_{last}.parquet"
+    interim_path = data_dir / "interim" / f"openaq_nox_{first}_{last}.parquet"
     raw_path.parent.mkdir(parents=True, exist_ok=True)
+    if window and raw_path.exists():
+        raw = merge_raw(pd.read_parquet(raw_path), raw)
     raw.to_parquet(raw_path, index=False)
     simat_table(raw).to_parquet(interim_path, index=False)
     return raw_path, interim_path

@@ -7,13 +7,13 @@ Días evaluados: 42 días hábiles, del 2019-04-01 al 2019-05-31. Referencia: 30
 | | |
 |---|---|
 | Cambio de la emisión de NOₓ, descontado el clima | −7% |
-| Rango compatible (contiene el cambio real ~90 % de las veces) | −17% a +3% |
-| Cambio mínimo que este análisis puede ver con 42 días | bajas de 15% o más |
+| Rango compatible (contiene el cambio real ~90 % de las veces) | −29% a +21% |
+| Cambio mínimo que este análisis puede ver con 42 días | bajas de 33% o más |
 | Cambio anunciado | −30%: **no cabe** en el rango compatible |
 
 Nota: 19% de los días evaluados caen en un periodo atípico (fin de año o Semana Santa), donde el método es menos confiable. Son minoría, pero conviene repetir el análisis sin esos días.
 
-La medida dura tanto como la referencia o más: el rango y el mínimo detectable salen de la variación de un día a otro de la temporada, no de repetir el análisis con días al azar.
+La medida dura demasiado para repetir el análisis con otros periodos de su duración: el rango y el mínimo detectable salen de la variación de un día a otro de la temporada más la deriva lenta que tiene a lo largo de los meses.
 
 ## Cómo leerlo
 

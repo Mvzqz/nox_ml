@@ -12,13 +12,12 @@ import pandas as pd
 import typer
 from pydantic import ValidationError
 
-from nox_ml import __version__
-from nox_ml.data import calendar as calendar_days
-from nox_ml.data import openaq, pbl, simat, tempo
-from nox_ml.data.inputs import load_inputs
+from nox_ml import __version__, monitor
+from nox_ml.data import openaq, pbl, simat, tempo, weather
+from nox_ml.data.inputs import load_inputs, openaq_sources
 from nox_ml.data.qc import render
 from nox_ml.validation import compare as comparison
-from nox_ml.validation import diagnostics, divergence, episodes, events, experiment, products, twins
+from nox_ml.validation import diagnostics, episodes, events, experiment, products, twins
 from nox_ml.validation import lockdown as lockdown_validation
 from nox_ml.validation import tune as tuning
 
@@ -100,6 +99,95 @@ def fetch_openaq(
     (the table of qc-simat). Takes about a second per request (the key's rate limit)."""
     raw, interim = openaq.run_fetch(start, end, data_dir)
     typer.echo(f"Written to {raw} and {interim}")
+
+
+@app.command("fetch-weather")
+def fetch_weather(
+    start: Annotated[str, typer.Argument(help="First day, YYYY-MM-DD (UTC).")],
+    end: Annotated[str, typer.Argument(help="Day after the last one, YYYY-MM-DD (UTC, exclusive).")],
+    data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
+) -> None:
+    """Download the airport reports (IEM) and ERA5 (Open-Meteo) of a window and merge them into the files the
+    seasons after 2024 read, for the months the downloads of 2024-2026 did not reach. No key needed."""
+    sources = openaq_sources(start, end)
+    covered = weather.run_fetch(start, end, data_dir / "raw", sources.metar, sources.era5)
+    for name, (first, last) in covered.items():
+        typer.echo(f"{name}: {first} to {last}")
+
+
+@app.command("fetch-tempo")
+def fetch_tempo(
+    start: Annotated[str, typer.Argument(help="First day, YYYY-MM-DD (UTC).")],
+    end: Annotated[str, typer.Argument(help="Last day (inclusive), YYYY-MM-DD (UTC).")],
+    raw_dir: Annotated[
+        Path, typer.Option(help="Where the granule subsets and manifest.csv are stored.")
+    ] = RAW / "tempo",
+    workers: Annotated[int, typer.Option(min=1, help="Parallel downloads (each granule is ~150 MB).")] = 2,
+) -> None:
+    """Download the TEMPO NO2 L2 V04 afternoon scans (18-23 UTC) over the domain and keep a subset of each.
+
+    Skips the granules already in raw_dir (idempotent), so it can be repeated to pick up late ones. Needs
+    Earthdata credentials in ~/.netrc and curl. Each granule is downloaded to a temporary file, cropped to the
+    domain and deleted; manifest.csv records URL, size and status."""
+    counts = tempo.fetch_window(raw_dir, start, end, progress=typer.echo, workers=workers)
+    typer.echo(
+        f"{counts['found']} granules in {start}..{end}: {counts['new']} new, "
+        f"{counts['skipped']} already there, {counts['failed']} failed."
+    )
+    if counts["failed"]:
+        raise typer.Exit(1)
+
+
+@app.command("update")
+def update(
+    through: Annotated[
+        str | None,
+        typer.Option(help="Last day to update, YYYY-MM-DD (default: today minus the publication lag)."),
+    ] = None,
+    season: Annotated[
+        str | None,
+        typer.Option(
+            help="Season window START:END, e.g. 2026-11-01:2026-12-31 (default: the one with `through`)."
+        ),
+    ] = None,
+    lag: Annotated[
+        int,
+        typer.Option(min=0, help="Days of publication delay of OpenAQ and TEMPO, for the default through."),
+    ] = monitor.PUBLICATION_LAG_DAYS,
+    data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
+    runs_dir: Annotated[Path, typer.Option(help="Where runs/flux_divergence and runs/monitor go.")] = Path(
+        "runs"
+    ),
+) -> None:
+    """Keep the current season up to date: fetch-openaq, fetch-weather, fetch-tempo, qc-tempo,
+    flux-divergence and the weekly index of the stations, in that order, up to `through`.
+
+    Every file keeps the name of the full season window and grows in place; each step is idempotent, so it can
+    run daily. A failed step does not stop the independent ones (exit code 1 at the end). Writes
+    runs/monitor/status.json. Needs OPENAQ_API_KEY and Earthdata credentials in ~/.netrc."""
+    last = through or monitor.default_through(pd.Timestamp.now(tz="UTC").date(), lag)
+    try:
+        last = pd.Timestamp(last).date().isoformat()
+        window = _window(season) if season else monitor.season_of(last)
+    except ValueError as error:
+        typer.echo(f"Invalid through {through} or season {season}: {error}", err=True)
+        raise typer.Exit(2) from error
+    if window is None:
+        typer.echo(f"{last} is in no season (january to mid-february): nothing to update.")
+        return
+    start, end = window
+    if pd.Timestamp(start).year <= products.LAST_SIMAT_YEAR:
+        typer.echo(f"{start}: SIMAT covers it, there is nothing to download.", err=True)
+        raise typer.Exit(2)
+    if pd.Timestamp(last) < pd.Timestamp(start):
+        typer.echo(f"{last} is before the season {start}:{end}: nothing to update.")
+        return
+    job = monitor.Job(start, end, min(last, end), data_dir, runs_dir)
+    status = monitor.run_update(job)
+    typer.echo(monitor.summary(status))
+    typer.echo(f"Written to {runs_dir / 'monitor' / monitor.STATUS_FILE}")
+    if not status["ok"]:
+        raise typer.Exit(1)
 
 
 @app.command("fill-pbl")
@@ -401,7 +489,8 @@ def ficha_medida(
     data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
     out_dir: Annotated[Path, typer.Option(help="Where the sheet is written.")] = Path("runs/fichas"),
 ) -> None:
-    """Sheet: did the emission change on these days? With the estimator validated for changes (E7).
+    """Sheet: did the emission change on these days? With the estimator validated for changes (E7), and the
+    satellite alone (flux divergence) as a second opinion where the season has TEMPO pixels (`qc-tempo`).
 
     With several seasons, each one's days are compared with its own normal days and the changes are
     combined; seasons after 2024 read the OpenAQ tables (`fetch-openaq`)."""
@@ -419,8 +508,11 @@ def ficha_medida(
             raise typer.Exit(2)
         inputs = products.season_inputs(data_dir, start, end, products.sources_for(start, end))
         excluded = products.reference_exclusions(data_dir, start, end, season)
+        satellite = products.satellite_daily(data_dir, start, end)
         results.append(
-            products.measure_result(inputs, products.estimator("change"), season, excluded, claim=claim)
+            products.measure_result(
+                inputs, products.estimator("change"), season, excluded, claim=claim, satellite=satellite
+            )
         )
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"medida_{event[0]:%Y-%m-%d}_{event[-1]:%Y-%m-%d}.md"
@@ -446,19 +538,10 @@ def flux_divergence(
     Also its placebo and detection limit on the business days without contingency nor atypical period, and
     the daily series (with the atypical days flagged) for other analyses. Seasons after 2024 read the OpenAQ
     tables and the airport wind (`fetch-openaq`, `fetch-weather`)."""
-    inputs = load_inputs(data_dir, start, end, (12, 17), products.sources_for(start, end))
-    daily = divergence.daily_emission(inputs, wind_scale=wind_scale)
-    days = pd.DatetimeIndex(daily.index)
-    daily["atypical"] = days.isin(calendar_days.atypical_days(start, end))
-    ratios = divergence.day_type_ratios(pd.DataFrame(daily[~daily["atypical"]]).drop(columns="atypical"))
-    left_out = products.reference_exclusions(data_dir, start, end, pd.DatetimeIndex([]))
-    normal = days[(daily["kind"] == 0).to_numpy() & ~days.isin(left_out)]
-    placebos = {
-        c: divergence.placebo(pd.Series(daily[c]), normal) for c in ("tau_2h", "tau_4h")
-    }  # tau_infh: too noisy
+    record, daily = products.flux_divergence_record(data_dir, start, end, wind_scale)
+    ratios, placebos = record["ratios"], record["placebo"]
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"{start}_{end}.json"
-    record = {"start": start, "end": end, "wind_scale": wind_scale, "ratios": ratios, "placebo": placebos}
     out.write_text(json.dumps(record, indent=2) + "\n")
     daily.rename_axis("day").to_csv(out.with_suffix(".csv"))
     for column, by_kind in ratios.items():
@@ -483,10 +566,12 @@ def flux_divergence(
 def ficha_dias(
     data: Annotated[str, typer.Option(help="Season window START:END whose day-to-day variation is used.")],
     drops: Annotated[list[float] | None, typer.Option(help="Drops as fractions (repeatable).")] = None,
+    days_per_season: Annotated[int, typer.Option(help="Business days of the measure in each season.")] = 20,
     data_dir: Annotated[Path, typer.Option(help="Data folder (raw/ and interim/).")] = Path("data"),
     out_dir: Annotated[Path, typer.Option(help="Where the sheet is written.")] = Path("runs/fichas"),
 ) -> None:
-    """Sheet: how many business days a measure needs to show a drop, from the variation of the season."""
+    """Sheet: how many consecutive business days a measure needs to show a drop in one season, from the
+    day-to-day variation and the slow drift of the season, and how many seasons when one is not enough."""
     start, end = (pd.Timestamp(day).date().isoformat() for day in data.split(":"))
     inputs = products.season_inputs(data_dir, start, end, products.sources_for(start, end))
     normal = events.split_days(
@@ -495,10 +580,18 @@ def ficha_dias(
         products.reference_exclusions(data_dir, start, end, pd.DatetimeIndex([])),
     ).normal
     curve = events.detection_curve(inputs, products.estimator("change"), normal, [5, 9, 15], products.PLACEBO)
-    table = [(d, products.days_needed(d, curve["cv"])) for d in (drops or [0.05, 0.1, 0.2, 0.3])]
+    cv = curve["cv"]
+    table = [
+        (
+            d,
+            products.days_needed(d, cv, drift=products.DRIFT_SD),
+            products.seasons_needed(d, cv, days_per_season),
+        )
+        for d in (drops or [0.05, 0.1, 0.2, 0.3])
+    ]
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"dias_{start}_{end}.md"
-    out.write_text(products.render_days(table, curve["cv"], (start, end)))
+    out.write_text(products.render_days(table, cv, (start, end), days_per_season))
     typer.echo(out.read_text())
     typer.echo(f"Written to {out}")
 
