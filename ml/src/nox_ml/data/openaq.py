@@ -25,12 +25,14 @@ import urllib.error
 import urllib.request
 import warnings
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from nox_ml.atomic import atomic_path
 from nox_ml.time import utc_to_local
 
 API = "https://api.openaq.org/v3"
@@ -137,9 +139,16 @@ def sensor_hours(sensor: int, start: str, end: str, get: Getter = api_get) -> pd
     return table
 
 
-def fetch(start: str, end: str, catalog: pd.DataFrame, get: Getter = api_get) -> pd.DataFrame:
+def fetch(
+    start: str,
+    end: str,
+    catalog: pd.DataFrame,
+    get: Getter = api_get,
+    skipped: list[str] | None = None,
+) -> pd.DataFrame:
     """Raw hourly measurements of every matched sensor from `start` to `end`: ``sensor``, ``location``,
-    ``station``, ``parameter``, ``h``, ``value``."""
+    ``station``, ``parameter``, ``h``, ``value``. A sensor the server keeps failing on is left out with a
+    warning, and described in `skipped` when given."""
     west, south, east, north = BBOX
     locations = get("/locations", {"bbox": f"{west},{south},{east},{north}", "limit": 1000})["results"]
     sensors = match_sensors(locations, catalog)
@@ -150,9 +159,10 @@ def fetch(start: str, end: str, catalog: pd.DataFrame, get: Getter = api_get) ->
         except (
             urllib.error.HTTPError
         ) as error:  # a sensor the server keeps failing on: the others still count
-            warnings.warn(
-                f"OpenAQ sensor {row.sensor} ({row.station} {row.parameter}) skipped: {error}", stacklevel=2
-            )
+            message = f"OpenAQ sensor {row.sensor} ({row.station} {row.parameter}) skipped: {error}"
+            warnings.warn(message, stacklevel=2)
+            if skipped is not None:
+                skipped.append(message)
             continue
         frames.append(
             hours.assign(
@@ -185,33 +195,56 @@ def simat_table(raw: pd.DataFrame) -> pd.DataFrame:
 
 
 def merge_raw(old: pd.DataFrame, new: pd.DataFrame) -> pd.DataFrame:
-    """The measurements of both tables, one per sensor and hour (the new one where both have it), in order."""
+    """The measurements of both tables, one per sensor and hour (the new one where both have it), in order.
+    A missing value in `new` never replaces a stored one."""
+    new = new.dropna(subset=["value"])
     both = pd.concat([old, new], ignore_index=True).drop_duplicates(subset=["sensor", "h"], keep="last")
     return both.sort_values(["sensor", "h"], ignore_index=True)
 
 
-def run_fetch(
-    start: str, end: str, data_dir: Path, window: tuple[str, str] | None = None
-) -> tuple[Path, Path]:
+@dataclass(frozen=True)
+class Fetched:
+    """What `run_fetch` did: the files (None when there is nothing yet), the hours that were not in the raw
+    file, and the sensors the server failed on."""
+
+    raw: Path | None
+    interim: Path | None
+    new_hours: int
+    skipped: list[str] = field(default_factory=list)
+
+
+def run_fetch(start: str, end: str, data_dir: Path, window: tuple[str, str] | None = None) -> Fetched:
     """`fetch` and `simat_table`, written to ``raw/openaq/openaq_<start>_<end>.parquet`` and
     ``interim/openaq_nox_<start>_<end>.parquet``.
 
     With a `window` (first day, day after the last one) the files are named by it instead and extended: the
     new measurements are merged into the raw file if there is one, which lets a season that is still running
-    keep the name of its full window (the one `inputs.openaq_sources` reads)."""
+    keep the name of its full window (the one `inputs.openaq_sources` reads). Then no new measurements is a
+    valid outcome (OpenAQ lags the days by a week or two): the files stay as they are, and when there are
+    none yet, `Fetched.raw` is None. Without a `window` it is an error."""
     import geopandas as gpd
 
     catalog = gpd.read_file(data_dir / "interim" / "estaciones.gpkg").to_crs(4326).set_index("cve_estac")
     catalog = pd.DataFrame({"lat": catalog.geometry.y, "lon": catalog.geometry.x})
-    raw = fetch(start, end, catalog)
-    if raw.empty:
-        raise RuntimeError(f"OpenAQ returned no measurements for {start} to {end}")
+    skipped: list[str] = []
+    raw = fetch(start, end, catalog, skipped=skipped)
     first, last = window or (start, end)
     raw_path = data_dir / "raw" / "openaq" / f"openaq_{first}_{last}.parquet"
     interim_path = data_dir / "interim" / f"openaq_nox_{first}_{last}.parquet"
+    raw = raw.dropna(subset=["value"])
+    if raw.empty:
+        if not window:
+            raise RuntimeError(f"OpenAQ returned no measurements for {start} to {end}")
+        have = raw_path.exists() and interim_path.exists()
+        return Fetched(raw_path if have else None, interim_path if have else None, 0, skipped)
     raw_path.parent.mkdir(parents=True, exist_ok=True)
+    new_hours = len(raw)
     if window and raw_path.exists():
-        raw = merge_raw(pd.read_parquet(raw_path), raw)
-    raw.to_parquet(raw_path, index=False)
-    simat_table(raw).to_parquet(interim_path, index=False)
-    return raw_path, interim_path
+        old = pd.read_parquet(raw_path)
+        raw = merge_raw(old, raw)
+        new_hours = len(raw) - len(old)
+    with atomic_path(raw_path) as tmp:
+        raw.to_parquet(tmp, index=False)
+    with atomic_path(interim_path) as tmp:
+        simat_table(raw).to_parquet(tmp, index=False)
+    return Fetched(raw_path, interim_path, new_hours, skipped)

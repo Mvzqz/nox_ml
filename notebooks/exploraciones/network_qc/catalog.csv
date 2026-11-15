@@ -1,0 +1,594 @@
+source,type,param,station,start,end,hours,value,note,month,known_to_project,relevant,status
+OpenAQ,gap,NOX,CUA,2024-11-01 00:00:00,2024-11-05 19:00:00,116,0.0,,2024-11,False,False,new
+OpenAQ,gap,NOX,FAC,2024-11-01 00:00:00,2024-11-14 07:00:00,320,0.0,,2024-11,False,True,new
+OpenAQ,gap,NOX,HGM,2024-11-01 00:00:00,2024-12-05 07:00:00,824,0.0,,2024-11,False,True,new
+OpenAQ,gap,NOX,UIZ,2024-11-02 21:00:00,2024-11-12 09:00:00,229,0.0,,2024-11,False,True,new
+OpenAQ,gap,NOX,CUA,2024-11-20 20:00:00,2024-11-27 22:00:00,171,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,AJM,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,ATI,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,CAM,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,CCA,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,CHO,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,CUT,2024-11-20 21:00:00,2024-11-27 23:00:00,171,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,FAC,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,IZT,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,MER,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,MGH,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,NEZ,2024-11-20 21:00:00,2024-11-27 17:00:00,165,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,PED,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,SAC,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,SAG,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,TLA,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,TLI,2024-11-20 21:00:00,2024-11-27 22:00:00,170,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,UAX,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,UIZ,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,VIF,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,gap,NOX,XAL,2024-11-20 21:00:00,2024-11-27 16:00:00,164,0.0,inside network outage,2024-11,False,False,new
+OpenAQ,network_outage,NOX,ALL,2024-11-20 21:00:00,2024-11-27 16:00:00,164,21.0,,2024-11,False,True,new
+OpenAQ,stuck,O3,UIZ,2024-11-28 05:00:00,2024-11-28 12:00:00,8,6.0,,2024-11,False,False,candidate
+OpenAQ,gap,NOX,CUA,2024-12-02 23:00:00,2024-12-07 05:00:00,103,0.0,,2024-12,False,False,new
+OpenAQ,gap,NOX,ATI,2024-12-04 14:00:00,2024-12-09 07:00:00,114,0.0,inside network outage,2024-12,False,False,new
+OpenAQ,gap,NOX,CAM,2024-12-04 14:00:00,2024-12-09 07:00:00,114,0.0,inside network outage,2024-12,False,False,new
+OpenAQ,gap,NOX,CCA,2024-12-04 14:00:00,2024-12-09 07:00:00,114,0.0,inside network outage,2024-12,False,False,new
+OpenAQ,gap,NOX,CHO,2024-12-04 14:00:00,2024-12-09 07:00:00,114,0.0,inside network outage,2024-12,False,False,new
+OpenAQ,gap,NOX,CUT,2024-12-04 14:00:00,2024-12-09 07:00:00,114,0.0,inside network outage,2024-12,False,False,new
+OpenAQ,gap,NOX,MER,2024-12-04 14:00:00,2024-12-09 18:00:00,125,0.0,inside network outage,2024-12,False,False,new
+OpenAQ,gap,NOX,NEZ,2024-12-04 14:00:00,2024-12-09 07:00:00,114,0.0,inside network outage,2024-12,False,False,new
+OpenAQ,gap,NOX,PED,2024-12-04 14:00:00,2024-12-09 07:00:00,114,0.0,inside network outage,2024-12,False,False,new
+OpenAQ,gap,NOX,SAG,2024-12-04 14:00:00,2024-12-09 07:00:00,114,0.0,inside network outage,2024-12,False,False,new
+OpenAQ,gap,NOX,TLA,2024-12-04 14:00:00,2024-12-09 07:00:00,114,0.0,inside network outage,2024-12,False,False,new
+OpenAQ,gap,NOX,UAX,2024-12-04 14:00:00,2024-12-09 07:00:00,114,0.0,inside network outage,2024-12,False,False,new
+OpenAQ,gap,NOX,UIZ,2024-12-04 14:00:00,2024-12-09 07:00:00,114,0.0,inside network outage,2024-12,False,False,new
+OpenAQ,gap,NOX,VIF,2024-12-04 14:00:00,2024-12-09 07:00:00,114,0.0,inside network outage,2024-12,False,False,new
+OpenAQ,gap,NOX,XAL,2024-12-04 14:00:00,2024-12-10 17:00:00,148,0.0,,2024-12,False,False,new
+OpenAQ,network_outage,NOX,ALL,2024-12-04 14:00:00,2024-12-05 20:00:00,31,21.0,,2024-12,False,True,new
+OpenAQ,gap,NOX,HGM,2024-12-06 21:00:00,2024-12-12 08:00:00,132,0.0,,2024-12,False,False,new
+OpenAQ,network_outage,NOX,ALL,2024-12-07 18:00:00,2024-12-09 07:00:00,38,21.0,,2024-12,False,True,new
+OpenAQ,network_outage,NOX,ALL,2024-12-11 18:00:00,2024-12-12 08:00:00,15,21.0,,2024-12,False,True,new
+OpenAQ,network_outage,NOX,ALL,2024-12-16 22:00:00,2024-12-17 13:00:00,16,21.0,,2024-12,False,True,new
+OpenAQ,gap,NOX,HGM,2024-12-18 20:00:00,2024-12-31 23:00:00,316,0.0,,2024-12,False,True,new
+OpenAQ,gap,NOX,XAL,2024-12-19 08:00:00,2024-12-31 23:00:00,304,0.0,,2024-12,False,True,new
+OpenAQ,gap,NOX,MER,2024-12-27 19:00:00,2024-12-31 23:00:00,101,0.0,,2024-12,False,False,new
+OpenAQ,network_outage,NOX,ALL,2024-12-29 05:00:00,2024-12-29 12:00:00,8,21.0,,2024-12,False,True,new
+OpenAQ,gap,NOX,ACO,2025-02-15 00:00:00,2025-02-27 15:00:00,304,0.0,,2025-02,False,True,new
+OpenAQ,gap,NOX,HGM,2025-02-15 00:00:00,2025-04-21 19:00:00,1580,0.0,,2025-02,False,True,new
+OpenAQ,gap,NOX,UAX,2025-02-15 00:00:00,2025-02-20 06:00:00,127,0.0,,2025-02,False,False,new
+OpenAQ,gap,NOX,XAL,2025-02-15 00:00:00,2025-02-27 15:00:00,304,0.0,,2025-02,False,True,new
+OpenAQ,network_outage,NOX,ALL,2025-02-20 20:00:00,2025-02-21 14:00:00,19,19.0,,2025-02,False,True,new
+OpenAQ,gap,NOX,IZT,2025-02-22 15:00:00,2025-02-27 17:00:00,123,0.0,,2025-02,False,False,new
+OpenAQ,gap,NOX,NEZ,2025-02-24 07:00:00,2025-02-27 21:00:00,87,0.0,inside network outage,2025-02,False,False,new
+OpenAQ,gap,NOX,ATI,2025-02-24 08:00:00,2025-02-27 15:00:00,80,0.0,inside network outage,2025-02,False,False,new
+OpenAQ,gap,NOX,CAM,2025-02-24 08:00:00,2025-02-27 15:00:00,80,0.0,inside network outage,2025-02,False,False,new
+OpenAQ,gap,NOX,CCA,2025-02-24 08:00:00,2025-02-27 15:00:00,80,0.0,inside network outage,2025-02,False,False,new
+OpenAQ,gap,NOX,CHO,2025-02-24 08:00:00,2025-02-27 15:00:00,80,0.0,inside network outage,2025-02,False,False,new
+OpenAQ,gap,NOX,CUA,2025-02-24 08:00:00,2025-02-27 15:00:00,80,0.0,inside network outage,2025-02,False,False,new
+OpenAQ,gap,NOX,CUT,2025-02-24 08:00:00,2025-02-27 15:00:00,80,0.0,inside network outage,2025-02,False,False,new
+OpenAQ,gap,NOX,FAC,2025-02-24 08:00:00,2025-02-27 15:00:00,80,0.0,inside network outage,2025-02,False,False,new
+OpenAQ,gap,NOX,MER,2025-02-24 08:00:00,2025-02-27 15:00:00,80,0.0,inside network outage,2025-02,False,False,new
+OpenAQ,gap,NOX,SAC,2025-02-24 08:00:00,2025-02-27 15:00:00,80,0.0,inside network outage,2025-02,False,False,new
+OpenAQ,gap,NOX,SAG,2025-02-24 08:00:00,2025-02-27 15:00:00,80,0.0,inside network outage,2025-02,False,False,new
+OpenAQ,gap,NOX,TLI,2025-02-24 08:00:00,2025-02-27 15:00:00,80,0.0,inside network outage,2025-02,False,False,new
+OpenAQ,gap,NOX,UIZ,2025-02-24 08:00:00,2025-02-27 18:00:00,83,0.0,inside network outage,2025-02,False,False,new
+OpenAQ,gap,NOX,VIF,2025-02-24 08:00:00,2025-02-27 15:00:00,80,0.0,inside network outage,2025-02,False,False,new
+OpenAQ,network_outage,NOX,ALL,2025-02-24 08:00:00,2025-02-25 21:00:00,38,19.0,,2025-02,False,True,new
+OpenAQ,network_outage,NOX,ALL,2025-02-26 17:00:00,2025-02-27 15:00:00,23,19.0,,2025-02,False,True,new
+OpenAQ,gap,NOX,VIF,2025-02-27 20:00:00,2025-03-19 18:00:00,479,0.0,,2025-02,False,True,new
+OpenAQ,gap,NOX,CUA,2025-02-28 18:00:00,2025-03-12 20:00:00,291,0.0,,2025-02,False,True,new
+OpenAQ,network_outage,NOX,ALL,2025-03-01 15:00:00,2025-03-02 04:00:00,14,20.0,,2025-03,False,True,new
+OpenAQ,level_shift,NOX,AJM,2025-03-02 00:00:00,2025-03-16 00:00:00,336,0.480143751093006,,2025-03,False,True,candidate
+OpenAQ,network_outage,NOX,ALL,2025-03-03 17:00:00,2025-03-04 02:00:00,10,20.0,,2025-03,False,True,new
+OpenAQ,gap,NOX,NEZ,2025-03-06 00:00:00,2025-03-10 15:00:00,112,0.0,,2025-03,False,False,new
+OpenAQ,gap,NOX,AJM,2025-03-06 01:00:00,2025-03-10 15:00:00,111,0.0,,2025-03,False,False,new
+OpenAQ,gap,NOX,CCA,2025-03-06 01:00:00,2025-03-11 05:00:00,125,0.0,,2025-03,False,False,new
+OpenAQ,gap,NOX,CHO,2025-03-06 01:00:00,2025-03-10 15:00:00,111,0.0,,2025-03,False,False,new
+OpenAQ,gap,NOX,CUT,2025-03-06 01:00:00,2025-03-10 15:00:00,111,0.0,,2025-03,False,False,new
+OpenAQ,gap,NOX,IZT,2025-03-06 01:00:00,2025-03-10 15:00:00,111,0.0,,2025-03,False,False,new
+OpenAQ,gap,NOX,MER,2025-03-06 01:00:00,2025-03-10 15:00:00,111,0.0,,2025-03,False,False,new
+OpenAQ,gap,NOX,TLA,2025-03-06 01:00:00,2025-03-12 08:00:00,152,0.0,,2025-03,False,False,new
+OpenAQ,gap,NOX,TLI,2025-03-06 01:00:00,2025-03-10 15:00:00,111,0.0,,2025-03,False,False,new
+OpenAQ,gap,NOX,UAX,2025-03-06 01:00:00,2025-03-10 15:00:00,111,0.0,,2025-03,False,False,new
+OpenAQ,network_outage,NOX,ALL,2025-03-06 01:00:00,2025-03-07 16:00:00,40,20.0,,2025-03,False,True,new
+OpenAQ,network_outage,NOX,ALL,2025-03-10 01:00:00,2025-03-10 06:00:00,6,20.0,,2025-03,False,True,new
+OpenAQ,network_outage,NOX,ALL,2025-03-10 08:00:00,2025-03-10 15:00:00,8,20.0,,2025-03,False,True,new
+OpenAQ,gap,NOX,ACO,2025-03-10 16:00:00,2025-05-31 23:00:00,1976,0.0,,2025-03,False,True,new
+OpenAQ,gap,NOX,CHO,2025-03-17 13:00:00,2025-03-20 19:00:00,79,0.0,,2025-03,False,False,new
+OpenAQ,gap,NOX,XAL,2025-03-21 18:00:00,2025-04-01 05:00:00,252,0.0,,2025-03,False,True,new
+OpenAQ,gap,NOX,ATI,2025-03-24 13:00:00,2025-04-05 08:00:00,284,0.0,,2025-03,False,True,new
+OpenAQ,stuck,NOX,CUT,2025-04-06 05:00:00,2025-04-06 14:00:00,9,13.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,TLA,2025-04-06 05:00:00,2025-04-06 14:00:00,9,30.0,,2025-04,False,False,candidate
+OpenAQ,network_stuck,ALL,ALL,2025-04-06 06:00:00,2025-04-06 15:00:00,9,24.0,value = stations frozen,2025-04,False,True,new
+OpenAQ,stuck,NO2,AJM,2025-04-06 06:00:00,2025-04-06 14:00:00,8,8.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,AJM,2025-04-06 06:00:00,2025-04-06 14:00:00,8,9.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,AJM,2025-04-06 06:00:00,2025-04-06 14:00:00,8,27.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO,ATI,2025-04-06 06:00:00,2025-04-06 14:00:00,8,7.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,ATI,2025-04-06 06:00:00,2025-04-06 14:00:00,8,23.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,ATI,2025-04-06 06:00:00,2025-04-06 14:00:00,8,31.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,ATI,2025-04-06 06:00:00,2025-04-06 14:00:00,8,10.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,BJU,2025-04-06 06:00:00,2025-04-06 14:00:00,8,24.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,BJU,2025-04-06 06:00:00,2025-04-06 14:00:00,8,9.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,CAM,2025-04-06 06:00:00,2025-04-06 14:00:00,8,17.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,CAM,2025-04-06 06:00:00,2025-04-06 14:00:00,8,18.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,CAM,2025-04-06 06:00:00,2025-04-06 14:00:00,8,18.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,CCA,2025-04-06 06:00:00,2025-04-06 14:00:00,8,29.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,CCA,2025-04-06 06:00:00,2025-04-06 14:00:00,8,31.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,CHO,2025-04-06 06:00:00,2025-04-06 14:00:00,8,13.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,CHO,2025-04-06 06:00:00,2025-04-06 14:00:00,8,16.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,CHO,2025-04-06 06:00:00,2025-04-06 14:00:00,8,20.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,CUA,2025-04-06 06:00:00,2025-04-06 14:00:00,8,6.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,CUA,2025-04-06 06:00:00,2025-04-06 14:00:00,8,6.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,CUA,2025-04-06 06:00:00,2025-04-06 14:00:00,8,34.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,CUT,2025-04-06 06:00:00,2025-04-06 14:00:00,8,12.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,CUT,2025-04-06 06:00:00,2025-04-06 14:00:00,8,19.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO,FAC,2025-04-06 06:00:00,2025-04-06 14:00:00,8,6.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,FAC,2025-04-06 06:00:00,2025-04-06 14:00:00,8,21.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,FAC,2025-04-06 06:00:00,2025-04-06 14:00:00,8,27.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,FAC,2025-04-06 06:00:00,2025-04-06 14:00:00,8,13.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,FAR,2025-04-06 06:00:00,2025-04-06 14:00:00,8,39.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,GAM,2025-04-06 06:00:00,2025-04-06 14:00:00,8,30.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,GAM,2025-04-06 06:00:00,2025-04-06 14:00:00,8,7.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,HGM,2025-04-06 06:00:00,2025-04-06 14:00:00,8,15.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,IZT,2025-04-06 06:00:00,2025-04-06 14:00:00,8,22.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,IZT,2025-04-06 06:00:00,2025-04-06 14:00:00,8,26.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,IZT,2025-04-06 06:00:00,2025-04-06 14:00:00,8,10.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,MGH,2025-04-06 06:00:00,2025-04-06 14:00:00,8,15.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,MGH,2025-04-06 06:00:00,2025-04-06 14:00:00,8,16.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,MGH,2025-04-06 06:00:00,2025-04-06 14:00:00,8,22.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO,NEZ,2025-04-06 06:00:00,2025-04-06 14:00:00,8,7.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,NEZ,2025-04-06 06:00:00,2025-04-06 14:00:00,8,33.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,NEZ,2025-04-06 06:00:00,2025-04-06 14:00:00,8,40.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,PED,2025-04-06 06:00:00,2025-04-06 14:00:00,8,13.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,SAC,2025-04-06 06:00:00,2025-04-06 14:00:00,8,14.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,SAC,2025-04-06 06:00:00,2025-04-06 14:00:00,8,14.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,SAC,2025-04-06 06:00:00,2025-04-06 14:00:00,8,16.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO,SAG,2025-04-06 06:00:00,2025-04-06 14:00:00,8,13.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,SAG,2025-04-06 06:00:00,2025-04-06 14:00:00,8,32.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,SAG,2025-04-06 06:00:00,2025-04-06 14:00:00,8,45.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,TLA,2025-04-06 06:00:00,2025-04-06 14:00:00,8,32.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,TLA,2025-04-06 06:00:00,2025-04-06 14:00:00,8,10.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO,TLI,2025-04-06 06:00:00,2025-04-06 14:00:00,8,13.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,TLI,2025-04-06 06:00:00,2025-04-06 15:00:00,9,30.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,TLI,2025-04-06 06:00:00,2025-04-06 14:00:00,8,43.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,UAX,2025-04-06 06:00:00,2025-04-06 14:00:00,8,24.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,UAX,2025-04-06 06:00:00,2025-04-06 14:00:00,8,27.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,UAX,2025-04-06 06:00:00,2025-04-06 14:00:00,8,14.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,UIZ,2025-04-06 06:00:00,2025-04-06 14:00:00,8,28.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,UIZ,2025-04-06 06:00:00,2025-04-06 14:00:00,8,31.0,,2025-04,False,False,candidate
+OpenAQ,stuck,O3,UIZ,2025-04-06 06:00:00,2025-04-06 14:00:00,8,7.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO,VIF,2025-04-06 06:00:00,2025-04-06 14:00:00,8,17.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,VIF,2025-04-06 06:00:00,2025-04-06 14:00:00,8,30.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,VIF,2025-04-06 06:00:00,2025-04-06 14:00:00,8,48.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO,XAL,2025-04-06 06:00:00,2025-04-06 14:00:00,8,21.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NO2,XAL,2025-04-06 06:00:00,2025-04-06 14:00:00,8,34.0,,2025-04,False,False,candidate
+OpenAQ,stuck,NOX,XAL,2025-04-06 06:00:00,2025-04-06 14:00:00,8,54.0,,2025-04,False,False,candidate
+OpenAQ,gap,NOX,TLA,2025-04-14 17:00:00,2025-05-03 05:00:00,445,0.0,,2025-04,False,True,new
+OpenAQ,gap,NOX,HGM,2025-04-26 14:00:00,2025-04-29 16:00:00,75,0.0,,2025-04,False,False,new
+OpenAQ,gap,NOX,XAL,2025-05-02 16:00:00,2025-05-06 18:00:00,99,0.0,,2025-05,False,False,new
+OpenAQ,gap,NOX,UAX,2025-05-06 17:00:00,2025-05-16 20:00:00,244,0.0,,2025-05,False,True,new
+OpenAQ,gap,NOX,XAL,2025-05-08 22:00:00,2025-05-31 23:00:00,554,0.0,,2025-05,False,True,new
+OpenAQ,gap,NOX,CUA,2025-05-12 17:00:00,2025-05-31 23:00:00,463,0.0,,2025-05,False,True,new
+OpenAQ,gap,NOX,AJM,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,ATI,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,CAM,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,CCA,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,CHO,2025-05-13 00:00:00,2025-05-17 08:00:00,105,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,CUT,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,FAC,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,HGM,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,IZT,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,MER,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,MGH,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,NEZ,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,PED,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,SAC,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,SAG,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,TLA,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,TLI,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,UIZ,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,gap,NOX,VIF,2025-05-13 00:00:00,2025-05-16 20:00:00,93,0.0,inside network outage,2025-05,False,False,new
+OpenAQ,network_outage,NOX,ALL,2025-05-13 00:00:00,2025-05-16 20:00:00,93,20.0,,2025-05,False,True,new
+OpenAQ,gap,NOX,CHO,2025-05-18 17:00:00,2025-05-22 05:00:00,85,0.0,,2025-05,False,False,new
+OpenAQ,gap,NOX,UIZ,2025-05-22 21:00:00,2025-05-26 19:00:00,95,0.0,,2025-05,False,False,new
+OpenAQ,gap,NOX,IZT,2025-05-24 05:00:00,2025-05-27 21:00:00,89,0.0,,2025-05,False,False,new
+OpenAQ,gap,NOX,VIF,2025-05-27 18:00:00,2025-05-31 23:00:00,102,0.0,,2025-05,False,False,new
+OpenAQ,gap,NOX,SAC,2025-05-28 17:00:00,2025-05-31 23:00:00,79,0.0,,2025-05,False,False,new
+OpenAQ,gap,NOX,ACO,2025-06-01 00:00:00,2025-08-19 18:00:00,1915,0.0,,2025-06,False,True,new
+OpenAQ,gap,NOX,AJM,2025-06-01 00:00:00,2025-06-21 05:00:00,486,0.0,,2025-06,False,True,new
+OpenAQ,gap,NOX,CHO,2025-06-01 00:00:00,2025-08-19 05:00:00,1902,0.0,,2025-06,False,True,new
+OpenAQ,gap,NOX,CUA,2025-06-01 00:00:00,2025-10-29 05:00:00,3606,0.0,,2025-06,False,True,new
+OpenAQ,gap,NOX,SAC,2025-06-01 00:00:00,2025-10-28 21:00:00,3598,0.0,,2025-06,False,True,new
+OpenAQ,gap,NOX,XAL,2025-06-01 00:00:00,2025-07-02 18:00:00,763,0.0,,2025-06,False,True,new
+OpenAQ,network_step,O3,ALL,2025-06-12 00:00:00,2025-06-26 00:00:00,336,0.3288275082274977,,2025-06,False,True,candidate
+OpenAQ,gap,NOX,IZT,2025-06-30 17:00:00,2025-07-07 19:00:00,171,0.0,inside network outage,2025-06,False,False,new
+OpenAQ,gap,NOX,NEZ,2025-07-03 15:00:00,2025-07-07 19:00:00,101,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,TLI,2025-07-03 16:00:00,2025-07-07 19:00:00,100,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,AJM,2025-07-03 17:00:00,2025-07-07 19:00:00,99,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,ATI,2025-07-03 17:00:00,2025-07-07 20:00:00,100,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,CAM,2025-07-03 17:00:00,2025-07-07 19:00:00,99,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,CCA,2025-07-03 17:00:00,2025-07-07 19:00:00,99,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,CUT,2025-07-03 17:00:00,2025-07-07 19:00:00,99,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,FAC,2025-07-03 17:00:00,2025-07-07 19:00:00,99,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,HGM,2025-07-03 17:00:00,2025-07-07 19:00:00,99,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,MER,2025-07-03 17:00:00,2025-07-07 19:00:00,99,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,MGH,2025-07-03 17:00:00,2025-07-07 19:00:00,99,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,PED,2025-07-03 17:00:00,2025-07-07 19:00:00,99,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,SAG,2025-07-03 17:00:00,2025-07-07 19:00:00,99,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,TLA,2025-07-03 17:00:00,2025-07-07 19:00:00,99,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,UAX,2025-07-03 17:00:00,2025-07-07 19:00:00,99,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,UIZ,2025-07-03 17:00:00,2025-07-07 19:00:00,99,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,VIF,2025-07-03 17:00:00,2025-07-07 19:00:00,99,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,gap,NOX,XAL,2025-07-03 17:00:00,2025-07-07 19:00:00,99,0.0,inside network outage,2025-07,False,False,new
+OpenAQ,network_outage,NOX,ALL,2025-07-03 17:00:00,2025-07-07 19:00:00,99,18.0,,2025-07,False,True,new
+OpenAQ,gap,NOX,TLI,2025-07-07 22:00:00,2025-07-15 05:00:00,176,0.0,,2025-07,False,True,new
+OpenAQ,gap,NOX,MER,2025-07-24 17:00:00,2025-08-13 05:00:00,469,0.0,,2025-07,False,True,new
+OpenAQ,gap,NOX,ATI,2025-07-28 14:00:00,2025-08-05 05:00:00,184,0.0,,2025-07,False,True,new
+OpenAQ,network_outage,NOX,ALL,2025-08-02 19:00:00,2025-08-03 02:00:00,8,18.55000000000001,,2025-08,False,True,new
+OpenAQ,gap,NOX,TLI,2025-08-11 00:00:00,2025-08-16 05:00:00,126,0.0,,2025-08,False,False,new
+OpenAQ,gap,NOX,UIZ,2025-08-13 17:00:00,2025-08-27 16:00:00,336,0.0,,2025-08,False,True,new
+OpenAQ,gap,NOX,CHO,2025-08-19 23:00:00,2025-08-23 05:00:00,79,0.0,,2025-08,False,False,new
+OpenAQ,gap,NOX,CUT,2025-08-21 21:00:00,2025-10-31 23:00:00,1707,0.0,,2025-08,False,True,new
+OpenAQ,gap,NOX,CAM,2025-08-24 22:00:00,2025-09-13 05:00:00,464,0.0,,2025-08,False,True,new
+OpenAQ,gap,NOX,CHO,2025-08-30 23:00:00,2025-09-03 17:00:00,91,0.0,,2025-08,False,False,new
+OpenAQ,stuck,NO,CCA,2025-09-01 03:00:00,2025-09-01 11:00:00,9,12.0,,2025-09,False,False,candidate
+OpenAQ,gap,NOX,UIZ,2025-09-03 10:00:00,2025-09-10 16:00:00,175,0.0,,2025-09,False,True,new
+OpenAQ,network_outage,NOX,ALL,2025-09-05 06:00:00,2025-09-05 13:00:00,8,19.0,,2025-09,False,True,new
+OpenAQ,gap,NOX,UAX,2025-09-05 17:00:00,2025-10-02 08:00:00,640,0.0,,2025-09,False,True,new
+OpenAQ,network_outage,NOX,ALL,2025-09-05 17:00:00,2025-09-08 14:00:00,70,19.0,,2025-09,False,True,new
+OpenAQ,gap,NOX,CHO,2025-09-18 14:00:00,2025-10-31 23:00:00,1042,0.0,,2025-09,False,True,new
+OpenAQ,gap,NOX,IZT,2025-09-18 14:00:00,2025-10-31 23:00:00,1042,0.0,,2025-09,False,True,new
+OpenAQ,gap,NOX,NEZ,2025-09-18 14:00:00,2025-10-31 23:00:00,1042,0.0,,2025-09,False,True,new
+OpenAQ,gap,NOX,SAG,2025-09-18 14:00:00,2025-10-28 20:00:00,967,0.0,,2025-09,False,True,new
+OpenAQ,gap,NOX,XAL,2025-09-18 14:00:00,2025-10-31 23:00:00,1042,0.0,,2025-09,False,True,new
+OpenAQ,gap,NOX,PED,2025-09-26 18:00:00,2025-10-14 08:00:00,423,0.0,,2025-09,False,True,new
+OpenAQ,gap,NOX,MGH,2025-10-20 18:00:00,2025-10-29 20:00:00,219,0.0,,2025-10,False,True,new
+OpenAQ,gap,NOX,ACO,2025-10-23 18:00:00,2025-10-31 23:00:00,198,0.0,,2025-10,False,True,new
+OpenAQ,gap,NOX,NEZ,2025-11-01 00:00:00,2025-11-06 06:00:00,127,0.0,,2025-11,False,False,new
+OpenAQ,gap,NOX,UIZ,2025-11-01 00:00:00,2025-11-05 17:00:00,114,0.0,,2025-11,False,False,new
+OpenAQ,gap,NOX,XAL,2025-11-01 00:00:00,2025-12-16 05:00:00,1086,0.0,,2025-11,False,True,new
+OpenAQ,gap,NOX,SAG,2025-11-03 18:00:00,2025-11-14 05:00:00,252,0.0,,2025-11,False,True,new
+OpenAQ,gap,NOX,FAC,2025-11-05 18:00:00,2025-12-04 14:00:00,693,0.0,,2025-11,False,True,new
+OpenAQ,gap,NOX,UAX,2025-11-12 22:00:00,2025-12-03 05:00:00,488,0.0,,2025-11,False,True,new
+OpenAQ,gap,NOX,XAL,2025-12-16 23:00:00,2025-12-31 08:00:00,346,0.0,,2025-12,False,True,new
+OpenAQ,gap,NOX,UAX,2025-12-22 17:00:00,2025-12-31 23:00:00,223,0.0,,2025-12,False,True,new
+OpenAQ,gap,NOX,UIZ,2025-12-23 21:00:00,2025-12-31 08:00:00,180,0.0,,2025-12,False,True,new
+OpenAQ,gap,NOX,PED,2025-12-25 23:00:00,2025-12-31 23:00:00,145,0.0,,2025-12,False,False,new
+OpenAQ,gap,NOX,CAM,2026-02-15 00:00:00,2026-03-13 08:00:00,633,0.0,,2026-02,False,True,new
+OpenAQ,gap,NOX,CUA,2026-02-15 00:00:00,2026-03-24 21:00:00,910,0.0,,2026-02,False,True,new
+OpenAQ,gap,NOX,IZT,2026-02-15 00:00:00,2026-03-11 05:00:00,582,0.0,,2026-02,False,True,new
+OpenAQ,gap,NOX,NEZ,2026-02-15 00:00:00,2026-02-25 06:00:00,247,0.0,,2026-02,False,True,new
+OpenAQ,gap,NOX,SAC,2026-02-15 00:00:00,2026-03-14 05:00:00,654,0.0,,2026-02,False,True,new
+OpenAQ,gap,NOX,SAG,2026-02-15 00:00:00,2026-02-21 05:00:00,150,0.0,,2026-02,False,False,new
+OpenAQ,gap,NOX,TLA,2026-02-15 00:00:00,2026-02-18 16:00:00,89,0.0,,2026-02,False,False,new
+OpenAQ,gap,NOX,TLI,2026-02-15 00:00:00,2026-02-27 19:00:00,308,0.0,,2026-02,False,True,new
+OpenAQ,gap,NOX,VIF,2026-02-15 00:00:00,2026-02-18 05:00:00,78,0.0,,2026-02,False,False,new
+OpenAQ,gap,NOX,VIF,2026-03-03 13:00:00,2026-03-07 08:00:00,92,0.0,,2026-03,False,False,new
+OpenAQ,gap,NOX,XAL,2026-03-07 01:00:00,2026-03-10 05:00:00,77,0.0,,2026-03,False,False,new
+OpenAQ,gap,NOX,XAL,2026-04-03 08:00:00,2026-04-10 14:00:00,175,0.0,,2026-04,False,True,new
+OpenAQ,stuck,NO2,ATI,2026-04-05 05:00:00,2026-04-05 15:00:00,10,9.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,ATI,2026-04-05 05:00:00,2026-04-05 15:00:00,10,18.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,HGM,2026-04-05 05:00:00,2026-04-05 15:00:00,10,24.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,IZT,2026-04-05 05:00:00,2026-04-05 15:00:00,10,40.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO,UIZ,2026-04-05 05:00:00,2026-04-05 15:00:00,10,31.0,,2026-04,False,False,candidate
+OpenAQ,network_stuck,ALL,ALL,2026-04-05 06:00:00,2026-04-05 15:00:00,9,22.0,value = stations frozen,2026-04,False,True,new
+OpenAQ,stuck,NO2,ACO,2026-04-05 06:00:00,2026-04-05 15:00:00,9,11.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,ACO,2026-04-05 06:00:00,2026-04-05 15:00:00,9,10.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,ACO,2026-04-05 06:00:00,2026-04-05 15:00:00,9,28.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,AJM,2026-04-05 06:00:00,2026-04-05 15:00:00,9,8.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,AJM,2026-04-05 06:00:00,2026-04-05 15:00:00,9,9.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,AJM,2026-04-05 06:00:00,2026-04-05 15:00:00,9,30.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,ATI,2026-04-05 06:00:00,2026-04-05 15:00:00,9,9.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,BJU,2026-04-05 06:00:00,2026-04-05 15:00:00,9,26.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,BJU,2026-04-05 06:00:00,2026-04-05 15:00:00,9,8.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,CAM,2026-04-05 06:00:00,2026-04-05 15:00:00,9,21.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,CAM,2026-04-05 06:00:00,2026-04-05 15:00:00,9,24.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,CAM,2026-04-05 06:00:00,2026-04-05 15:00:00,9,10.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,CCA,2026-04-05 06:00:00,2026-04-05 15:00:00,9,23.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,CCA,2026-04-05 06:00:00,2026-04-05 15:00:00,9,28.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,CCA,2026-04-05 06:00:00,2026-04-05 15:00:00,9,7.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,CUA,2026-04-05 06:00:00,2026-04-05 15:00:00,9,19.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,CUA,2026-04-05 06:00:00,2026-04-05 15:00:00,9,23.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,CUA,2026-04-05 06:00:00,2026-04-05 15:00:00,9,20.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,FAC,2026-04-05 06:00:00,2026-04-05 15:00:00,9,14.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,FAC,2026-04-05 06:00:00,2026-04-05 15:00:00,9,16.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,FAC,2026-04-05 06:00:00,2026-04-05 15:00:00,9,14.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,GAM,2026-04-05 06:00:00,2026-04-05 15:00:00,9,30.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,HGM,2026-04-05 06:00:00,2026-04-05 15:00:00,9,27.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,HGM,2026-04-05 06:00:00,2026-04-05 15:00:00,9,9.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO,IZT,2026-04-05 06:00:00,2026-04-05 15:00:00,9,12.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,IZT,2026-04-05 06:00:00,2026-04-05 15:00:00,9,28.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO,MER,2026-04-05 06:00:00,2026-04-05 15:00:00,9,8.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,MER,2026-04-05 06:00:00,2026-04-05 15:00:00,9,27.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,MER,2026-04-05 06:00:00,2026-04-05 15:00:00,9,35.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,MER,2026-04-05 06:00:00,2026-04-05 15:00:00,9,6.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,MGH,2026-04-05 06:00:00,2026-04-05 15:00:00,9,15.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,MGH,2026-04-05 06:00:00,2026-04-05 15:00:00,9,16.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,MGH,2026-04-05 06:00:00,2026-04-05 15:00:00,9,14.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,NEZ,2026-04-05 06:00:00,2026-04-05 15:00:00,9,31.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,NEZ,2026-04-05 06:00:00,2026-04-05 15:00:00,9,7.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,PED,2026-04-05 06:00:00,2026-04-05 15:00:00,9,20.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,PED,2026-04-05 06:00:00,2026-04-05 15:00:00,9,22.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,PED,2026-04-05 06:00:00,2026-04-05 15:00:00,9,7.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO,SAC,2026-04-05 06:00:00,2026-04-05 15:00:00,9,19.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,SAC,2026-04-05 06:00:00,2026-04-05 15:00:00,9,32.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,SAC,2026-04-05 06:00:00,2026-04-05 15:00:00,9,51.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,SAG,2026-04-05 06:00:00,2026-04-05 15:00:00,9,17.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,SAG,2026-04-05 06:00:00,2026-04-05 15:00:00,9,19.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,SAG,2026-04-05 06:00:00,2026-04-05 15:00:00,9,20.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,TLA,2026-04-05 06:00:00,2026-04-05 15:00:00,9,13.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,TLA,2026-04-05 06:00:00,2026-04-05 15:00:00,9,15.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,TLA,2026-04-05 06:00:00,2026-04-05 15:00:00,9,22.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,TLI,2026-04-05 06:00:00,2026-04-05 15:00:00,9,11.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,TLI,2026-04-05 06:00:00,2026-04-05 15:00:00,9,12.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,TLI,2026-04-05 06:00:00,2026-04-05 15:00:00,9,32.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO,UAX,2026-04-05 06:00:00,2026-04-05 15:00:00,9,18.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,UAX,2026-04-05 06:00:00,2026-04-05 15:00:00,9,27.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,UAX,2026-04-05 06:00:00,2026-04-05 15:00:00,9,45.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,UIZ,2026-04-05 06:00:00,2026-04-05 15:00:00,9,33.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,UIZ,2026-04-05 06:00:00,2026-04-05 15:00:00,9,64.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NO2,VIF,2026-04-05 06:00:00,2026-04-05 15:00:00,9,9.0,,2026-04,False,False,candidate
+OpenAQ,stuck,NOX,VIF,2026-04-05 06:00:00,2026-04-05 15:00:00,9,9.0,,2026-04,False,False,candidate
+OpenAQ,stuck,O3,VIF,2026-04-05 06:00:00,2026-04-05 15:00:00,9,28.0,,2026-04,False,False,candidate
+OpenAQ,gap,NOX,SAG,2026-04-07 17:00:00,2026-04-10 19:00:00,75,0.0,,2026-04,False,False,new
+OpenAQ,gap,NOX,XAL,2026-04-18 12:00:00,2026-04-22 05:00:00,90,0.0,,2026-04,False,False,new
+OpenAQ,gap,NOX,ACO,2026-04-18 13:00:00,2026-04-25 05:00:00,161,0.0,,2026-04,False,False,new
+OpenAQ,gap,NOX,XAL,2026-04-25 22:00:00,2026-05-05 05:00:00,224,0.0,,2026-04,False,True,new
+OpenAQ,gap,NOX,UAX,2026-04-30 05:00:00,2026-05-03 12:00:00,80,0.0,,2026-04,False,False,new
+OpenAQ,gap,NOX,CUA,2026-04-30 16:00:00,2026-05-31 23:00:00,752,0.0,,2026-04,False,True,new
+OpenAQ,network_outage,NOX,ALL,2026-05-06 05:00:00,2026-05-06 15:00:00,11,20.0,,2026-05,False,True,new
+OpenAQ,network_outage,NOX,ALL,2026-05-12 01:00:00,2026-05-12 08:00:00,8,20.0,,2026-05,False,True,new
+OpenAQ,gap,NOX,HGM,2026-05-15 18:00:00,2026-05-31 23:00:00,390,0.0,,2026-05,False,True,new
+OpenAQ,gap,NOX,CCA,2026-05-24 19:00:00,2026-05-28 21:00:00,99,0.0,,2026-05,False,False,new
+OpenAQ,gap,NOX,AJM,2026-05-25 18:00:00,2026-05-31 23:00:00,150,0.0,,2026-05,False,False,new
+OpenAQ,gap,NOX,XAL,2026-05-27 15:00:00,2026-05-31 23:00:00,105,0.0,,2026-05,False,False,new
+OpenAQ,gap,NOX,SAG,2026-05-28 23:00:00,2026-05-31 23:00:00,73,0.0,,2026-05,False,False,new
+OpenAQ,gap,NOX,AJM,2026-06-01 00:00:00,2026-06-20 05:00:00,462,0.0,,2026-06,False,True,new
+OpenAQ,gap,NOX,HGM,2026-06-01 00:00:00,2026-06-06 05:00:00,126,0.0,,2026-06,False,False,new
+OpenAQ,gap,NOX,SAG,2026-06-01 00:00:00,2026-08-19 05:00:00,1902,0.0,,2026-06,False,True,new
+OpenAQ,gap,NOX,XAL,2026-06-01 00:00:00,2026-08-08 05:00:00,1638,0.0,,2026-06,False,True,new
+OpenAQ,gap,NOX,ATI,2026-06-12 15:00:00,2026-07-03 05:00:00,495,0.0,,2026-06,False,True,new
+OpenAQ,gap,NOX,SAC,2026-06-12 17:00:00,2026-06-20 05:00:00,181,0.0,,2026-06,False,True,new
+OpenAQ,gap,NOX,AJM,2026-06-20 14:00:00,2026-06-24 05:00:00,88,0.0,,2026-06,False,False,new
+OpenAQ,gap,NOX,FAC,2026-07-04 23:00:00,2026-07-08 15:00:00,89,0.0,,2026-07,False,False,new
+OpenAQ,gap,NOX,NEZ,2026-07-07 17:00:00,2026-07-21 05:00:00,325,0.0,,2026-07,False,True,new
+OpenAQ,gap,NOX,MER,2026-07-09 23:00:00,2026-07-13 17:00:00,91,0.0,,2026-07,False,False,new
+OpenAQ,gap,NOX,CAM,2026-07-13 17:00:00,2026-07-24 19:00:00,267,0.0,,2026-07,False,True,new
+OpenAQ,gap,NOX,FAC,2026-07-17 00:00:00,2026-07-22 05:00:00,126,0.0,,2026-07,False,False,new
+OpenAQ,gap,NOX,VIF,2026-07-17 16:00:00,2026-09-05 05:00:00,1190,0.0,,2026-07,False,True,new
+OpenAQ,gap,NOX,IZT,2026-07-23 17:00:00,2026-08-06 05:00:00,325,0.0,,2026-07,False,True,new
+OpenAQ,gap,NOX,UAX,2026-07-23 17:00:00,2026-08-29 05:00:00,877,0.0,,2026-07,False,True,new
+OpenAQ,gap,NOX,ACO,2026-07-31 16:00:00,2026-08-08 05:00:00,182,0.0,,2026-07,False,True,new
+OpenAQ,gap,NOX,CAM,2026-08-24 18:00:00,2026-08-28 21:00:00,100,0.0,,2026-08,False,False,new
+OpenAQ,gap,NOX,UAX,2026-08-29 22:00:00,2026-09-02 05:00:00,80,0.0,,2026-08,False,False,new
+OpenAQ,gap,NOX,ATI,2026-09-02 18:00:00,2026-09-12 05:00:00,228,0.0,,2026-09,False,True,new
+OpenAQ,gap,NOX,UAX,2026-09-03 00:00:00,2026-09-15 08:00:00,297,0.0,,2026-09,False,True,new
+OpenAQ,stuck,O3,CCA,2026-09-04 05:00:00,2026-09-04 12:00:00,8,6.0,,2026-09,False,False,candidate
+OpenAQ,stuck,O3,CCA,2026-09-08 02:00:00,2026-09-08 09:00:00,8,6.0,,2026-09,False,False,candidate
+OpenAQ,gap,NOX,AJM,2026-09-08 05:00:00,2026-09-18 05:00:00,241,0.0,,2026-09,False,True,new
+OpenAQ,gap,NOX,FAC,2026-09-10 19:00:00,2026-09-15 08:00:00,110,0.0,,2026-09,False,False,new
+OpenAQ,gap,NOX,TLA,2026-09-10 20:00:00,2026-09-21 21:00:00,266,0.0,,2026-09,False,True,new
+OpenAQ,network_step,NOX,ALL,2026-09-16 00:00:00,2026-09-30 00:00:00,336,0.5542660913108737,,2026-09,False,True,candidate
+OpenAQ,gap,NOX,FAC,2026-09-19 17:00:00,2026-10-03 08:00:00,328,0.0,,2026-09,False,True,new
+OpenAQ,gap,NOX,AJM,2026-09-22 00:00:00,2026-10-03 08:00:00,273,0.0,,2026-09,False,True,new
+OpenAQ,gap,NOX,MER,2026-09-25 16:00:00,2026-10-06 21:00:00,270,0.0,,2026-09,False,True,new
+OpenAQ,gap,NOX,VIF,2026-09-28 21:00:00,2026-10-06 05:00:00,177,0.0,,2026-09,False,True,new
+OpenAQ,gap,NOX,VIF,2026-10-07 01:00:00,2026-10-22 19:00:00,379,0.0,,2026-10,False,True,new
+OpenAQ,gap,NOX,XAL,2026-10-08 17:00:00,2026-10-12 23:00:00,103,0.0,,2026-10,False,False,new
+OpenAQ,gap,NOX,NEZ,2026-10-12 17:00:00,2026-10-21 08:00:00,208,0.0,,2026-10,False,True,new
+OpenAQ,gap,NOX,AJM,2026-10-14 09:00:00,2026-10-20 18:00:00,154,0.0,,2026-10,False,False,new
+OpenAQ,gap,NOX,CUA,2026-10-15 12:00:00,2026-10-21 20:00:00,153,0.0,,2026-10,False,False,new
+OpenAQ,gap,NOX,TLA,2026-10-16 20:00:00,2026-10-22 19:00:00,144,0.0,,2026-10,False,False,new
+SIMAT,gap,NOX,SAC,2019-01-01 00:00:00,2019-03-01 05:00:00,1422,0.0,,2019-01,False,True,new
+SIMAT,gap,NOX,TLI,2019-01-01 00:00:00,2019-02-02 05:00:00,774,0.0,,2019-01,False,True,new
+SIMAT,gap,NOX,CAM,2019-01-09 06:00:00,2019-03-21 05:00:00,1704,0.0,,2019-01,False,True,new
+SIMAT,gap,NOX,MON,2019-01-18 16:00:00,2019-01-22 04:00:00,85,0.0,,2019-01,False,False,new
+SIMAT,gap,NOX,UIZ,2019-01-31 05:00:00,2019-02-06 08:00:00,148,0.0,,2019-01,False,False,new
+SIMAT,gap,NOX,AJM,2019-02-05 06:00:00,2019-02-21 05:00:00,384,0.0,,2019-02,False,True,new
+SIMAT,gap,NOX,MER,2019-02-05 06:00:00,2019-02-14 05:00:00,216,0.0,,2019-02,False,True,new
+SIMAT,gap,NOX,VIF,2019-02-27 06:00:00,2019-03-12 05:00:00,312,0.0,,2019-02,False,True,new
+SIMAT,gap,NOX,PED,2019-02-28 06:00:00,2019-03-08 08:00:00,195,0.0,,2019-02,False,True,new
+SIMAT,gap,NOX,ACO,2019-03-04 06:00:00,2019-03-08 08:00:00,99,0.0,,2019-03,False,False,new
+SIMAT,gap,NOX,FAC,2019-03-04 22:00:00,2019-04-02 06:00:00,681,0.0,,2019-03,False,True,new
+SIMAT,gap,NOX,CUA,2019-03-11 06:00:00,2019-03-14 08:00:00,75,0.0,,2019-03,False,False,new
+SIMAT,gap,NOX,MON,2019-03-25 19:00:00,2019-06-01 05:00:00,1619,0.0,,2019-03,False,True,new
+SIMAT,gap,NOX,CHO,2019-04-02 06:00:00,2019-12-31 23:00:00,6570,0.0,,2019-04,False,True,new
+SIMAT,gap,NOX,VIF,2019-04-04 18:00:00,2019-04-11 05:00:00,156,0.0,,2019-04,False,False,new
+SIMAT,gap,NOX,UIZ,2019-04-11 05:00:00,2019-05-18 05:00:00,889,0.0,,2019-04,False,True,new
+SIMAT,gap,NOX,XAL,2019-04-24 06:00:00,2019-05-18 05:00:00,576,0.0,,2019-04,False,True,new
+SIMAT,gap,NOX,UAX,2019-04-26 05:00:00,2019-05-07 08:00:00,268,0.0,,2019-04,False,True,new
+SIMAT,gap,NOX,SAG,2019-05-15 06:00:00,2019-05-19 08:00:00,99,0.0,,2019-05,False,False,new
+SIMAT,gap,NOX,CUA,2019-05-20 06:00:00,2019-06-07 05:00:00,432,0.0,,2019-05,False,True,new
+SIMAT,gap,NOX,CCA,2019-05-23 15:00:00,2019-06-12 08:00:00,474,0.0,,2019-05,False,True,new
+SIMAT,gap,NOX,PED,2019-05-27 19:00:00,2019-06-06 08:00:00,230,0.0,,2019-05,False,True,new
+SIMAT,gap,NOX,CAM,2019-06-01 06:00:00,2019-09-16 08:00:00,2571,0.0,,2019-06,False,True,new
+SIMAT,gap,NOX,SAG,2019-06-06 05:00:00,2019-06-20 05:00:00,337,0.0,,2019-06,False,True,new
+SIMAT,gap,NOX,TLI,2019-06-12 03:00:00,2019-06-26 05:00:00,339,0.0,,2019-06,False,True,new
+SIMAT,gap,NOX,ATI,2019-06-22 01:00:00,2019-10-01 05:00:00,2429,0.0,,2019-06,False,True,new
+SIMAT,gap,NOX,LLA,2019-06-23 19:00:00,2019-07-13 05:00:00,467,0.0,,2019-06,False,True,new
+SIMAT,gap,NOX,UIZ,2019-06-29 03:00:00,2019-07-19 05:00:00,483,0.0,,2019-06,False,True,new
+SIMAT,gap,NOX,ACO,2019-06-30 05:00:00,2019-12-31 23:00:00,4435,0.0,,2019-06,False,True,new
+SIMAT,gap,NOX,CUA,2019-07-12 23:00:00,2019-07-18 08:00:00,130,0.0,,2019-07,False,False,new
+SIMAT,gap,NOX,SFE,2019-07-18 05:00:00,2019-08-17 08:00:00,724,0.0,,2019-07,False,True,new
+SIMAT,gap,NOX,UAX,2019-07-25 19:00:00,2019-07-30 08:00:00,110,0.0,,2019-07,False,False,new
+SIMAT,gap,NOX,CUT,2019-07-28 18:00:00,2019-08-14 05:00:00,396,0.0,,2019-07,False,True,new
+SIMAT,gap,NOX,SAG,2019-07-31 06:00:00,2019-11-01 05:00:00,2232,0.0,,2019-07,False,True,new
+SIMAT,gap,NOX,HGM,2019-08-12 17:00:00,2019-09-14 05:00:00,781,0.0,,2019-08,False,True,new
+SIMAT,gap,NOX,MGH,2019-08-13 15:00:00,2019-12-31 23:00:00,3369,0.0,,2019-08,False,True,new
+SIMAT,gap,NOX,TLA,2019-08-18 04:00:00,2019-08-21 05:00:00,74,0.0,,2019-08,False,False,new
+SIMAT,gap,NOX,NEZ,2019-08-22 15:00:00,2019-09-21 05:00:00,711,0.0,,2019-08,False,True,new
+SIMAT,gap,NOX,TLI,2019-08-29 05:00:00,2019-10-01 05:00:00,793,0.0,,2019-08,False,True,new
+SIMAT,gap,NOX,CUA,2019-09-01 01:00:00,2019-11-14 05:00:00,1781,0.0,,2019-09,False,True,new
+SIMAT,gap,NOX,ATI,2019-10-06 04:00:00,2019-10-09 05:00:00,74,0.0,,2019-10,False,False,new
+SIMAT,gap,NOX,UAX,2019-10-11 06:00:00,2019-11-13 05:00:00,792,0.0,,2019-10,False,True,new
+SIMAT,gap,NOX,NEZ,2019-10-14 18:00:00,2019-11-15 08:00:00,759,0.0,,2019-10,False,True,new
+SIMAT,gap,NOX,TAH,2019-10-27 01:00:00,2019-12-14 05:00:00,1157,0.0,,2019-10,False,True,new
+SIMAT,gap,NOX,UIZ,2019-11-04 22:00:00,2019-11-13 05:00:00,200,0.0,,2019-11,False,True,new
+SIMAT,gap,NOX,SFE,2019-11-07 05:00:00,2019-11-22 05:00:00,361,0.0,,2019-11,False,True,new
+SIMAT,gap,NOX,LLA,2019-11-08 19:00:00,2019-11-12 05:00:00,83,0.0,,2019-11,False,False,new
+SIMAT,gap,NOX,SAC,2019-11-14 19:00:00,2019-11-20 05:00:00,131,0.0,,2019-11,False,False,new
+SIMAT,gap,NOX,PED,2019-11-20 17:00:00,2019-12-03 08:00:00,304,0.0,,2019-11,False,True,new
+SIMAT,gap,NOX,SAC,2019-12-06 06:00:00,2019-12-10 05:00:00,96,0.0,,2019-12,False,False,new
+SIMAT,gap,NOX,MON,2019-12-16 06:00:00,2019-12-21 08:00:00,123,0.0,,2019-12,False,False,new
+SIMAT,gap,NOX,UAX,2019-12-20 06:00:00,2019-12-24 05:00:00,96,0.0,,2019-12,False,False,new
+SIMAT,gap,NOX,MGH,2020-01-01 00:00:00,2020-01-24 05:00:00,558,0.0,,2020-01,False,True,new
+SIMAT,gap,NOX,HGM,2020-01-01 06:00:00,2020-01-14 08:00:00,315,0.0,,2020-01,False,True,new
+SIMAT,gap,NOX,XAL,2020-01-01 06:00:00,2020-12-31 23:00:00,8778,0.0,,2020-01,False,True,new
+SIMAT,gap,NOX,UAX,2020-01-03 16:00:00,2020-01-18 05:00:00,350,0.0,,2020-01,False,True,new
+SIMAT,gap,NOX,VIF,2020-01-07 21:00:00,2020-01-14 08:00:00,156,0.0,,2020-01,False,False,new
+SIMAT,gap,NOX,UIZ,2020-01-09 03:00:00,2020-01-12 05:00:00,75,0.0,,2020-01,False,False,new
+SIMAT,gap,NOX,AJM,2020-01-17 17:00:00,2020-03-02 08:00:00,1072,0.0,,2020-01,False,True,new
+SIMAT,gap,NOX,SAC,2020-01-20 05:00:00,2020-02-05 05:00:00,385,0.0,,2020-01,False,True,new
+SIMAT,gap,NOX,MER,2020-02-04 17:00:00,2020-02-14 05:00:00,229,0.0,,2020-02,False,True,new
+SIMAT,gap,NOX,CCA,2020-02-13 05:00:00,2020-02-26 05:00:00,313,0.0,,2020-02,False,True,new
+SIMAT,gap,NOX,MON,2020-03-10 03:00:00,2020-04-30 05:00:00,1227,0.0,,2020-03,False,True,new
+SIMAT,gap,NOX,TLI,2020-03-22 04:00:00,2020-12-31 23:00:00,6836,0.0,,2020-03,False,True,new
+SIMAT,gap,NOX,MER,2020-03-29 06:00:00,2020-04-04 05:00:00,144,0.0,,2020-03,False,False,new
+SIMAT,gap,NOX,ATI,2020-04-05 06:00:00,2020-04-09 05:00:00,96,0.0,,2020-04,False,False,new
+SIMAT,gap,NOX,LLA,2020-04-11 21:00:00,2020-12-31 23:00:00,6339,0.0,,2020-04,False,True,new
+SIMAT,gap,NOX,TLA,2020-04-15 01:00:00,2020-04-23 05:00:00,197,0.0,,2020-04,False,True,new
+SIMAT,gap,NOX,CUA,2020-04-17 06:00:00,2020-04-23 05:00:00,144,0.0,,2020-04,False,False,new
+SIMAT,gap,NOX,UAX,2020-06-05 19:00:00,2020-06-09 05:00:00,83,0.0,,2020-06,False,False,new
+SIMAT,gap,NOX,UAX,2020-06-17 06:00:00,2020-06-20 06:00:00,73,0.0,,2020-06,False,False,new
+SIMAT,gap,NOX,MON,2020-06-19 06:00:00,2020-06-25 05:00:00,144,0.0,,2020-06,False,False,new
+SIMAT,gap,NOX,TLA,2020-06-20 05:00:00,2020-06-23 05:00:00,73,0.0,,2020-06,False,False,new
+SIMAT,gap,NOX,CUT,2020-07-13 14:00:00,2020-08-21 05:00:00,928,0.0,,2020-07,False,True,new
+SIMAT,gap,NOX,FAC,2020-07-18 02:00:00,2020-07-21 05:00:00,76,0.0,,2020-07,False,False,new
+SIMAT,gap,NOX,CUA,2020-07-19 16:00:00,2020-12-31 23:00:00,3968,0.0,,2020-07,False,True,new
+SIMAT,gap,NOX,IZT,2020-08-07 15:00:00,2020-12-31 23:00:00,3513,0.0,,2020-08,False,True,new
+SIMAT,gap,NOX,HGM,2020-08-12 12:00:00,2020-12-31 23:00:00,3396,0.0,,2020-08,False,True,new
+SIMAT,gap,NOX,AJM,2020-08-12 16:00:00,2020-12-31 23:00:00,3392,0.0,,2020-08,False,True,new
+SIMAT,gap,NOX,MGH,2020-08-14 17:00:00,2020-09-12 05:00:00,685,0.0,,2020-08,False,True,new
+SIMAT,gap,NOX,SAG,2020-09-14 18:00:00,2020-10-17 05:00:00,780,0.0,,2020-09,False,True,new
+SIMAT,gap,NOX,MER,2020-09-25 09:00:00,2020-10-01 05:00:00,141,0.0,,2020-09,False,False,new
+SIMAT,gap,NOX,SFE,2020-10-03 19:00:00,2020-10-07 05:00:00,83,0.0,,2020-10,False,False,new
+SIMAT,gap,NOX,ATI,2020-10-16 06:00:00,2020-10-19 05:00:00,72,0.0,,2020-10,False,False,new
+SIMAT,gap,NOX,UAX,2020-10-20 03:00:00,2020-10-23 05:00:00,75,0.0,,2020-10,False,False,new
+SIMAT,gap,NOX,ATI,2020-11-02 19:00:00,2020-11-07 05:00:00,107,0.0,,2020-11,False,False,new
+SIMAT,gap,NOX,ATI,2020-12-02 20:00:00,2020-12-08 05:00:00,130,0.0,,2020-12,False,False,new
+SIMAT,gap,NOX,TLI,2023-01-01 00:00:00,2023-10-28 05:00:00,7206,0.0,,2023-01,False,True,new
+SIMAT,gap,NOX,XAL,2023-01-01 00:00:00,2023-01-13 05:00:00,294,0.0,,2023-01,False,True,new
+SIMAT,gap,NOX,PED,2023-01-03 17:00:00,2023-01-10 08:00:00,160,0.0,,2023-01,False,False,new
+SIMAT,gap,NOX,MON,2023-01-12 14:00:00,2023-01-16 08:00:00,91,0.0,,2023-01,False,False,new
+SIMAT,gap,NOX,UIZ,2023-01-12 18:00:00,2023-02-02 05:00:00,492,0.0,,2023-01,False,True,new
+SIMAT,gap,NOX,CAM,2023-01-16 06:00:00,2023-01-21 05:00:00,120,0.0,,2023-01,False,False,new
+SIMAT,gap,NOX,ATI,2023-01-20 16:00:00,2023-01-24 22:00:00,103,0.0,,2023-01,False,False,new
+SIMAT,gap,NOX,CHO,2023-01-30 18:00:00,2023-02-18 05:00:00,444,0.0,,2023-01,False,True,new
+SIMAT,gap,NOX,MER,2023-02-03 06:00:00,2023-02-08 05:00:00,120,0.0,,2023-02,False,False,new
+SIMAT,gap,NOX,HGM,2023-02-09 06:00:00,2023-02-18 06:00:00,217,0.0,,2023-02,False,True,new
+SIMAT,gap,NOX,TLA,2023-02-14 17:00:00,2023-02-28 08:00:00,328,0.0,,2023-02,False,True,new
+SIMAT,gap,NOX,IZT,2023-02-28 15:00:00,2023-03-08 05:00:00,183,0.0,,2023-02,False,True,new
+SIMAT,gap,NOX,PED,2023-03-01 17:00:00,2023-05-09 05:00:00,1645,0.0,,2023-03,False,True,new
+SIMAT,gap,NOX,HGM,2023-03-02 19:00:00,2023-03-11 08:00:00,206,0.0,,2023-03,False,True,new
+SIMAT,gap,NOX,MER,2023-03-14 18:00:00,2023-03-29 17:00:00,360,0.0,,2023-03,False,True,new
+SIMAT,gap,NOX,ATI,2023-03-15 16:00:00,2023-07-19 20:00:00,3029,0.0,,2023-03,False,True,new
+SIMAT,gap,NOX,UIZ,2023-03-22 17:00:00,2023-05-27 05:00:00,1573,0.0,,2023-03,False,True,new
+SIMAT,gap,NOX,SAG,2023-03-22 18:00:00,2023-04-07 04:00:00,371,0.0,,2023-03,False,True,new
+SIMAT,gap,NOX,XAL,2023-04-02 03:00:00,2023-05-10 08:00:00,918,0.0,,2023-04,False,True,new
+SIMAT,gap,NOX,HGM,2023-04-07 04:00:00,2023-10-13 08:00:00,4541,0.0,,2023-04,False,True,new
+SIMAT,gap,NOX,CUT,2023-04-09 01:00:00,2023-05-10 08:00:00,752,0.0,,2023-04,False,True,new
+SIMAT,gap,NOX,ACO,2023-04-12 19:00:00,2023-04-26 05:00:00,323,0.0,,2023-04,False,True,new
+SIMAT,gap,NOX,CAM,2023-04-14 22:00:00,2023-06-28 11:00:00,1790,0.0,,2023-04,False,True,new
+SIMAT,gap,NOX,TAH,2023-04-18 17:00:00,2023-10-10 19:00:00,4203,0.0,,2023-04,False,True,new
+SIMAT,gap,NOX,NEZ,2023-05-07 01:00:00,2023-06-15 08:00:00,944,0.0,,2023-05,False,True,new
+SIMAT,gap,NOX,IZT,2023-05-16 08:00:00,2023-05-20 05:00:00,94,0.0,,2023-05,False,False,new
+SIMAT,gap,NOX,TLA,2023-05-19 21:00:00,2023-07-01 05:00:00,1017,0.0,,2023-05,False,True,new
+SIMAT,gap,NOX,PED,2023-05-21 01:00:00,2023-05-24 22:00:00,94,0.0,,2023-05,False,False,new
+SIMAT,gap,NOX,UAX,2023-05-23 19:00:00,2023-05-31 05:00:00,179,0.0,,2023-05,False,True,new
+SIMAT,gap,NOX,CUA,2023-06-01 18:00:00,2023-06-16 05:00:00,348,0.0,,2023-06,False,True,new
+SIMAT,gap,NOX,CHO,2023-06-11 22:00:00,2023-06-23 05:00:00,272,0.0,,2023-06,False,True,new
+SIMAT,gap,NOX,SAC,2023-06-14 19:00:00,2023-08-31 05:00:00,1859,0.0,,2023-06,False,True,new
+SIMAT,gap,NOX,SAG,2023-07-06 18:00:00,2023-08-26 08:00:00,1215,0.0,,2023-07,False,True,new
+SIMAT,gap,NOX,ACO,2023-07-12 18:00:00,2023-07-18 15:00:00,142,0.0,,2023-07,False,False,new
+SIMAT,gap,NOX,UAX,2023-07-14 19:00:00,2023-07-18 16:00:00,94,0.0,,2023-07,False,False,new
+SIMAT,gap,NOX,ACO,2023-08-01 17:00:00,2023-08-09 10:00:00,186,0.0,,2023-08,False,True,new
+SIMAT,gap,NOX,CUA,2023-08-03 15:00:00,2023-08-08 08:00:00,114,0.0,,2023-08,False,False,new
+SIMAT,gap,NOX,VIF,2023-08-06 22:00:00,2023-08-26 08:00:00,467,0.0,,2023-08,False,True,new
+SIMAT,gap,NOX,AJM,2023-08-09 18:00:00,2023-10-10 05:00:00,1476,0.0,,2023-08,False,True,new
+SIMAT,gap,NOX,UAX,2023-08-11 16:00:00,2023-08-15 05:00:00,86,0.0,,2023-08,False,False,new
+SIMAT,gap,NOX,XAL,2023-08-14 21:00:00,2023-09-13 19:00:00,719,0.0,,2023-08,False,True,new
+SIMAT,gap,NOX,MER,2023-08-19 22:00:00,2023-08-23 05:00:00,80,0.0,,2023-08,False,False,new
+SIMAT,gap,NOX,UIZ,2023-08-19 22:00:00,2023-09-15 05:00:00,632,0.0,,2023-08,False,True,new
+SIMAT,gap,NOX,PED,2023-09-05 19:00:00,2023-10-03 19:00:00,673,0.0,,2023-09,False,True,new
+SIMAT,gap,NOX,CAM,2023-09-07 17:00:00,2023-09-12 05:00:00,109,0.0,,2023-09,False,False,new
+SIMAT,gap,NOX,CHO,2023-09-13 06:00:00,2023-10-01 08:00:00,435,0.0,,2023-09,False,True,new
+SIMAT,gap,NOX,XAL,2023-09-24 23:00:00,2023-09-28 18:00:00,92,0.0,,2023-09,False,False,new
+SIMAT,gap,NOX,CCA,2023-09-27 18:00:00,2023-10-13 08:00:00,375,0.0,,2023-09,False,True,new
+SIMAT,gap,NOX,UAX,2023-10-12 20:00:00,2023-11-01 08:00:00,469,0.0,,2023-10,False,True,new
+SIMAT,gap,NOX,IZT,2023-10-17 06:00:00,2023-10-28 05:00:00,264,0.0,,2023-10,False,True,new
+SIMAT,gap,NOX,XAL,2023-10-23 02:00:00,2023-11-01 05:00:00,220,0.0,,2023-10,False,True,new
+SIMAT,gap,NOX,ATI,2023-10-23 17:00:00,2023-11-12 08:00:00,472,0.0,,2023-10,False,True,new
+SIMAT,gap,NOX,UIZ,2023-10-27 00:00:00,2023-11-16 05:00:00,486,0.0,,2023-10,False,True,new
+SIMAT,gap,NOX,TLA,2023-11-03 17:00:00,2023-11-12 08:00:00,208,0.0,,2023-11,False,True,new
+SIMAT,gap,NOX,MON,2023-11-18 06:00:00,2023-12-31 23:00:00,1050,0.0,,2023-11,False,True,new
+SIMAT,gap,NOX,ACO,2023-11-25 19:00:00,2023-12-31 23:00:00,869,0.0,,2023-11,False,True,new
+SIMAT,gap,NOX,VIF,2023-11-28 20:00:00,2023-12-15 00:00:00,389,0.0,,2023-11,False,True,new
+SIMAT,gap,NOX,CHO,2023-11-28 23:00:00,2023-12-08 05:00:00,223,0.0,,2023-11,False,True,new
+SIMAT,gap,NOX,UAX,2023-12-05 15:00:00,2023-12-31 23:00:00,633,0.0,,2023-12,False,True,new
+SIMAT,gap,NOX,CUT,2023-12-19 17:00:00,2023-12-23 04:00:00,84,0.0,,2023-12,False,False,new
+SIMAT,level_shift,NOX,VIF,2023-12-24 00:00:00,2024-01-07 00:00:00,336,2.0731647154670823,,2023-12,False,True,candidate
+SIMAT,gap,NOX,MON,2024-01-01 00:00:00,2024-02-07 14:00:00,903,0.0,,2024-01,False,True,new
+SIMAT,gap,NOX,UAX,2024-01-01 00:00:00,2024-02-16 08:00:00,1113,0.0,,2024-01,False,True,new
+SIMAT,network_step,WSP,ALL,2024-01-01 00:00:00,2024-01-15 00:00:00,336,2.123863678042884,,2024-01,True,True,known
+SIMAT,gap,NOX,NEZ,2024-01-01 06:00:00,2024-08-08 08:00:00,5283,0.0,,2024-01,False,True,new
+SIMAT,gap,NOX,XAL,2024-01-01 19:00:00,2024-01-24 05:00:00,539,0.0,,2024-01,False,True,new
+SIMAT,gap,NOX,AJM,2024-01-07 05:00:00,2024-01-12 05:00:00,121,0.0,,2024-01,False,False,new
+SIMAT,gap,NOX,CHO,2024-01-12 16:00:00,2024-02-28 08:00:00,1121,0.0,,2024-01,False,True,new
+SIMAT,gap,NOX,CUA,2024-01-22 16:00:00,2024-01-25 15:00:00,72,0.0,,2024-01,False,False,new
+SIMAT,gap,NOX,UIZ,2024-01-29 05:00:00,2024-02-03 05:00:00,121,0.0,,2024-01,False,False,new
+SIMAT,gap,NOX,XAL,2024-02-06 06:00:00,2024-02-10 08:00:00,99,0.0,,2024-02,False,False,new
+SIMAT,gap,NOX,TLA,2024-02-06 17:00:00,2024-03-21 05:00:00,1045,0.0,,2024-02,False,True,new
+SIMAT,gap,NOX,CAM,2024-02-20 00:00:00,2024-02-23 05:00:00,78,0.0,,2024-02,False,False,new
+SIMAT,stuck,O3,FAR,2024-02-27 05:00:00,2024-02-27 12:00:00,8,8.0,,2024-02,False,False,candidate
+SIMAT,gap,NOX,CUT,2024-03-01 19:00:00,2024-03-05 08:00:00,86,0.0,,2024-03,False,False,new
+SIMAT,gap,NOX,CHO,2024-03-10 18:00:00,2024-03-17 17:00:00,168,0.0,,2024-03,False,True,new
+SIMAT,gap,NOX,UAX,2024-03-11 05:00:00,2024-03-27 21:00:00,401,0.0,,2024-03,False,True,new
+SIMAT,gap,NOX,HGM,2024-03-12 18:00:00,2024-04-09 05:00:00,660,0.0,,2024-03,False,True,new
+SIMAT,gap,NOX,CUA,2024-03-14 17:00:00,2024-03-19 17:00:00,121,0.0,,2024-03,False,False,new
+SIMAT,gap,NOX,VIF,2024-03-27 19:00:00,2024-04-11 05:00:00,347,0.0,,2024-03,False,True,new
+SIMAT,gap,NOX,CHO,2024-03-29 05:00:00,2024-04-16 08:00:00,436,0.0,,2024-03,False,True,new
+SIMAT,gap,NOX,XAL,2024-04-03 17:00:00,2024-08-20 08:00:00,3328,0.0,,2024-04,False,True,new
+SIMAT,gap,NOX,PED,2024-04-05 20:00:00,2024-04-09 05:00:00,82,0.0,,2024-04,False,False,new
+SIMAT,network_outage,NOX,ALL,2024-04-07 05:00:00,2024-04-07 12:00:00,8,21.0,,2024-04,False,True,new
+SIMAT,gap,NOX,MON,2024-04-15 17:00:00,2024-04-19 05:00:00,85,0.0,,2024-04,False,False,new
+SIMAT,gap,NOX,TLA,2024-04-17 16:00:00,2024-05-10 08:00:00,545,0.0,,2024-04,False,True,new
+SIMAT,gap,NOX,SAG,2024-04-21 16:00:00,2024-04-30 05:00:00,206,0.0,,2024-04,False,True,new
+SIMAT,gap,NOX,UIZ,2024-05-05 05:00:00,2024-05-08 05:00:00,73,0.0,,2024-05,False,False,new
+SIMAT,gap,NOX,MER,2024-05-05 16:00:00,2024-05-30 05:00:00,590,0.0,,2024-05,False,True,new
+SIMAT,gap,NOX,CAM,2024-05-24 22:00:00,2024-08-10 05:00:00,1856,0.0,,2024-05,False,True,new
+SIMAT,gap,NOX,SAC,2024-05-29 17:00:00,2024-06-14 05:00:00,373,0.0,,2024-05,False,True,new
+SIMAT,gap,NOX,PED,2024-05-31 02:00:00,2024-06-12 05:00:00,292,0.0,,2024-05,False,True,new
+SIMAT,gap,NOX,VIF,2024-05-31 15:00:00,2024-06-04 05:00:00,87,0.0,,2024-05,False,False,new
+SIMAT,gap,NOX,UAX,2024-05-31 21:00:00,2024-07-04 05:00:00,801,0.0,,2024-05,False,True,new
+SIMAT,network_step,O3,ALL,2024-06-19 00:00:00,2024-07-03 00:00:00,336,0.5408485847064591,,2024-06,False,True,candidate
+SIMAT,gap,NOX,SAG,2024-06-23 04:00:00,2024-06-27 08:00:00,101,0.0,,2024-06,False,False,new
+SIMAT,gap,NOX,UIZ,2024-06-28 07:00:00,2024-07-04 05:00:00,143,0.0,,2024-06,False,False,new
+SIMAT,gap,NOX,ATI,2024-07-03 05:00:00,2024-07-06 05:00:00,73,0.0,,2024-07,False,False,new
+SIMAT,gap,NOX,VIF,2024-07-11 15:00:00,2024-07-18 21:00:00,175,0.0,,2024-07,False,True,new
+SIMAT,gap,NOX,TAH,2024-07-18 02:00:00,2024-11-21 05:00:00,3028,0.0,,2024-07,False,True,new
+SIMAT,gap,NOX,UIZ,2024-07-18 16:00:00,2024-07-24 05:00:00,134,0.0,,2024-07,False,False,new
+SIMAT,gap,NOX,PED,2024-07-25 17:00:00,2024-09-19 22:00:00,1350,0.0,,2024-07,False,True,new
+SIMAT,gap,NOX,CHO,2024-07-28 22:00:00,2024-08-02 08:00:00,107,0.0,,2024-07,False,False,new
+SIMAT,stuck,WSP,INN,2024-07-31 06:00:00,2024-08-01 05:00:00,24,3.7,,2024-07,False,True,candidate
+SIMAT,gap,NOX,UIZ,2024-08-07 04:00:00,2024-08-10 05:00:00,74,0.0,,2024-08,False,False,new
+SIMAT,gap,NOX,HGM,2024-08-14 05:00:00,2024-12-31 23:00:00,3355,0.0,,2024-08,False,True,new
+SIMAT,gap,NOX,SAG,2024-08-18 13:00:00,2024-09-27 05:00:00,953,0.0,,2024-08,False,True,new
+SIMAT,gap,NOX,SAC,2024-08-19 17:00:00,2024-09-28 05:00:00,949,0.0,,2024-08,False,True,new
+SIMAT,gap,NOX,ATI,2024-08-27 15:00:00,2024-10-18 05:00:00,1239,0.0,,2024-08,False,True,new
+SIMAT,gap,NOX,TLI,2024-08-30 17:00:00,2024-09-05 05:00:00,133,0.0,,2024-08,False,False,new
+SIMAT,gap,NOX,VIF,2024-08-30 18:00:00,2024-09-26 05:00:00,636,0.0,,2024-08,False,True,new
+SIMAT,gap,NOX,CHO,2024-09-02 23:00:00,2024-10-17 05:00:00,1063,0.0,,2024-09,False,True,new
+SIMAT,gap,NOX,UIZ,2024-09-05 17:00:00,2024-11-12 08:00:00,1624,0.0,,2024-09,False,True,new
+SIMAT,gap,NOX,XAL,2024-09-06 11:00:00,2024-09-19 08:00:00,310,0.0,,2024-09,False,True,new
+SIMAT,gap,NOX,CUA,2024-09-11 16:00:00,2024-09-21 05:00:00,230,0.0,,2024-09,False,True,new
+SIMAT,gap,NOX,MON,2024-09-11 17:00:00,2024-09-17 12:00:00,140,0.0,,2024-09,False,False,new
+SIMAT,gap,NOX,CUT,2024-09-12 03:00:00,2024-09-18 05:00:00,147,0.0,,2024-09,False,False,new
+SIMAT,gap,NOX,FAC,2024-09-15 23:00:00,2024-09-19 15:00:00,89,0.0,,2024-09,False,False,new
+SIMAT,gap,NOX,CUA,2024-10-01 05:00:00,2024-10-08 21:00:00,185,0.0,,2024-10,False,True,new
+SIMAT,gap,NOX,NEZ,2024-10-07 06:00:00,2024-10-12 05:00:00,120,0.0,,2024-10,False,False,new
+SIMAT,gap,NOX,XAL,2024-10-09 21:00:00,2024-10-16 05:00:00,153,0.0,,2024-10,False,False,new
+SIMAT,gap,NOX,FAC,2024-10-24 19:00:00,2024-11-14 05:00:00,491,0.0,,2024-10,False,True,new
+SIMAT,gap,NOX,CUA,2024-10-31 06:00:00,2024-11-04 15:00:00,106,0.0,,2024-10,False,False,new
+SIMAT,network_step,NOX,ALL,2024-11-02 00:00:00,2024-11-16 00:00:00,336,1.8899925592912423,,2024-11,False,True,candidate
+SIMAT,gap,NOX,CUA,2024-11-20 20:00:00,2024-12-07 05:00:00,394,0.0,,2024-11,False,True,new
+SIMAT,gap,NOX,XAL,2024-12-19 07:00:00,2024-12-31 23:00:00,305,0.0,,2024-12,False,True,new
+SIMAT,gap,NOX,SAG,2024-12-23 06:00:00,2024-12-31 23:00:00,210,0.0,,2024-12,False,True,new
+SIMAT,gap,NOX,MER,2024-12-27 16:00:00,2024-12-31 23:00:00,104,0.0,,2024-12,False,False,new
+SIMAT,stuck,O3,SAC,2024-12-29 04:00:00,2024-12-29 13:00:00,10,7.0,,2024-12,False,False,candidate

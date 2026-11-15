@@ -19,6 +19,8 @@ from typing import Any
 
 import pandas as pd
 
+from nox_ml.atomic import atomic_path, write_text
+
 IEM = "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py"
 OPEN_METEO = "https://archive-api.open-meteo.com/v1/archive"
 AIRPORTS = ("MMMX", "MMSM")
@@ -26,23 +28,40 @@ METAR_COLUMNS = ("sknt", "drct", "tmpf", "relh")
 ERA5_CELL = (19.5, -99.25)  # lat, lon of the city cell
 ERA5_HOURLY = ("boundary_layer_height", "wind_speed_10m", "wind_direction_10m")
 RETRIES = 4
+MAX_RETRY_AFTER_S = 300.0
 
 Getter = Callable[[str], bytes]
+
+
+def retry_after(error: urllib.error.HTTPError) -> float | None:
+    """The seconds to wait that the server asks for (``Retry-After`` as a number, capped), or None."""
+    value = error.headers.get("Retry-After") if error.headers else None
+    try:
+        return min(max(float(value), 0.0), MAX_RETRY_AFTER_S) if value is not None else None
+    except ValueError:  # an HTTP date: the default wait is good enough
+        return None
 
 
 def http_get(url: str) -> bytes:
     """GET `url`, retrying on server and network errors and when rate limited."""
     for attempt in range(RETRIES):
+        wait: float | None = None
         try:
             with urllib.request.urlopen(url, timeout=180) as response:
                 return response.read()
         except urllib.error.HTTPError as error:
             if (error.code < 500 and error.code != 429) or attempt == RETRIES - 1:  # 429: rate limited
                 raise
-        except (urllib.error.URLError, TimeoutError, http.client.IncompleteRead):  # the network: wait, retry
+            wait = retry_after(error) if error.code == 429 else None
+        except (
+            urllib.error.URLError,
+            TimeoutError,
+            ConnectionError,  # reset, aborted, RemoteDisconnected
+            http.client.IncompleteRead,
+        ):  # the network: wait, retry
             if attempt == RETRIES - 1:
                 raise
-        time.sleep(20 * (attempt + 1))
+        time.sleep(wait if wait is not None else 20 * (attempt + 1))
     raise RuntimeError("unreachable")
 
 
@@ -97,11 +116,12 @@ def run_fetch(start: str, end: str, raw_dir: Path, metar: tuple[str, ...], era5:
         path = raw_dir / "metar" / name
         new = pd.read_csv(io.BytesIO(get(metar_url(station, start, end))), dtype={"valid": str})
         merged = merge_metar(pd.read_csv(path, dtype={"valid": str}), new)
-        merged.to_csv(path, index=False, float_format="%.2f")
+        with atomic_path(path) as tmp:  # two decimals, as the files of 2024-2026 already are
+            merged.to_csv(tmp, index=False, float_format="%.2f")
         covered[name] = (merged["valid"].min(), merged["valid"].max())
     path = raw_dir / "era5_openmeteo" / era5
     merged = merge_era5(json.loads(path.read_text()), json.loads(get(era5_url(start, end))))
-    path.write_text(json.dumps(merged))
+    write_text(path, json.dumps(merged))
     pbl = zip(merged["hourly"]["time"], merged["hourly"]["boundary_layer_height"], strict=True)
     filled = [t for t, h in pbl if h is not None]
     covered[era5] = (filled[0], filled[-1])
