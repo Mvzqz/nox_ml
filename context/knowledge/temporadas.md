@@ -15,7 +15,7 @@ Fecha: 2026-10-29. Los seis modelos congelados (`configs/experiments/`) corridos
 Los placebos de todas las corridas quedan entre 0.91 y 1.11 (elegibles). Tráfico de referencia: 0.76–0.81 (Infovial nov–dic 2018, ponderado por emisión, [sesgo_domingo.md](sesgo_domingo.md)).
 
 - **X4 es el más estable** (0.57–0.58) y es el estimador del ciclo semanal en las fichas (`products.ESTIMATORS`).
-- **E7 varía más entre temporadas** (0.47–0.64). Su precisión para un cambio sostenido se mide con el placebo de cada temporada, que es lo que usan las fichas.
+- **E7 varía más entre temporadas** (0.47–0.64). En feb–may 2026, por azar, los domingos fueron más estancados que los días hábiles (ventilación modelada 11 % peor; en 2025, igual): en las estaciones el domingo bajó de 0.71 a 0.64, y E7, al corregir el clima, lo llevó a 0.47 (X4: 0.58). Corrige de más cuando el clima de los dos grupos de días está desbalanceado; su intervalo de bootstrap (0.42–0.53) no lo refleja. Las fichas no usan ese intervalo sino el placebo de la temporada, que sí incluye estos desbalances.
 - **Las inversiones exageran el domingo** en algunas temporadas (E5b 0.36 en nov–dic 2025): es el sesgo ya conocido.
 - **El sábado** no se estima en invierno con una temporada: en nov–dic 2025 sale ≈ 1.0 en todos los modelos, porque ya viene así en las estaciones (6 sábados, cada uno entre 0.76 y 1.34 del día hábil; el más alto, el del Buen Fin).
 
@@ -40,7 +40,7 @@ La regresión-kriging le gana a IDW en las cuatro.
 | nov–dic 2025 | 0.41 | 38 % |
 | feb–may 2026 | 0.27 | 27 % |
 
-Combinando las seis temporadas, cada una contra sus propios días normales (`ficha-medida` con `--data` repetido): 14 % con 9 días por temporada, 10 % con 20 y 6 % con 60 (80 % de potencia; extrapolación con la regla de los placebos cortos). Solo aplica a medidas presentes en varias temporadas.
+Esa tabla es para días sueltos. Una medida de días seguidos suma la deriva lenta de la temporada (±15 %, [fichas.md](fichas.md)): 39–47 % con 9 días y 32–34 % con 60 en una temporada. Combinando las seis temporadas, cada una contra sus propios días normales (`ficha-medida` con `--data` repetido): 20 % con 9 días por temporada, 17 % con 20 y 15 % con 60 (80 % de potencia). Solo aplica a medidas presentes en varias temporadas, y supone que la deriva de cada una es independiente.
 
 ## Datos y arreglos
 

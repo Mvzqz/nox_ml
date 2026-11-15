@@ -34,7 +34,7 @@ Ficha C:
 | 1–2, ficha A | La emisión bajó ~50 %, con seguridad (fuera de lo que da el azar) |
 | 1–2, ficha B | No se puede afirmar un cambio; el cambio medido (−7 %) cabe en el azar |
 | 3 | A: sí (−50 % cabe); B: no (−30 % queda fuera del rango) |
-| 4 | No: puede haber un cambio menor al mínimo detectable (15 % en B) |
+| 4 | No: puede haber un cambio menor al mínimo detectable (33 % en B) |
 | 6 | ~10 meses de días hábiles en invierno (214 días) |
 
 Se aprueba si al menos dos de tres personas responden bien las preguntas 1–4 de las dos fichas y la 6. Las respuestas a 5 y 7 se usan para corregir la redacción.

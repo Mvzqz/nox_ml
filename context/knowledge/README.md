@@ -15,3 +15,4 @@ Se migra por partes desde la carpeta de investigación (`reports/RESUMEN.md`, `r
 - [`deriva.md`](deriva.md): la deriva lenta de E7 dentro de cada temporada: el satélite ve la misma, qué la acompaña y por qué la columna lejana no sirve para corregirla.
 - [`fichas.md`](fichas.md): las fichas (evaluar una medida o verificar un anuncio; días necesarios), qué estimador responde cada pregunta y su validación.
 - [`ensambles.md`](ensambles.md): los ensambles del avance 5 (X1, X2, X5, X6): resultados frente a su base, error anidado del stacking, colapso del promedio bayesiano y por qué ninguno mejora a E5b.
+- [`pipeline.md`](pipeline.md): actualización automática de la temporada en curso (`nox-ml update`, `fetch-tempo`): qué corre, nombres de archivos, retrasos, cómo programarla y fallas conocidas.
