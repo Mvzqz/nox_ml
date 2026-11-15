@@ -7,7 +7,8 @@ of the sheets (`events.inject_drop`) lowers station NOx above the background by 
 into ``(1 - d) obs - d point``: linear too, so the per-day point term is kept as well.
 
 Usage (from the repo root): uv run python notebooks/exploraciones/switchback/daily_sums.py OUT_DIR
-Writes OUT_DIR/<season>.csv with columns day, obs, model, point, hours.
+Writes OUT_DIR/<season>.csv with columns day, obs, model, point, hours and, with TEMPO, sat (the city
+emission of the day from the satellite alone, `products.satellite_daily`).
 """
 
 import sys
@@ -54,7 +55,13 @@ def season_table(start: str, end: str) -> pd.DataFrame:
                 "hours": 1,
             }
         )
-    return pd.DataFrame(pd.DataFrame(rows).groupby("day", as_index=False).sum())
+    table = pd.DataFrame(pd.DataFrame(rows).groupby("day", as_index=False).sum())
+    satellite = products.satellite_daily(DATA, start, end)  # TEMPO alone, flux divergence (tau 2 h)
+    if satellite is not None:
+        days = pd.DatetimeIndex(satellite.index).normalize()
+        by_day = dict(zip(days, satellite.to_numpy(float), strict=True))
+        table["sat"] = [by_day.get(d, np.nan) for d in pd.DatetimeIndex(table["day"]).normalize()]
+    return table
 
 
 def main(out: Path) -> None:

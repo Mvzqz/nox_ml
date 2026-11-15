@@ -44,9 +44,10 @@ def day_numbers(days: pd.DatetimeIndex) -> np.ndarray:
     return ordinal - ordinal[0]
 
 
-def contiguous(days: pd.DatetimeIndex, rng: np.random.Generator) -> np.ndarray:
-    """Half the normal days in a row (before and after are the control), at a random start."""
-    n, k = len(days), len(days) // 2
+def contiguous(days: pd.DatetimeIndex, rng: np.random.Generator, k: int | None = None) -> np.ndarray:
+    """`k` normal days in a row (half by default; before and after are the control), at a random start."""
+    n = len(days)
+    k = n // 2 if k is None else k
     start = rng.integers(0, n - k + 1)
     mask = np.zeros(n, bool)
     mask[start : start + k] = True
@@ -83,10 +84,10 @@ def two_week_blocks(days: pd.DatetimeIndex, rng: np.random.Generator) -> np.ndar
     return _paired_units(_calendar_units(days, 14, rng), rng)
 
 
-def random_days(days: pd.DatetimeIndex, rng: np.random.Generator) -> np.ndarray:
-    """Half the normal days, drawn at random (the placebo of the sheets)."""
+def random_days(days: pd.DatetimeIndex, rng: np.random.Generator, k: int | None = None) -> np.ndarray:
+    """`k` normal days (half by default), drawn at random (the placebo of the sheets)."""
     mask = np.zeros(len(days), bool)
-    mask[rng.choice(len(days), len(days) // 2, replace=False)] = True
+    mask[rng.choice(len(days), len(days) // 2 if k is None else k, replace=False)] = True
     return mask
 
 
@@ -106,6 +107,12 @@ DESIGNS: dict[str, Design] = {
     "e_random_days": random_days,
     "f_random_weeks": random_weeks,
 }
+# The drift as measured in deriva.md: runs of 9 days in a row against the rest, over 9 random days.
+DRIFT_REFERENCE: dict[str, Design] = {
+    "ref_contiguous9": lambda days, rng: contiguous(days, rng, 9),
+    "ref_random9": lambda days, rng: random_days(days, rng, 9),
+}
+ESTIMATORS = ("e7", "e7_satellite")
 
 
 def carryover(days: pd.DatetimeIndex, masks: np.ndarray) -> np.ndarray:
@@ -119,8 +126,12 @@ def carryover(days: pd.DatetimeIndex, masks: np.ndarray) -> np.ndarray:
     return out
 
 
-def ratios(table: pd.DataFrame, masks: np.ndarray, drop: float, carry: np.ndarray | None) -> np.ndarray:
-    """E7 ratio (measure over control) of each realization, with `drop` injected."""
+def ratios(
+    table: pd.DataFrame, masks: np.ndarray, drop: float, carry: np.ndarray | None, estimator: str = "e7"
+) -> np.ndarray:
+    """Ratio (measure over control) of each realization, with `drop` injected. ``e7``: E7. ``e7_satellite``:
+    the geometric mean of E7 and the satellite (mean daily emission of the measure days over that of the
+    control days with TEMPO), the 0.5/0.5 combination of deriva.md; the satellite drop is multiplicative."""
     obs, model, point = (table[c].to_numpy(float) for c in ("obs", "model", "point"))
     effect = masks * drop
     if carry is not None:
@@ -129,7 +140,14 @@ def ratios(table: pd.DataFrame, masks: np.ndarray, drop: float, carry: np.ndarra
     t, c = masks, ~masks
     num = (injected * t).sum(1) / (model * t).sum(1)
     den = (injected * c).sum(1) / (model * c).sum(1)
-    return num / den
+    e7 = num / den
+    if estimator == "e7":
+        return e7
+    sat = table["sat"].to_numpy(float)
+    seen = np.isfinite(sat)
+    value = np.where(seen, (1 - effect) * np.nan_to_num(sat), 0.0)
+    satellite = ((value * t).sum(1) / (seen * t).sum(1)) / ((value * c).sum(1) / (seen * c).sum(1))
+    return np.sqrt(e7 * satellite)
 
 
 def draw(days: pd.DatetimeIndex, design: Design, rng: np.random.Generator) -> np.ndarray:
@@ -160,21 +178,25 @@ def bootstrap_coverage(table: pd.DataFrame, masks: np.ndarray, rng: np.random.Ge
     return float(np.mean(hits))
 
 
-def evaluate(table: pd.DataFrame, design: Design, rng: np.random.Generator) -> list[dict]:
+def evaluate(
+    table: pd.DataFrame, design: Design, rng: np.random.Generator, estimator: str = "e7"
+) -> list[dict]:
     days = pd.DatetimeIndex(pd.to_datetime(table["day"]))
     null_masks = draw(days, design, rng)
-    center, lo, hi = bounds(ratios(table, null_masks, 0.0, None))
-    sd_log = float(np.std(np.log(ratios(table, null_masks, 0.0, None)), ddof=1))
+    null = np.log(ratios(table, null_masks, 0.0, None, estimator))
+    center, lo, hi = bounds(np.exp(null))
+    sd_log = float(np.std(null, ddof=1))
+    rms_log = float(np.sqrt(np.mean(null**2)))  # spread around no change: the drift moves the center too
     masks = draw(days, design, rng)
     carry = carryover(days, masks)
     k = float(masks.sum(1).mean())
     rows = []
     for name, c in (("none", None), ("carry50", carry)):
-        power = np.array([(ratios(table, masks, d, c) < lo).mean() for d in GRID])
+        power = np.array([(ratios(table, masks, d, c, estimator) < lo).mean() for d in GRID])
         reached = np.flatnonzero(power >= POWER)
         mdd = float(GRID[reached[0]]) if reached.size else np.nan
         for d in DROPS:
-            r = ratios(table, masks, d, c)
+            r = ratios(table, masks, d, c, estimator)
             low, high = r / hi - 1, r / lo - 1  # true ratio = r / placebo draw
             rows.append(
                 {
@@ -183,6 +205,7 @@ def evaluate(table: pd.DataFrame, design: Design, rng: np.random.Generator) -> l
                     "k_mean": k,
                     "n_days": len(days),
                     "sd_log": sd_log,
+                    "rms_log": rms_log,
                     "placebo_center": center,
                     "placebo_lo": lo,
                     "placebo_hi": hi,
@@ -193,7 +216,8 @@ def evaluate(table: pd.DataFrame, design: Design, rng: np.random.Generator) -> l
                     "mdd": mdd,
                 }
             )
-    rows[0]["boot_coverage0"] = bootstrap_coverage(table, null_masks, rng)
+    if estimator == "e7":
+        rows[0]["boot_coverage0"] = bootstrap_coverage(table, null_masks, rng)
     return rows
 
 
@@ -219,16 +243,16 @@ def main(sums: Path, out: Path) -> None:
     rows = []
     for path in sorted(sums.glob("*.csv")):
         table = pd.read_csv(path)
-        for name, design in DESIGNS.items():
-            for row in evaluate(table, design, rng):
-                rows.append({"season": path.stem, "design": name, **row})
-            print(path.stem, name, flush=True)
+        for estimator in ESTIMATORS:
+            for name, design in {**DESIGNS, **DRIFT_REFERENCE}.items():
+                for row in evaluate(table, design, rng, estimator):
+                    rows.append({"season": path.stem, "estimator": estimator, "design": name, **row})
+            print(path.stem, estimator, flush=True)
     out.mkdir(parents=True, exist_ok=True)
     frame = pd.DataFrame(rows)
     frame.to_csv(out / "switchback.csv", index=False)
-    summary = frame[frame["drop"] == 0.0].pivot_table(
-        index="design", columns=["carryover", "season"], values="mdd"
-    )
+    zero = frame[(frame["drop"] == 0.0) & (frame["estimator"] == "e7")]
+    summary = zero.pivot_table(index="design", columns=["carryover", "season"], values="mdd")
     print(summary.round(2).to_string())
 
 
