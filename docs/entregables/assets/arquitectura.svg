@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="Liberation Sans, Arial, sans-serif" font-size="11">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#444"/>
+    </marker>
+    <style>
+      .box{fill:#eef3fb;stroke:#0b2a6b;stroke-width:1.2}
+      .grp{fill:none;stroke:#8899bb;stroke-dasharray:4 3}
+      .t{fill:#0b2a6b;font-weight:bold;font-size:12px}
+      .l{stroke:#444;stroke-width:1.2;fill:none;marker-end:url(#a)}
+    </style>
+  </defs>
+  <!-- columns -->
+  <rect class="grp" x="10" y="20" width="160" height="300" rx="6"/><text class="t" x="20" y="38">Fuentes públicas</text>
+  <rect class="grp" x="190" y="20" width="170" height="300" rx="6"/><text class="t" x="200" y="38">Ingesta diaria</text>
+  <rect class="grp" x="380" y="20" width="130" height="300" rx="6"/><text class="t" x="390" y="38">Almacenamiento</text>
+  <rect class="grp" x="530" y="20" width="190" height="300" rx="6"/><text class="t" x="540" y="38">Cálculo</text>
+  <rect class="grp" x="740" y="20" width="150" height="300" rx="6"/><text class="t" x="750" y="38">Consumo</text>
+
+  <rect class="box" x="20" y="60" width="140" height="50" rx="5"/><text x="30" y="81">OpenAQ / SINAICA</text><text x="30" y="98">estaciones</text>
+  <rect class="box" x="20" y="140" width="140" height="50" rx="5"/><text x="30" y="161">NASA TEMPO</text><text x="30" y="178">NO₂ por píxel</text>
+  <rect class="box" x="20" y="220" width="140" height="50" rx="5"/><text x="30" y="241">METAR y ERA5</text><text x="30" y="258">viento, capa de mezcla</text>
+
+  <rect class="box" x="200" y="90" width="150" height="66" rx="5"/><text x="210" y="111">nox-ml update</text><text x="210" y="128">descarga incremental,</text><text x="210" y="145">escritura atómica, candado</text>
+  <rect class="box" x="235" y="190" width="115" height="40" rx="5"/><text x="245" y="215">QC de TEMPO</text>
+  <rect class="box" x="200" y="255" width="150" height="40" rx="5"/><text x="210" y="280">status.json (monitoreo)</text>
+
+  <rect class="box" x="390" y="140" width="110" height="66" rx="5"/><text x="400" y="161">Datos</text><text x="400" y="178">versionados</text><text x="400" y="195">DVC + DagsHub</text>
+
+  <rect class="box" x="540" y="55" width="170" height="44" rx="5"/><text x="550" y="74">Divergencia de flujo</text><text x="550" y="90">satélite, diaria</text>
+  <rect class="box" x="540" y="115" width="170" height="44" rx="5"/><text x="550" y="134">Índice semanal E7</text><text x="550" y="150">tendencia</text>
+  <rect class="box" x="540" y="175" width="170" height="44" rx="5"/><text x="550" y="194">Fichas de medidas</text><text x="550" y="210">E7 + satélite, a demanda</text>
+  <rect class="box" x="540" y="235" width="170" height="44" rx="5"/><text x="550" y="254">Inversión E5b≥0</text><text x="550" y="270">por temporada, en lote</text>
+
+  <rect class="box" x="750" y="100" width="130" height="66" rx="5"/><text x="760" y="121">Interfaz</text><text x="760" y="138">Streamlit; lee solo</text><text x="760" y="155">resultados</text>
+  <rect class="box" x="750" y="200" width="130" height="50" rx="5"/><text x="760" y="221">Fichas en</text><text x="760" y="238">Markdown y JSON</text>
+
+  <path class="l" d="M160,85 L200,115"/>
+  <path class="l" d="M160,165 L200,128"/>
+  <path class="l" d="M160,245 L200,140"/>
+  <path class="l" d="M290,156 L290,190"/>
+  <path class="l" d="M212,156 L212,255"/>
+  <path class="l" d="M350,210 L390,180"/>
+  <path class="l" d="M500,165 L540,77"/>
+  <path class="l" d="M500,170 L540,137"/>
+  <path class="l" d="M500,175 L540,197"/>
+  <path class="l" d="M500,182 L540,257"/>
+  <path class="l" d="M710,77 L750,120"/>
+  <path class="l" d="M710,137 L750,133"/>
+  <path class="l" d="M710,197 L750,150"/>
+  <path class="l" d="M710,257 L750,160"/>
+  <path class="l" d="M710,200 L750,225"/>
+  <text x="10" y="350" font-size="11" fill="#555">Las salidas rápidas se recalculan en cada actualización; la inversión se precalcula por temporada. La interfaz nunca ve un cálculo a medias.</text>
+</svg>
