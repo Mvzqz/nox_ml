@@ -1,6 +1,6 @@
 # Régimen del ozono en la ZMVM (frente F2)
 
-Fecha: 2026-11-14. Rama `explore/ozone-regime`. Pregunta: ¿el ozono de la ZMVM está limitado por COV o por NOₓ, y cambia por zona? Plan: [exploraciones_valor.md](../management/exploraciones_valor.md), sección F2.
+Fecha: 2026-11-14; repetición con 2026 y revisión de literatura: 2026-11-15 (sección "Repetición con 2026", antes de "Cómo reproducir"). Ramas `explore/ozone-regime` y `explore/ozone-regime-2`. Pregunta: ¿el ozono de la ZMVM está limitado por COV o por NOₓ, y cambia por zona? Plan: [exploraciones_valor.md](../management/exploraciones_valor.md), sección F2.
 
 ## Resumen
 
@@ -86,14 +86,14 @@ Las seis estaciones donde el ozono sube en domingo (MER, CAM, TLA, XAL, TLI, UIZ
 ## Comparación con la literatura
 
 - **MCMA-2003 y MILAGRO-2006.** Los estudios de modelado y de radicales de esas campañas (Lei et al. 2007 y 2008 con CAMx; Volkamer et al. 2010; Song et al. 2010; síntesis en Molina et al. 2007 y 2010) concluyeron que la producción de ozono en el núcleo urbano está limitada por COV en la mañana y se acerca a la transición o a NOₓ en la tarde y a favor del viento (sur y sur-poniente). Stephens et al. (2008) documentaron con la RAMA 1986–2007 que el ozono de fin de semana es igual o mayor que el de entre semana pese a menos NOₓ.
-- **Lo que aporta este frente.** Confirma lo conocido con datos de 2019–2026, después de dos décadas de cambio de flota y de inventario: el núcleo sigue limitado por COV y el efecto de fin de semana persiste. Lo nuevo es (a) la cifra actual por estación con control por clima e intervalos, (b) la réplica con el confinamiento de 2020 (NOₓ −33 %, ozono −2 a −4 %, no significativo) y (c) el mapa de régimen de TEMPO cada temporada, con umbral calibrado contra el fin de semana de la red (cruce en ~2) y el corrimiento del núcleo de COV en febrero a transición en mayo, que las campañas de 2003 y 2006 (un mes cada una) no podían ver.
-- No verificamos en este frente si ya hay publicaciones con HCHO/NO₂ de TEMPO sobre la ZMVM; hay que buscarlo antes de presentarlo como nuevo.
+- **Lo que aporta este frente.** Confirma lo conocido con datos de 2019–2026, después de dos décadas de cambio de flota y de inventario: el núcleo sigue limitado por COV y el efecto de fin de semana persiste. Lo que parece nuevo (la búsqueda de abajo no encontró lo contrario, pero no fue exhaustiva) es (a) la cifra actual por estación con control por clima e intervalos, (b) la réplica con el confinamiento de 2020 (NOₓ −33 %, ozono −2 a −4 %, no significativo) y (c) el mapa de régimen de TEMPO cada temporada, con umbral calibrado contra el fin de semana de la red (cruce en ~2) y el corrimiento del núcleo de COV en febrero a transición en mayo, que las campañas de 2003 y 2006 (un mes cada una) no miraron; con la repetición de 2026 el corrimiento mensual del cociente se repite, pero el del ozono de domingo no (ver "Repetición con 2026").
+- **Búsqueda de literatura (2026-11-15, web, no exhaustiva).** No se encontró ningún estudio con TEMPO para la ZMVM. Lo más cercano: Vazquez Santiago et al. (2021) usaron el cociente HCHO/NO₂ de OMI en la ZMVM (2006–2016) y concluyen que el núcleo se volvió más limitado por COV y que reducir COV sería lo adecuado; comparan dos pares de umbrales y el resultado depende de cuál se use, como aquí. Tian et al. (2025) calibran el umbral global del cociente con el efecto de fin de semana del ozono (transición cerca de 3.1, rango ~2.7–3.4), la misma idea de nuestro cruce local; la ZMVM no está en su análisis. Para TEMPO solo se hallaron trabajos sobre EE. UU. (p. ej. Canty, 2025), que no se leyeron completos. Lo no cubierto por lo encontrado: el cociente de TEMPO en la ZMVM, su ciclo mensual y su contraste con el domingo del ozono por estación.
 
 ## Valor: qué cambiaría en el programa de contingencias
 
-La Fase I por ozono activa el Doble Hoy No Circula, que reduce sobre todo NOₓ vehicular (y algo de COV del escape). Con el régimen medido, recortar NOₓ ~30 % (más que lo que logra una contingencia, ~5–10 %) deja el ozono del centro igual o un poco más alto y lo baja apenas en la orilla sur-poniente. Consecuencias para la CAMe y la autoridad ambiental:
+La Fase I por ozono activa el Doble Hoy No Circula, que reduce sobre todo NOₓ vehicular (y algo de COV del escape). Con el régimen medido, recortar NOₓ ~30 % (la reducción real de NOₓ en una contingencia no se midió aquí; se espera menor que la del domingo) deja el ozono del centro igual o un poco más alto y lo baja apenas en la orilla sur-poniente. Consecuencias para la CAMe y la autoridad ambiental:
 
-1. **La medida principal no ataca el ozono del día.** Su efecto esperado en el máximo de 8 h es nulo en el centro y de unos pocos por ciento en la periferia; las contingencias terminan porque cambia el clima, no por la medida. Eso concuerda con que el sistema no detecta el efecto de las contingencias sobre la emisión ([casos_de_uso.md](casos_de_uso.md)).
+1. **La medida principal no ataca el ozono del día.** Su efecto esperado en el máximo de 8 h, por analogía con el domingo y el confinamiento, es nulo en el centro y pequeño en la periferia (no se probó con un modelo); no se midió aquí por qué terminan las contingencias (probablemente el clima). Eso es compatible con que el sistema no detecta el efecto de las contingencias sobre la emisión ([casos_de_uso.md](casos_de_uso.md)).
 2. **Las medidas sobre COV serían las eficaces:** venta y carga de combustible (vapores), solventes y pinturas, gas LP (fugas domésticas, una fuente conocida de la ZMVM desde MCMA-2003), talleres, y restringir actividades con COV en los días de activación.
 3. **El NOₓ sigue importando** por el NO₂ y las partículas secundarias, y porque fuera del núcleo (orilla sur-poniente, Ajusco) el régimen se acerca a NOₓ: recortar solo NOₓ desplaza el máximo de ozono hacia afuera.
 4. **Uso frecuente para el sistema:** un mapa de régimen por temporada (TEMPO, gratis, cada hora) y el efecto de fin de semana por estación como indicador de seguimiento, del orden de 5–10 episodios al año y una revisión por temporada.
@@ -106,10 +106,65 @@ La Fase I por ozono activa el Doble Hoy No Circula, que reduce sobre todo NOₓ 
 | **Evidencia** | Prueba decisiva y cifra | Domingo: NOₓ 0.70 (24 h) y 0.58 (mañana), O₃ máx. 8 h 1.03 (1.00–1.06) en el centro y 1.00 (0.97–1.03) en la periferia. Confinamiento: NOₓ 0.67, O₃ 0.96–0.98. Spearman cociente HCHO/NO₂ vs. domingo del O₃: −0.73 (2024) y −0.68 (2025); mapas de semanas pares e impares 0.98–0.99 |
 | **Usuario** | Rol de casos_de_uso.md | CAMe y autoridad ambiental (diseño del programa de contingencias, CU3 y CU9); planeadores del inventario (CU5) |
 | **Frecuencia** | Usos al año | Un mapa por temporada de ozono (1–2 al año) y una revisión del programa cada pocos años; consulta en los ~5–10 episodios al año para explicar por qué la medida no baja el ozono |
-| **Alternativa** | Ninguna · peor · igual · mejor | Mejor que lo disponible para la autoridad (modelos de campaña de 2003 y 2006); igual a un modelo químico regional en la conclusión del núcleo, con menos costo y actualizado cada año; peor que un modelo para cuantificar cuánto baja el ozono por tonelada de COV |
+| **Alternativa** | Ninguna · peor · igual · mejor | Confirma, con datos de 2019–2026, lo que ya concluyeron los modelos y campañas de 2003 y 2006 y el estudio con OMI de 2021 (el núcleo está limitado por COV); su ventaja sería el costo bajo y poder actualizarlo cada año, no una conclusión distinta. No se comparó contra un modelo químico. Peor que un modelo para cuantificar cuánto baja el ozono por tonelada de COV |
 | **Decisión que cambia** | Qué haría distinto | Que la Fase I deje de apoyarse solo en reducir NOₓ vehicular: agregar medidas de COV (vapores de combustible, solventes, gas LP, pinturas) en los días de activación, y dirigir las de NOₓ a la orilla sur-poniente, donde el régimen se acerca a NOₓ |
 | **Costo de llevarlo a producto** | Días y costo al mes | 3–5 días: mover la descarga de HCHO a `nox_ml.data.tempo` (por OPeNDAP), el mapa y el efecto de fin de semana con pruebas; operación: ~600 granulos por temporada, ~50 MB y ~1 h de descarga, cálculo en minutos, sin costo |
 | **Veredicto** | Adoptar · seguir con condiciones · descartar | **Seguir con condiciones:** (1) presentar el efecto de fin de semana como el resultado principal, que no depende del satélite; (2) usar el mapa de HCHO/NO₂ solo con el umbral calibrado con la red (~2) y decir que su forma la da el NO₂; (3) antes de comunicarlo, revisar si ya hay estudios con TEMPO HCHO/NO₂ para la ZMVM y la validación de los sesgos de los dos productos |
+
+## Repetición con 2026: ¿cambia el régimen dentro de la temporada? (2026-11-15)
+
+**Pregunta y criterio (fijado antes).** F2 vio el centro limitado por COV en febrero y en transición en mayo, pero la subida del ozono en domingo no fue claramente mayor en feb–mar que en abr–jun. Aumenta la confianza si en al menos 2 de 3 años (2024, 2025, 2026) el cociente HCHO/NO₂ del centro sube de febrero a mayo **y** el domingo ÷ hábil del O₃ baja en la misma dirección; no la aumenta si los años se contradicen.
+
+**Datos nuevos.** HCHO V04 feb–may 2026, 545 granulos de 18–22 UTC con el mismo script (`data/raw/tempo_hcho/`, anotado en `data/raw/MANIFEST.md`). O₃ de 2026 de OpenAQ (desde el 15 de febrero, así que febrero de 2026 casi no tiene domingos). Script: `notebooks/exploraciones/ozone_regime/monthly_regime.py`; tablas `monthly_fnr_center.csv`, `monthly_weekend_center.csv` y `monthly_criterion.csv`. Mismo emparejamiento por clima del paso 1, solo estaciones del centro (< 12 km del Zócalo), domingos cortados por mes; intervalos del 90 % por bootstrap de semanas (domingos) para el ozono y de días para el cociente. No se exige mínimo de pares por estación (un mes tiene 2–5 domingos tras las exclusiones), así que los intervalos son anchos.
+
+**Cociente HCHO/NO₂ del centro por mes** (intervalo 90 %):
+
+| Mes | 2024 | 2025 | 2026 |
+|---|---|---|---|
+| Febrero | 0.56 (0.46–0.67) | 0.72 (0.60–0.87) | 0.75 (0.67–0.87) |
+| Marzo | 1.11 (1.00–1.24) | 1.01 (0.95–1.09) | 0.90 (0.83–0.98) |
+| Abril | 1.34 (1.24–1.43) | 1.11 (0.99–1.28) | 1.26 (1.16–1.36) |
+| Mayo | 1.43 (1.34–1.54) | 1.36 (1.27–1.45) | 1.28 (1.15–1.44) |
+
+El corrimiento de febrero a mayo se repite en los tres años, con intervalos de febrero y mayo que no se traslapan. Eso confirma la parte del satélite.
+
+**Domingo ÷ hábil del O₃ máximo de 8 h, centro** (intervalo 90 %; domingos entre paréntesis):
+
+| Periodo | 2024 | 2025 | 2026 |
+|---|---|---|---|
+| Febrero | 0.78 (0.57–1.05; 2) | 1.22 (1.06–1.42; 4) | sin dato (2 domingos, sin pares) |
+| Marzo | 0.97 (0.90–1.04; 3) | 1.06 (1.01–1.10; 5) | 1.00 (0.92–1.04; 3) |
+| Abril | 1.14 (1.07–1.18; 3) | 1.13 (1.00–1.26; 2) | sin domingos válidos |
+| Mayo | 1.12 (1.09–1.12; 2) | 0.98 (0.89–1.02; 3) | 1.10 (1.01–1.23; 5) |
+| Feb–mar | 0.91 (0.76–1.03; 5) | 1.09 (1.03–1.18; 9) | 1.00 (0.88–1.07; 5) |
+| Abr–may | 1.13 (1.08–1.16; 5) | 1.02 (0.96–1.11; 5) | 1.07 (1.00–1.17; 6) |
+
+**Criterio, año por año** (de febrero a mayo; entre paréntesis, intervalo del cambio):
+
+| Año | Cociente sube | Domingo del O₃ | Cambio del O₃ feb a may | Cambio feb–mar a abr–may | Cumple |
+|---|---|---|---|---|---|
+| 2024 | sí (0.56 a 1.43) | sube (0.78 a 1.12) | +0.34 (+0.04 a +0.55) | +0.22 (+0.09 a +0.38) | no, direcciones opuestas |
+| 2025 | sí (0.72 a 1.36) | baja (1.22 a 0.98) | −0.25 (−0.49 a −0.06) | −0.07 (−0.18 a +0.04) | **sí** |
+| 2026 | sí (0.75 a 1.28) | sin dato en febrero | sin dato | +0.07 (−0.02 a +0.23) | no |
+
+Solo 1 de 3 años cumple (2025). En 2024 el efecto de domingo va en sentido contrario al esperado, con intervalo del cambio sobre cero; 2026 tampoco lo debilita. Spearman entre cociente mensual y domingo ÷ hábil, con los 11 pares año-mes que tienen dato: +0.24 (p = 0.51); no hay relación, y el signo es contrario al esperado (negativo).
+
+**Veredicto de esta repetición: no aumenta la confianza en el ciclo dentro de la temporada.** El cociente sube de febrero a mayo en los tres años, pero el ozono de domingo no lo sigue: 2024 contradice a 2025. Se sostiene lo que ya estaba (el cociente sube con el calor y el orden espacial coincide con el domingo); no se sostiene que el régimen del ozono del centro cambie de COV a transición en el curso de la temporada. Cautelas: los meses tienen 2–5 domingos, el ozono de domingo de un mes mezcla clima, episodios y exclusiones (Semana Santa saca domingos de abril; las contingencias de 2026 son un indicador), y febrero y abril de 2026 quedan sin dato; con tan pocos domingos la prueba tiene poca potencia, así que "no se confirma" no equivale a "se descarta". Tampoco se descarta que la columna total de TEMPO a mediodía no represente el régimen de la mañana, cuando se forma el ozono.
+
+**Qué cambia en el veredicto.** "Funciona" sigue en 2 (con condiciones). Se agrega la condición (4): no afirmar un cambio de régimen dentro de la temporada con base en el satélite; presentar el ciclo mensual del cociente como un cambio del indicador, no como un cambio comprobado de la química del ozono. La fila "Alternativa" se corrigió: el resultado confirma lo que ya concluían las campañas y el estudio de OMI (2021); no es una conclusión mejor.
+
+**Verificación de cifras del veredicto.** Domingo y confinamiento: `weekend_ratios.csv`. Spearman, cruce y mapas de semanas pares e impares: `fnr_summary.csv` y `stations_fnr_<año>.csv`. Núcleo por mes y 70 % del dominio sobre 2 en mayo (0.73 en 2024, 0.70 en 2025): `fnr_monthly.csv`. Se suavizaron las afirmaciones sin fuente en los resultados: la reducción de NOₓ de una contingencia (~5–10 %), "las contingencias terminan por el clima", "unos pocos por ciento" en la periferia y la comparación con los modelos de campaña. Los DOI de las referencias de la sección de literatura anterior no se verificaron en esta pasada.
+
+**Referencias nuevas (APA 7).**
+
+- Duncan, B. N., Yoshida, Y., Olson, J. R., Sillman, S., Martin, R. V., Lamsal, L., Hu, Y., Pickering, K. E., Retscher, C., Allen, D. J., & Crawford, J. H. (2010). Application of OMI observations to a space-based indicator of NOx and VOC controls on surface ozone formation. *Atmospheric Environment, 44*(18), 2213–2223. https://doi.org/10.1016/j.atmosenv.2010.03.010
+- Jin, X., Fiore, A. M., Murray, L. T., Valin, L. C., Lamsal, L. N., Duncan, B., Folkert Boersma, K., De Smedt, I., Abad, G. G., Chance, K., & Tonnesen, G. S. (2017). Evaluating a space-based indicator of surface ozone-NOx-VOC sensitivity over midlatitude source regions and application to decadal trends. *Journal of Geophysical Research: Atmospheres, 122*(19), 10439–10461. https://doi.org/10.1002/2017JD026720
+- Tian, Y., Wang, S., & Jin, X. (2025). Global patterns and trends in ground-level ozone chemical formation regimes from 1996 to 2022. *Atmospheric Chemistry and Physics, 25*(16), 9127–9149. https://doi.org/10.5194/acp-25-9127-2025
+- Vazquez Santiago, J., Inoue, K., & Tonokura, K. (2021). Diagnosis of ozone formation sensitivity in the Mexico City Metropolitan Area using HCHO/NO2 column ratios from the ozone monitoring instrument. *Environmental Advances, 6*, Article 100138. https://doi.org/10.1016/j.envadv.2021.100138
+
+**Veredicto actualizado (plantilla).** ¿Funciona? 2 (sin cambio). Evidencia: la de arriba más el cociente del centro de febrero a mayo (0.56 a 1.43 en 2024, 0.72 a 1.36 en 2025, 0.75 a 1.28 en 2026) y el domingo del O₃, que solo se debilita en 2025 (1.22 a 0.98). Alternativa: confirma lo conocido, no lo mejora. Decisión que cambia: igual, con el límite (4). Veredicto: **seguir con condiciones (1)–(4); la repetición no aumenta la confianza**.
+
+**Sigue sin probarse.** Cociente por hora (mañana frente a tarde); un criterio con más domingos (juntar los años por mes, o usar sábados); la lista oficial de contingencias; los sesgos de TEMPO frente a Pandora; una lectura completa de la literatura con TEMPO.
 
 ## Cómo reproducir
 
@@ -120,6 +175,8 @@ uv run python notebooks/exploraciones/ozone_regime/weekend_effect.py
 uv run python notebooks/exploraciones/ozone_regime/tempo_hcho_download.py 2024-02-01 2024-05-31
 uv run python notebooks/exploraciones/ozone_regime/tempo_hcho_download.py 2025-02-01 2025-05-31
 uv run python notebooks/exploraciones/ozone_regime/hcho_no2_ratio.py
+# Repetición con 2026 (primero la descarga 2026-02-01 2026-05-31)
+uv run python notebooks/exploraciones/ozone_regime/monthly_regime.py
 ```
 
 Archivos de salida: `weekend_ratios.csv` (cociente, intervalo y número de pares por estación, zona, métrica y caso), `days.csv` (clima y tipo de cada día), `activations_per_year.csv`, `fnr_map.csv` (celda de 0.05°, temporada, HCHO, NO₂, FNR, error y régimen), `fnr_summary.csv` y `stations_fnr_<temporada>.csv`.
@@ -130,6 +187,6 @@ Archivos de salida: `weekend_ratios.csv` (cociente, intervalo y número de pares
 - **Sesgos de los productos.** No se cuantificó cómo los sesgos de NO₂ y HCHO de TEMPO frente a Pandora mueven los umbrales; el umbral calibrado (~2) absorbe una parte.
 - **Contingencias reales fuera de 2024.** Para 2019, 2020, 2023, 2025 y 2026 se usó un indicador (O₃ > 154 ppb en una hora); la lista oficial de la CAMe mejoraría las exclusiones y el conteo.
 - **Febrero incompleto.** Faltan granulos de NO₂ V04 a inicios de febrero de 2024 y 2025 (~15 días por año).
-- **2026 y otros años de TEMPO.** No se descargó HCHO de 2026 ni de 2023 (V04 empieza en agosto de 2023), lo que daría una tercera temporada.
+- **Otros años de TEMPO.** 2026 se descargó el 2026-11-15; 2023 no existe en V04 (empieza en agosto de 2023).
 - **Clima en el emparejamiento.** Se emparejó por temperatura máxima y viento de la tarde; no por radiación, capa de mezcla ni humedad. El resultado sin emparejar es casi igual, lo que sugiere que el clima no domina el cociente.
-- **Literatura reciente con TEMPO.** No se buscó si ya hay publicaciones de HCHO/NO₂ de TEMPO para la ZMVM (2024–2026).
+- **Literatura con TEMPO.** Búsqueda web somera el 2026-11-15; no se leyeron completos los trabajos de TEMPO sobre EE. UU. y no se consultaron bases como Scopus.

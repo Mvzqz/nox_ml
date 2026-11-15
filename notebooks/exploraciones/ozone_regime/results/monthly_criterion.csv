@@ -1,0 +1,7 @@
+year,contrast,fnr_from,fnr_to,o3_from,o3_to,o3_change,o3_change_lo,o3_change_hi,fnr_rises,o3_weakens
+2024,feb->may,0.5551,1.4315,0.7794,1.1157,0.3363,0.0371,0.5483,True,False
+2024,feb-mar->abr-may,0.8314,1.3865,0.9066,1.1256,0.2190,0.0908,0.3745,True,False
+2025,feb->may,0.7208,1.3567,1.2243,0.9796,-0.2447,-0.4906,-0.0584,True,True
+2025,feb-mar->abr-may,0.8675,1.2349,1.0919,1.0233,-0.0686,-0.1815,0.0436,True,True
+2026,feb->may,0.7506,1.3212,,1.1044,,,,True,False
+2026,feb-mar->abr-may,0.8235,1.2885,1.0022,1.0686,0.0664,-0.0230,0.2304,True,False
