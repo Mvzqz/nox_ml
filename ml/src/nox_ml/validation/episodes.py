@@ -17,8 +17,13 @@ Each ratio gets a null interval from fake episodes with the same weekdays drawn 
 (`placebo.placebo`), and the verdict reads them together. The emission estimator has no background term: when
 the background rose too, a rise of the emission can be accumulation: with usual weather, the urban part of the
 column tells regional accumulation from the city's, but not accumulation over the city from emission. In the
-week before Christmas 2023 it said emission while the traffic of those dates (Infovial 2018) was normal: read
-``emission`` as "the ventilation does not explain it" until there is an activity reference.
+week before Christmas 2023 it said emission while the traffic of those dates (Infovial 2018) was normal.
+
+The headline verdict is therefore the prudent one (`prudent_verdict`): it says whether the weather explains
+the episode and never claims an emission change; the detailed reading (`verdict`) is kept under ``detail``. On
+52 episodes of known cause (context/knowledge/validacion_episodios.md) the prudent verdict halved the false
+emission claims in weeks without an emission change (18 % to 9 %) and stopped blaming the weather for
+holidays.
 """
 
 from collections.abc import Collection, Iterator, Sequence
@@ -100,12 +105,12 @@ def verdict(ratios: dict[str, float], null: dict[str, dict[str, float]]) -> tupl
     emission against an unusual weather (opposite directions) is ``weather``, with the note
     ``emission_against_weather``: the normalization likely over-corrects the ventilation, a known bias on
     strongly stagnant days. Both unusual in the same direction is ``both``; only the emission, ``emission``.
-    A usual emission is ``weather`` when the concentration is unusual, ``accumulation`` when only the
-    background is, and ``normal`` otherwise."""
+    A usual emission with an unusual concentration is ``weather`` when the weather ratio is unusual in the
+    same direction and ``unexplained`` when it is not (a holiday: concentration and emission down, weather
+    usual); ``accumulation`` when only the background is unusual, and ``normal`` otherwise."""
 
     def unusual(name: str) -> bool:
-        value = ratios[name]
-        return bool(np.isfinite(value) and not null[name]["lo"] <= value <= null[name]["hi"])
+        return _side(ratios, null, name) != 0
 
     log_e, log_w = np.log(ratios["emission"]), np.log(ratios["weather"])
     if unusual("emission"):
@@ -120,9 +125,35 @@ def verdict(ratios: dict[str, float], null: dict[str, dict[str, float]]) -> tupl
                 return "weather", ["emission_against_weather"]
             return "both", []
         return "emission", []
-    if unusual("concentration"):
-        return "weather", []
+    concentration = _side(ratios, null, "concentration")
+    if concentration:
+        return ("weather" if _side(ratios, null, "weather") == concentration else "unexplained"), []
     return ("accumulation" if unusual("background") else "normal"), []
+
+
+def _side(ratios: dict[str, float], null: dict[str, dict[str, float]], name: str) -> int:
+    """+1 above its null interval, -1 below, 0 inside or without data."""
+    value, lo, hi = ratios[name], null[name]["lo"], null[name]["hi"]
+    if not np.isfinite(value) or lo <= value <= hi:
+        return 0
+    return 1 if value > hi else -1
+
+
+def prudent_verdict(ratios: dict[str, float], null: dict[str, dict[str, float]]) -> tuple[str, list[str]]:
+    """``normal`` (the concentration is usual), ``weather_explains`` (the weather ratio is unusual in the
+    direction of the concentration), ``weather_explains_part`` (the emission ratio is too) or
+    ``weather_does_not_explain``, with the note ``background_up`` when the regional background rose.
+
+    It never claims an emission change: the null intervals hold single days, not weeks, so they miss the slow
+    drift (±15 %) and the emission ratio of a week leaves them about one time in six without any change."""
+    notes = ["background_up"] if _side(ratios, null, "background") > 0 else []
+    concentration = _side(ratios, null, "concentration")
+    if not concentration:
+        return "normal", notes
+    if _side(ratios, null, "weather") != concentration:
+        return "weather_does_not_explain", notes
+    part = _side(ratios, null, "emission") == concentration
+    return ("weather_explains_part" if part else "weather_explains"), notes
 
 
 def diagnose_episode(
@@ -156,7 +187,8 @@ def diagnose_episode(
         if abs(log_c) > 1e-9
         else None
     )
-    label, notes = verdict(ratios, null)
+    label, notes = prudent_verdict(ratios, null)
+    detail, detail_notes = verdict(ratios, null)
     return {
         "days": [x.date().isoformat() for x in days],
         "ratios": ratios,
@@ -164,6 +196,7 @@ def diagnose_episode(
         "shares": shares,
         "verdict": label,
         "notes": notes,
+        "detail": {"verdict": detail, "notes": detail_notes},
         "level": level,
     }
 
@@ -177,9 +210,14 @@ def headline(result: dict[str, Any]) -> str:
     if result["shares"]:
         weather, emission = result["shares"]["weather"], result["shares"]["emission"]
         lines.append(f"  share of the change: weather {weather:.0%}, emission {emission:.0%}")
-    notes = f" ({', '.join(result['notes'])})" if result["notes"] else ""
-    lines.append(f"  verdict: {result['verdict']}{notes}")
+    lines.append(f"  verdict: {_labelled(result['verdict'], result['notes'])}")
+    detail = result["detail"]
+    lines.append(f"  detail (not a claim on the emission): {_labelled(detail['verdict'], detail['notes'])}")
     return "\n".join(lines)
+
+
+def _labelled(label: str, notes: list[str]) -> str:
+    return label + (f" ({', '.join(notes)})" if notes else "")
 
 
 def run_episode(

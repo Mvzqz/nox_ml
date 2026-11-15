@@ -93,6 +93,8 @@ Lectura:
 
 ## Cambio recomendado a la herramienta (PR posterior, con pruebas)
 
+Estado (15 nov 2026): los puntos 1 y 2 ya están en `nox_ml.validation.episodes` (`prudent_verdict` es el veredicto principal de `nox-ml episode`; el anterior queda en `detail`, con la rama final corregida a `unexplained`). Faltan los puntos 3 y 4.
+
 1. **Veredicto prudente** en `episodes.verdict` (o junto a él): `normal` / `weather_explains` / `weather_explains_part` / `weather_does_not_explain`, más la nota `background_up`, con las reglas de `prudent()` en `notebooks/exploraciones/episodes/validate.py`. La etiqueta de emisión queda solo en las notas, como "sin explicación del clima", hasta tener un dato de actividad.
 2. **Corregir la rama final:** con la concentración inusual y la emisión normal, el veredicto debe ser `weather` solo si el cociente del clima también sale del intervalo en la misma dirección; si no, es "el clima no lo explica". Prueba: un caso con concentración 0.56 inusual, clima 0.84 normal y emisión 0.67 normal no debe dar `weather`.
 3. **Intervalo nulo con la deriva:** para episodios de días seguidos, tomar los episodios falsos como bloques de días seguidos de la temporada (o sumar 0.15 de deriva en logaritmo, como las fichas). Así la tasa de falsas alarmas vuelve a ~5 %. Prueba: con datos sintéticos con deriva semanal, la tasa nominal se respeta.
