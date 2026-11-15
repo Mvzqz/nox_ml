@@ -188,7 +188,4 @@ uv run python notebooks/exploraciones/switchback/summarize.py OUT/out           
 - **Una medida localizada.** La inyección es de toda la ciudad. El contraste entre zonas también cancela la deriva, pero es ruidoso ([deriva.md](deriva.md)); no se repitió.
 - **La inyección del satélite en sus columnas.** Se aplicó como factor sobre la emisión diaria. Tampoco se validó la cobertura de la combinación E7–satélite con su propio placebo; las cifras de falsas alarmas y cobertura son las de E7.
 - **La correlación de la deriva entre años,** que afecta la combinación de seis temporadas. Con los diseños alternados pesa menos, porque la deriva ya se canceló dentro de la temporada.
-- **Observación al margen:** `products.measure_result` escribe el rango como `ratio * center / hi - 1`.
-  - Si el placebo está centrado en 1, como el de días al azar de las fichas, es lo mismo que `ratio / hi - 1`, que es lo que se usa aquí.
-  - Con un placebo descentrado, como el de días seguidos (0.88–1.27), no es lo mismo.
-  - Vale revisarlo si las fichas llegan a usar el placebo del mismo diseño.
+- **Observación al margen (resuelta en el PR #94):** `products.measure_result` escribía el rango como `ratio * center / hi - 1`, distinto de `ratio / hi - 1` con un placebo descentrado. El PR #94 lo cambió a `ratio/hi − 1` a `ratio/lo − 1`, lo que usa esta nota. Ese PR también suma la deriva solo cuando ≥ 80 % de los días hábiles del periodo son de la medida, así que un diseño alternado ya no la recibe por error.
