@@ -16,3 +16,4 @@ Se migra por partes desde la carpeta de investigación (`reports/RESUMEN.md`, `r
 - [`fichas.md`](fichas.md): las fichas (evaluar una medida o verificar un anuncio; días necesarios), qué estimador responde cada pregunta y su validación.
 - [`ensambles.md`](ensambles.md): los ensambles del avance 5 (X1, X2, X5, X6): resultados frente a su base, error anidado del stacking, colapso del promedio bayesiano y por qué ninguno mejora a E5b.
 - [`pipeline.md`](pipeline.md): actualización automática de la temporada en curso (`nox-ml update`, `fetch-tempo`): qué corre, nombres de archivos, retrasos, cómo programarla y fallas conocidas.
+- [`validacion_episodios.md`](validacion_episodios.md): validación de `nox-ml episode` en 65 episodios de causa conocida (clima, festivos, Semana Santa, confinamiento, fin de año, contingencias) y el veredicto prudente que se recomienda (F3).
