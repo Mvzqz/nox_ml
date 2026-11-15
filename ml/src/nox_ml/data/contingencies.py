@@ -1,11 +1,12 @@
 # pyright: reportArgumentType=false, reportAttributeAccessIssue=false, reportIndexIssue=false, reportCallIssue=false
 # pyright: reportOperatorIssue=false, reportReturnType=false, reportAssignmentType=false, reportGeneralTypeIssues=false
 # (pandas typing infers unions for `df[...]`; behavior is covered by the tests instead)
-"""Ozone contingency episodes of 2024 and the days they put in force.
+"""Ozone contingency episodes and the days they put in force.
 
-``contingencias_ozono_2024_episodios.csv`` has one row per episode, with the local date (and, when the press
-reported it, the hour) of the activation and of the suspension. Only the dates are used: the activation is
-announced around 15:00 and the "Doble Hoy No Circula" starts at 05:00 the next day, so
+``contingencias_ozono_<year>_episodios.csv`` (one file per year; `read_all` reads every one in the folder,
+and a year without file is not covered, see `covers`) has one row per episode, with the local date (and, when
+the press reported it, the hour) of the activation and of the suspension. Only the dates are used: the
+activation is announced around 15:00 and the "Doble Hoy No Circula" starts at 05:00 the next day, so
 
 - the **measure days** run from the day after the activation to the day of the suspension, inclusive
   (the suspension is usually at 15:00, but the morning of that day is still under the restrictions);
@@ -20,7 +21,9 @@ from pathlib import Path
 
 import pandas as pd
 
-EPISODES_FILE = Path("contingencias") / "contingencias_ozono_2024_episodios.csv"
+EPISODES_DIR = Path("contingencias")
+EPISODES_PATTERN = "contingencias_ozono_{year}_episodios.csv"
+EPISODES_FILE = EPISODES_DIR / EPISODES_PATTERN.format(year=2024)
 COLUMNS = ("episodio", "activacion_fecha", "suspension_fecha")
 
 
@@ -40,11 +43,38 @@ def read_episodes(path: Path) -> pd.DataFrame:
             "suspension": pd.to_datetime(raw["suspension_fecha"]),
         }
     ).sort_values("activation", ignore_index=True)
+    return _checked(episodes, path)
+
+
+def _checked(episodes: pd.DataFrame, source: object) -> pd.DataFrame:
     if (episodes["suspension"] < episodes["activation"]).any():
-        raise ValueError(f"{path}: a suspension precedes its activation")
+        raise ValueError(f"{source}: a suspension precedes its activation")
     if (episodes["activation"].iloc[1:].to_numpy() <= episodes["suspension"].iloc[:-1].to_numpy()).any():
-        raise ValueError(f"{path}: episodes overlap")
+        raise ValueError(f"{source}: episodes overlap")
     return episodes
+
+
+def read_all(directory: Path) -> pd.DataFrame:
+    """The episodes of every ``contingencias_ozono_*_episodios.csv`` in `directory`, concatenated and checked
+    like `read_episodes` (across files too). Empty, with the same columns, when there is no file."""
+    files = sorted(directory.glob(EPISODES_PATTERN.format(year="*")))
+    if not files:
+        return pd.DataFrame(
+            {
+                "episode": pd.Series(dtype=int),
+                "activation": pd.to_datetime([]),
+                "suspension": pd.to_datetime([]),
+            }
+        )
+    episodes = pd.concat([read_episodes(f) for f in files]).sort_values("activation", ignore_index=True)
+    return _checked(episodes, directory)
+
+
+def covers(directory: Path, start: str, end: str) -> bool:
+    """Whether every year of the window `start`..`end` has its episodes file: a year without one is unknown,
+    not a year without contingencies."""
+    years = range(pd.Timestamp(start).year, pd.Timestamp(end).year + 1)
+    return all((directory / EPISODES_PATTERN.format(year=year)).exists() for year in years)
 
 
 def activation_days(episodes: pd.DataFrame) -> pd.DatetimeIndex:

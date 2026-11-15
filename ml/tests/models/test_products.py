@@ -16,7 +16,7 @@ from test_events import BUSINESS_MEASURES, make_model, scaled
 from ventilation_synthetic import ventilation_inputs
 
 from nox_ml.models import REGISTRY
-from nox_ml.validation import products
+from nox_ml.validation import events, products
 from nox_ml.validation.experiment import Placebo
 
 WEEK = pd.date_range("2023-11-27", "2023-12-01")  # Monday to Friday, no contingency nor atypical day
@@ -246,3 +246,99 @@ def test_a_sheet_result_is_written_as_json(base):
 
     assert record["seasons"][0]["satellite"]["n_days"] == result["satellite"]["n_days"]
     assert record["seasons"][0]["range"] == list(result["range"])
+
+
+def test_the_range_contains_zero_exactly_when_the_verdict_is_undetectable():
+    # a placebo centered at 0.9: the estimator reads 10 % low with no change
+    ratios = np.random.default_rng(1).lognormal(np.log(0.9), 0.08, 400)
+    center, lo, hi, _ = products._read_placebo(ratios, False, 0.90, products.POWER)
+
+    assert center == pytest.approx(0.9, abs=0.02)
+    for ratio in np.linspace(0.6, 1.3, 71):
+        low, high = products.change_range(ratio, lo, hi)
+        assert (products.verdict(ratio, lo, hi) == "undetectable") == (low <= 0 <= high)
+    assert products.verdict(0.9, lo, hi) == "undetectable"  # the bias is not a change
+    assert products.verdict(1.0, lo, hi) == "undetectable" and products.verdict(0.6, lo, hi) == "decrease"
+
+
+def test_the_satellite_range_is_consistent_with_its_verdict():
+    normal = business(pd.date_range("2023-11-06", periods=56)).difference(WEEK)
+    for factor in (1.0, 0.8, 0.5, 1.3):
+        r = products.satellite_result(satellite_series(factor), WEEK, normal, contiguous=False)
+        assert (r["verdict"] == "undetectable") == (r["range"][0] <= 0 <= r["range"][1])
+
+
+def test_a_single_gap_day_keeps_the_drift(base):
+    gap = WEEK.delete(2)  # Monday, Tuesday, Thursday, Friday; Wednesday is a normal day
+
+    four = products.measure_result(base, make_model, gap, BUSINESS_MEASURES, PLACEBO)
+    sparse = products.measure_result(
+        base, make_model, WEEK[[0, 4]].union(pd.DatetimeIndex(["2023-12-12"])), BUSINESS_MEASURES, PLACEBO
+    )
+
+    assert pd.Timestamp("2023-11-29") not in pd.DatetimeIndex(four["days"]["event"])
+    assert four["method"] == "drift" and sparse["method"] == "placebo"
+
+
+REAL_DAILY = events._daily
+
+
+def stagnant(inputs, stagnant_normal):
+    """The daily table with the measure days at stagnation 5 and `stagnant_normal` normal days as stagnant."""
+    daily = REAL_DAILY(inputs)
+    normal = daily.index.difference(WEEK).difference(BUSINESS_MEASURES)
+    normal = normal[normal.day_of_week < 5]
+    values = np.where(daily.index.isin(WEEK), 5.0, 1.0)
+    values[daily.index.isin(normal[:stagnant_normal])] = 5.0
+    return daily.assign(stagnation=values)
+
+
+def test_stagnant_measure_days_get_a_placebo_of_stagnant_days(base, monkeypatch):
+    monkeypatch.setattr(events, "_daily", lambda inputs: stagnant(inputs, 12))
+
+    result = sheet(base)["stagnation"]
+
+    assert result["status"] == "done" and 10 <= result["n_pool"] <= 12
+    assert result["event_median"] > result["normal_median"]
+    assert result["survives"] is True and 0.5 < result["center"] < 2
+    low, high = result["range"]
+    assert (result["verdict"] == "undetectable") == (low <= 0 <= high)
+
+
+def test_few_stagnant_normal_days_are_reported_not_an_error(base, monkeypatch):
+    monkeypatch.setattr(events, "_daily", lambda inputs: stagnant(inputs, 3))
+
+    result = sheet(base)["stagnation"]
+
+    assert result["status"] == "too_few" and result["n_pool"] == 3
+
+
+def test_measure_days_that_are_not_stagnant_need_no_check(base, monkeypatch):
+    monkeypatch.setattr(events, "_daily", lambda inputs: stagnant(inputs, 12).assign(stagnation=1.0))
+
+    assert sheet(base)["stagnation"]["status"] == "not_needed"
+
+
+def test_the_sheet_warns_when_the_verdict_does_not_survive_stagnant_days(base):
+    result = sheet(base) | {"stagnation": {"status": "not_needed"}}
+    period = ("2023-11-06", "2023-12-31")
+    fails = {"status": "done", "survives": False, "range": (-0.4, -0.1), "verdict": "decrease", "n_pool": 20}
+
+    assert "peor ventilación" not in products.render_measure(result, "Prueba", period)
+    text = products.render_measure(result | {"stagnation": fails}, "Prueba", period)
+    assert "**Advertencia:** los días de la medida tienen peor ventilación" in text
+    few = result | {"stagnation": {"status": "too_few", "n_pool": 3}}
+    assert "muy pocos días normales igual de estancados (3)" in products.render_measure(few, "P", period)
+
+
+def test_the_sheet_warns_when_the_contingencies_are_not_loaded_or_days_fall_outside(base):
+    period = ("2025-02-15", "2025-05-31")
+    result = sheet(base, reference_covered=False)
+
+    text = products.render_measure(result, "Prueba", period, outside=["2025-07-01"])
+
+    assert "no están cargadas" in text and "(sin contingencias" not in text
+    assert "fuera de todas las ventanas" in text and "2025-07-01" in text
+    assert "(sin contingencias, fin de año ni Semana Santa)" in products.render_measure(
+        sheet(base), "Prueba", period
+    )

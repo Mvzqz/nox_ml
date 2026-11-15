@@ -78,6 +78,14 @@ Pendiente: la prueba de comprensión con tres personas fuera del equipo; protoco
 - **Días necesarios en invierno (nov–dic 2023):** 19 días hábiles para una baja de 30 %, 48 para 20 %, 214 para 10 % y ~900 para 5 %. Con la variación del invierno, las medidas de 5–10 % no se pueden evaluar en una temporada; en feb–may la variación es menor. Es el argumento cuantitativo para sumar temporadas (2024–2026).
 - La cobertura de las medidas de días seguidos se validó con bloques continuos de días reales (ver la deriva lenta): sin la deriva, la ficha prometía 90 % y cumplía 50–65 %.
 
+## Correcciones de la metodología (2026-11-05)
+
+- **Rango y veredicto coherentes:** el rango es el cambio entre el rango del placebo (`ratio/hi − 1` a `ratio/lo − 1`): el sesgo del placebo (su centro) aplica también al cambio real, así que "no se detecta" equivale a que el rango contiene 0. Antes el rango corregía por el centro y el veredicto no.
+- **Días de la medida estancados:** si los días de la medida están peor ventilados que los normales, la ficha repite el placebo con días falsos tomados solo de días normales igual de estancados (cuesta otros `refits` ajustes) y advierte si el veredicto cambia; si hay muy pocos de esos días, lo dice.
+- **Días seguidos:** la deriva se suma cuando al menos 80 % de los días hábiles entre el primero y el último de la medida son de la medida; un solo día suelto de hueco ya no la quita.
+- **Contingencias de todos los años:** se leen todos los `contingencias_ozono_*_episodios.csv`; si un año de la ventana no tiene archivo, la ficha advierte que las contingencias no están cargadas en vez de decir "sin contingencias".
+- **`ficha-medida`:** rechaza ventanas `--data` que se traslapan y advierte (en la terminal y en la ficha) de los días de la medida que caen fuera de todas las ventanas.
+
 ## Reproducir
 
 ```bash
