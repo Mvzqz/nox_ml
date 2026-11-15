@@ -58,7 +58,59 @@ El perfil horario del repositorio es de toda la ciudad (`perfil_infovial.json`),
 
 Infovial (`infovial_corridors.csv`, clases C3–C6 como pesadas, días hábiles nov–dic 2018): la fracción pesada de los corredores orientales (Zaragoza 6.9 % de los conteos, Eje 3 Oriente 6.1 %, Eje 1 Oriente 6.0 %) es **menor** que la de los demás corredores (5–10 %, mediana ~7 %); y el domingo / día hábil de Zaragoza es 1.07 y del Eje 3 Oriente 0.98 (frente a ~0.75 de los corredores centrales). Es decir, el oriente no tiene más carga pesada ni cae más en domingo que el resto: **la composición no explica una emisión menor**. Limitación: solo dos o tres corredores y solo la CDMX.
 
-## Veredicto (plantilla)
+## Contraste con fuentes oficiales e independientes (2026-11-15, F4b, PR apilado sobre #97)
+
+Pregunta: ¿qué fracción de la emisión vial cae en el oriente (regiones 2, 5, 8) según fuentes que no son nuestro prior de OSM? Script: `inventory_compare.py` (salida `out/inventory_compare.csv`). Mismas regiones 3 × 3 (UTM, celdas de 1 km) de `data.roads`.
+
+### Qué se buscó y qué hay
+
+- **No existe una tabla municipal de NOₓ vehicular en el inventario ZMVM 2018 ni 2020 de SEDEMA.** El 2020 (`inventario_2020/inv2020.pdf`) trae "jurisdicción" = CDMX / Edomex / Tizayuca / federal (Tabla 7 y 23): fuentes móviles NOₓ 48 235 t CDMX, 54 409 t Edomex, 9 119 t federal; nada por municipio ni malla. El 2018 solo trae flota por municipio.
+- **Sí existe el inventario vial oficial por municipio del INECC:** *MOVES-México 2016* (transporte carretero, NOₓ por municipio de todo el país; `inventario_2020/moves2016.pdf`). Limitaciones: es 2016 (no 2018), y **la CDMX viene como una sola fila (53 651 t)**, sin alcaldías; los 59 municipios del Edomex sí vienen por separado (Ecatepec 15 783 t, Nezahualcóyotl 11 279, Ixtapaluca 3 248, Chalco 3 934, Chimalhuacán 2 881, Texcoco 2 633).
+- Para llevarlo a las regiones: cada municipio del Edomex se reparte con un proxy espacial (población del censo 2020 por localidad con coordenadas, unidades DENUE o área) y la fila de la CDMX se reparte con el mismo proxy sobre las 16 alcaldías. La parte fuera del dominio se descarta. Los 3 proxies dan el mismo orden de magnitud (rango 13–15 %); el reparto dentro de la CDMX es la parte más débil.
+- **Hallazgo de definición:** la columna este del dominio (lon > ~−98.99°) **no contiene a Ecatepec ni a Nezahualcóyotl**: Ecatepec cae 75 % en la región 4 (centro) y 23 % en la 7 (norte); Nezahualcóyotl 69 % en la 1 (sur) y solo 13 % en la 2. El "oriente" es Chalco, Ixtapaluca, Chimalhuacán, Texcoco y el oriente de Iztapalapa.
+
+### Fracción del oriente por fuente
+
+| Fuente | Oriente | Notas |
+|---|---|---|
+| Inversión final (E5b≥0, 5 temporadas) | 4.8–9.5 % (media 7.3 %) | |
+| Satélite solo (divergencia TEMPO) | 9–15 % (11.5–12.3 %) | todo el NOₓ |
+| Prior OSM escalado (el "19 %") | 18.9 % | no es del inventario |
+| **MOVES-México 2016, municipal (INECC), CDMX por población** | **13.1 %** | oficial, vial |
+| **MOVES 2016, CDMX por DENUE** | **14.8 %** | |
+| **MOVES 2016, CDMX por área** | **14.5 %** | |
+| MOVES 2016, solo Edomex (sin CDMX) | 19–23 % | sesgado: omite el 38 % de la emisión |
+| **EDGAR v8.1 transporte carretero 2018 / 2022** | **16.4 % / 16.5 %** | malla de 0.1°, repartida por área |
+| EDGAR v8.1 total (todos los sectores) 2018 / 2022 | 14.4 % / 13.9 % | |
+| DENUE, todas las unidades | 19.1 % | referencia de actividad |
+| DENUE, comercio (SCIAN 43, 46) | 20.7 % | |
+| DENUE, transporte (48–49) / autotransporte y pasaje (484–485) | 6.5 % / 7.1 % | pocas unidades (6 121 / 3 078) |
+| Población del censo 2020 | 16.5 % | localidades con coordenadas |
+
+### Lectura
+
+- Las fuentes oficiales dan **13–17 %**: MOVES 13–15 %, EDGAR 16.5 %. Ni el 19 % (prior OSM) ni el 7 % (inversión): quedan en medio. El prior de OSM sobrestima al oriente en 2 a 6 puntos frente a los datos oficiales; la inversión lo subestima en 4 a 10 puntos frente a esos mismos datos, y el satélite (9–15 %) los toca por abajo.
+- Cumple el criterio fijado de antemano solo por EDGAR (≥ 15 %); MOVES queda en el borde (13–15 %). No se cumple el criterio de reducción (≤ 12 %): ninguna fuente oficial baja de 13 %. Las referencias de actividad (población 16.5 %, DENUE 19 %) también están sobre el 15 %; el transporte DENUE (6.5 %) es un conteo de establecimientos, no emisión.
+- **Cuidado:** EDGAR no es independiente de la red vial (reparte con mapas de carreteras y población) y su celda (0.1° ≈ 11 km) es del tamaño de una región; MOVES es 2016 y su CDMX no está repartida por alcaldías. Son contrastes de orden de magnitud, no mediciones.
+
+## Veredicto actualizado (plantilla, F4b)
+
+| Criterio | Resultado |
+|---|---|
+| **¿Funciona?** | Funciona con condiciones: las fuentes oficiales apoyan que el oriente es menor que el prior (19 %), pero lo ponen en 13–17 %, no en 5–10 %. |
+| **Evidencia** | MOVES-México 2016 por municipio 13.1–14.8 % (CDMX por proxy); EDGAR 2018/2022 transporte carretero 16.4–16.5 %; población 16.5 %; satélite 9–15 %; inversión 4.8–9.5 %. |
+| **Usuario** | Equipo de inventario (reparto espacial); autoridad ambiental. |
+| **Frecuencia** | 1 a 2 veces al año. |
+| **Alternativa** | Pedir a SEDEMA la tabla municipal del inventario 2018 (no se publica); mientras tanto, MOVES-INECC y EDGAR. |
+| **Decisión que cambia** | Citar el oriente como "10–15 %" con el 13–17 % oficial como techo, y no como "7 % frente a 19 %"; no afirmar que el inventario sobrestima al oriente en un factor 2–3. |
+| **Costo** | ~1 día para dejar la tabla municipal de MOVES y el reparto en `nox_ml` con pruebas. |
+| **Veredicto** | **Aumenta la confianza de forma parcial**: el criterio se cumple por EDGAR (16.5 %) y MOVES queda en 13–15 %; la dirección (el oriente es menos que el 19 % del prior) se sostiene, pero la brecha con la inversión (4–10 puntos) es la que queda sin explicar. |
+
+**Frase recomendada (artículo y resumen ejecutivo):** "El oriente de la ZMVM (la columna este del dominio) concentra entre 5 y 15 % de la emisión vial según la inversión y el satélite, y entre 13 y 17 % según el inventario vial por municipio del INECC (MOVES 2016) y EDGAR; el 19 % de referencia es el reparto previo por red vial de OpenStreetMap, no una cifra del inventario."
+
+Reproducir: `nice -n 10 uv run python notebooks/exploraciones/inventory_east/inventory_compare.py` (con `data/raw/inventario_2020/moves2016.txt`, de `pdftotext -layout`; `data/raw/censo2020/`, `data/raw/denue/`, `data/raw/edgar/`).
+
+## Veredicto de F4 (versión anterior, ver el actualizado arriba)
 
 | Criterio | Escala | Resultado |
 |---|---|---|
