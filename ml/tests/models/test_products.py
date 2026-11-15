@@ -4,6 +4,8 @@
 # (pandas typing infers unions for `df[...]`; behavior is covered by the tests instead)
 """The sheets: each question with its estimator, the verdict against the placebo, the days a measure needs."""
 
+import json
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -218,9 +220,29 @@ def test_without_clear_days_of_the_measure_there_is_no_satellite_opinion():
 
 def test_the_sheet_says_whether_the_satellite_agrees(base):
     with_satellite = sheet(scaled(base, dict.fromkeys(WEEK, 0.5)), satellite=satellite_series(0.5))
-    opposite = dict(with_satellite, satellite=dict(with_satellite["satellite"], verdict="increase"))
+    split = dict(with_satellite, satellite=dict(with_satellite["satellite"], verdict="undetectable"))
+    apart = dict(with_satellite, satellite=dict(with_satellite["satellite"], range=(0.5, 0.9)))
+    period = ("2023-11-06", "2023-12-31")
 
-    text = products.render_measure(with_satellite, "Prueba", ("2023-11-06", "2023-12-31"))
+    text = products.render_measure(with_satellite, "Prueba", period)
     assert "Segunda opinión, satélite TEMPO" in text and "Coincide con las estaciones" in text
-    assert "No coincide" in products.render_measure(opposite, "Prueba", ("2023-11-06", "2023-12-31"))
-    assert "no disponible" in products.render_measure(sheet(base), "Prueba", ("2023-11-06", "2023-12-31"))
+    assert "El veredicto no coincide" in products.render_measure(split, "Prueba", period)
+    assert "Contradice" in products.render_measure(apart, "Prueba", period)
+    assert "no disponible" in products.render_measure(sheet(base), "Prueba", period)
+
+
+def test_the_agreement_tells_a_split_verdict_from_a_contradiction():
+    e7 = {"verdict": "decrease", "range": (-0.5, -0.1)}
+
+    assert products.agreement(e7, {"verdict": "decrease", "range": (-0.4, 0.0)}) == "agree"
+    assert products.agreement(e7, {"verdict": "undetectable", "range": (-0.3, 0.1)}) == "split"
+    assert products.agreement(e7, {"verdict": "increase", "range": (0.1, 0.4)}) == "apart"
+
+
+def test_a_sheet_result_is_written_as_json(base):
+    result = sheet(base, satellite=satellite_series())
+
+    record = json.loads(json.dumps({"seasons": [result]}, default=float))
+
+    assert record["seasons"][0]["satellite"]["n_days"] == result["satellite"]["n_days"]
+    assert record["seasons"][0]["range"] == list(result["range"])

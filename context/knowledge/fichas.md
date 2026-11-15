@@ -92,3 +92,19 @@ uv run nox-ml ficha-medida --days 2023-12-18:2023-12-29 --data 2023-11-01:2023-1
 - No se combina con E7: los dos ven la misma deriva, así que la combinación no baja el mínimo detectable de medidas de días seguidos (0.164 frente a 0.163 en bloques de 9 días; [deriva.md](deriva.md)). Su valor es ser independiente de las estaciones y del modelo de transporte.
 - Prueba con datos reales, días sin ninguna medida: 4 semanas de marzo de 2025 (E7 +23 %, satélite +15 %, coinciden, no detectable); 4 semanas en 3 temporadas (+9 % y +6 %, coinciden); 5 días sueltos de feb–may 2025, donde E7 dio una falsa alarma (+34 %, "aumento") y el satélite no (−17 %, no detectable): la ficha avisa que no coinciden.
 - Sin píxeles de TEMPO, o con menos de 2 días de la medida sin nubes, la ficha lo dice y no da segunda opinión.
+- Ambas fichas escriben también un JSON con los números (`medida_*.json`, `dias_*.json`), para que otros programas (la interfaz) no lean el texto.
+
+### Calibración de la segunda opinión
+
+Inyecciones de bajas de 0 y 20 % en el satélite, en 6 temporadas (sin feb–may 2024), con bloques de 5, 9 y 20 días seguidos y conjuntos de días al azar (1,100 casos por baja):
+
+| | Días al azar (5 / 9 / 20) | Días seguidos (5 / 9 / 20) |
+|---|---|---|
+| El rango contiene la verdad (nominal 90 %) | 92 / 92 / 98 % | 94 / 87 / 95 % |
+| Falsas alarmas (sin cambio) | 8 / 8 / 2 % | 4 / 13 / 5 % |
+| Detecta una baja de 20 % | 54 / 71 / 51 % | 32 / 29 / 33 % |
+| El veredicto no coincide con E7, sin cambio | 14 / 11 / 6 % | 13 / 21 / 7 % |
+| El veredicto no coincide con E7, baja de 20 % | 35 / 39 / 33 % | 23 / 20 / 29 % |
+
+- Los rangos de E7 y del satélite nunca dejaron de cruzarse: los desacuerdos son siempre de veredicto (uno detecta y el otro no), sobre todo con cambios cerca del mínimo detectable. La ficha distingue tres casos: coinciden, el veredicto no coincide (indicio, no resultado firme) y se contradicen (rangos que no se cruzan; no se vio en las inyecciones).
+- E7 en esta prueba es su serie diaria (la media de cada día, como el satélite), no el ajuste completo de la ficha: aproxima su ruido, no lo reproduce.
