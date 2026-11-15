@@ -1,0 +1,66 @@
+season,type,start,end,days,criterion
+nd2023,estancada,2023-12-04,2023-12-08,2023-12-04 2023-12-05 2023-12-06 2023-12-07 2023-12-08,"rank 1 of 4 weeks by ventilation (PBL x wind, 1404 m2/s; season median 1761)"
+nd2023,ventilada,2023-11-13,2023-11-17,2023-11-13 2023-11-14 2023-11-15 2023-11-16 2023-11-17,"rank 1 of 4 weeks by ventilation (PBL x wind, 2298 m2/s; season median 1761)"
+nd2023,fondo_alto,2023-11-06,2023-11-10,2023-11-06 2023-11-07 2023-11-08 2023-11-09 2023-11-10,"highest TEMPO regional background of 4 weeks (3.88e+15 vs median 3.26e+15), not a weather week"
+nd2023,festivo,2023-11-20,2023-11-20,2023-11-20,official holiday
+nd2023,fin_de_anio,2023-12-18,2023-12-22,2023-12-18 2023-12-19 2023-12-20 2023-12-21 2023-12-22,business days before Christmas
+nd2023,fin_de_anio,2023-12-26,2023-12-29,2023-12-26 2023-12-27 2023-12-28 2023-12-29,business days Christmas to New Year
+fm2024,estancada,2024-02-26,2024-03-01,2024-02-26 2024-02-27 2024-02-28 2024-02-29 2024-03-01,"rank 1 of 5 weeks by ventilation (PBL x wind, 3451 m2/s; season median 3894)"
+fm2024,estancada,2024-04-15,2024-04-19,2024-04-15 2024-04-16 2024-04-17 2024-04-18 2024-04-19,"rank 2 of 5 weeks by ventilation (PBL x wind, 3827 m2/s; season median 3894)"
+fm2024,ventilada,2024-04-08,2024-04-12,2024-04-08 2024-04-09 2024-04-10 2024-04-11 2024-04-12,"rank 1 of 5 weeks by ventilation (PBL x wind, 5136 m2/s; season median 3894)"
+fm2024,ventilada,2024-04-22,2024-04-26,2024-04-22 2024-04-23 2024-04-24 2024-04-25 2024-04-26,"rank 2 of 5 weeks by ventilation (PBL x wind, 4805 m2/s; season median 3894)"
+fm2024,fondo_alto,2024-03-11,2024-03-15,2024-03-11 2024-03-12 2024-03-13 2024-03-14 2024-03-15,"highest TEMPO regional background of 5 weeks (2.45e+15 vs median 2.45e+15), not a weather week"
+fm2024,festivo,2024-03-18,2024-03-18,2024-03-18,official holiday
+fm2024,festivo,2024-05-01,2024-05-01,2024-05-01,official holiday
+fm2024,semana_santa,2024-03-25,2024-04-05,2024-03-25 2024-03-26 2024-03-27 2024-04-01 2024-04-02 2024-04-03 2024-04-04 2024-04-05,business days of Holy Week and the week after (school holidays)
+fm2024,contingencia,2024-02-22,2024-02-25,2024-02-22 2024-02-23 2024-02-24 2024-02-25,ozone contingency 1
+fm2024,contingencia,2024-03-06,2024-03-07,2024-03-06 2024-03-07,ozone contingency 2
+fm2024,contingencia,2024-03-23,2024-03-24,2024-03-23 2024-03-24,ozone contingency 3
+fm2024,contingencia,2024-04-30,2024-05-01,2024-04-30 2024-05-01,ozone contingency 4
+fm2024,contingencia,2024-05-03,2024-05-04,2024-05-03 2024-05-04,ozone contingency 5
+fm2024,contingencia,2024-05-09,2024-05-10,2024-05-09 2024-05-10,ozone contingency 6
+fm2024,contingencia,2024-05-13,2024-05-16,2024-05-13 2024-05-14 2024-05-15 2024-05-16,ozone contingency 7
+fm2024,contingencia,2024-05-18,2024-05-19,2024-05-18 2024-05-19,ozone contingency 8
+fm2024,contingencia,2024-05-22,2024-05-24,2024-05-22 2024-05-23 2024-05-24,ozone contingency 9
+fm2024,contingencia,2024-05-25,2024-05-26,2024-05-25 2024-05-26,ozone contingency 10
+fm2024,contingencia,2024-05-30,2024-05-31,2024-05-30 2024-05-31,ozone contingency 11
+nd2024,estancada,2024-12-02,2024-12-06,2024-12-02 2024-12-03 2024-12-04 2024-12-05 2024-12-06,"rank 1 of 4 weeks by ventilation (PBL x wind, 1858 m2/s; season median 2315)"
+nd2024,ventilada,2024-11-11,2024-11-15,2024-11-11 2024-11-12 2024-11-13 2024-11-14 2024-11-15,"rank 1 of 4 weeks by ventilation (PBL x wind, 3186 m2/s; season median 2315)"
+nd2024,fondo_alto,2024-11-25,2024-11-29,2024-11-25 2024-11-26 2024-11-27 2024-11-28 2024-11-29,"highest TEMPO regional background of 4 weeks (6.24e+15 vs median 4.30e+15), not a weather week"
+nd2024,festivo,2024-11-18,2024-11-18,2024-11-18,official holiday
+nd2024,fin_de_anio,2024-12-16,2024-12-23,2024-12-16 2024-12-17 2024-12-18 2024-12-19 2024-12-20 2024-12-23,business days before Christmas
+nd2024,fin_de_anio,2024-12-24,2024-12-31,2024-12-24 2024-12-26 2024-12-27 2024-12-30 2024-12-31,business days Christmas to New Year
+fm2025,estancada,2025-02-17,2025-02-21,2025-02-17 2025-02-18 2025-02-19 2025-02-21,"rank 1 of 8 weeks by ventilation (PBL x wind, 819 m2/s; season median 3527)"
+fm2025,estancada,2025-05-26,2025-05-30,2025-05-26 2025-05-27 2025-05-28 2025-05-29 2025-05-30,"rank 2 of 8 weeks by ventilation (PBL x wind, 1509 m2/s; season median 3527)"
+fm2025,ventilada,2025-04-07,2025-04-11,2025-04-07 2025-04-08 2025-04-09 2025-04-10 2025-04-11,"rank 1 of 8 weeks by ventilation (PBL x wind, 4282 m2/s; season median 3527)"
+fm2025,ventilada,2025-05-05,2025-05-09,2025-05-05 2025-05-06 2025-05-07 2025-05-08 2025-05-09,"rank 2 of 8 weeks by ventilation (PBL x wind, 4280 m2/s; season median 3527)"
+fm2025,fondo_alto,2025-03-10,2025-03-14,2025-03-10 2025-03-11 2025-03-12 2025-03-13 2025-03-14,"highest TEMPO regional background of 8 weeks (3.37e+15 vs median 2.53e+15), not a weather week"
+fm2025,festivo,2025-03-17,2025-03-17,2025-03-17,official holiday
+fm2025,festivo,2025-05-01,2025-05-01,2025-05-01,official holiday
+fm2025,semana_santa,2025-04-14,2025-04-25,2025-04-14 2025-04-15 2025-04-16 2025-04-21 2025-04-22 2025-04-23 2025-04-24 2025-04-25,business days of Holy Week and the week after (school holidays)
+nd2025,estancada,2025-11-03,2025-11-07,2025-11-03 2025-11-04 2025-11-05 2025-11-06 2025-11-07,"rank 1 of 4 weeks by ventilation (PBL x wind, 1238 m2/s; season median 1546)"
+nd2025,ventilada,2025-12-01,2025-12-05,2025-12-01 2025-12-02 2025-12-03 2025-12-04 2025-12-05,"rank 1 of 4 weeks by ventilation (PBL x wind, 1876 m2/s; season median 1546)"
+nd2025,fondo_alto,2025-11-10,2025-11-14,2025-11-10 2025-11-11 2025-11-12 2025-11-13 2025-11-14,"highest TEMPO regional background of 4 weeks (4.43e+15 vs median 3.55e+15), not a weather week"
+nd2025,festivo,2025-11-17,2025-11-17,2025-11-17,official holiday
+nd2025,fin_de_anio,2025-12-16,2025-12-23,2025-12-16 2025-12-17 2025-12-18 2025-12-19 2025-12-22 2025-12-23,business days before Christmas
+nd2025,fin_de_anio,2025-12-24,2025-12-31,2025-12-24 2025-12-26 2025-12-29 2025-12-30 2025-12-31,business days Christmas to New Year
+fm2026,estancada,2026-05-18,2026-05-22,2026-05-18 2026-05-19 2026-05-20 2026-05-21 2026-05-22,"rank 1 of 11 weeks by ventilation (PBL x wind, 1897 m2/s; season median 2628)"
+fm2026,estancada,2026-04-20,2026-04-24,2026-04-20 2026-04-21 2026-04-22 2026-04-23 2026-04-24,"rank 2 of 11 weeks by ventilation (PBL x wind, 2270 m2/s; season median 2628)"
+fm2026,ventilada,2026-02-23,2026-02-27,2026-02-23 2026-02-24 2026-02-25 2026-02-26 2026-02-27,"rank 1 of 11 weeks by ventilation (PBL x wind, 4224 m2/s; season median 2628)"
+fm2026,ventilada,2026-04-13,2026-04-17,2026-04-13 2026-04-14 2026-04-15 2026-04-16 2026-04-17,"rank 2 of 11 weeks by ventilation (PBL x wind, 3909 m2/s; season median 2628)"
+fm2026,fondo_alto,2026-02-16,2026-02-20,2026-02-16 2026-02-17 2026-02-18 2026-02-19 2026-02-20,"highest TEMPO regional background of 11 weeks (4.19e+15 vs median 2.81e+15), not a weather week"
+fm2026,festivo,2026-03-16,2026-03-16,2026-03-16,official holiday
+fm2026,festivo,2026-05-01,2026-05-01,2026-05-01,official holiday
+fm2026,semana_santa,2026-03-30,2026-04-10,2026-03-30 2026-03-31 2026-04-01 2026-04-06 2026-04-07 2026-04-08 2026-04-09 2026-04-10,business days of Holy Week and the week after (school holidays)
+fm2019,estancada,2019-03-04,2019-03-08,2019-03-04 2019-03-05 2019-03-06 2019-03-07 2019-03-08,"rank 1 of 11 weeks by ventilation (PBL x wind, 2463 m2/s; season median 5174)"
+fm2019,estancada,2019-03-11,2019-03-15,2019-03-11 2019-03-12 2019-03-13 2019-03-14 2019-03-15,"rank 2 of 11 weeks by ventilation (PBL x wind, 4137 m2/s; season median 5174)"
+fm2019,ventilada,2019-05-06,2019-05-10,2019-05-06 2019-05-07 2019-05-08 2019-05-09 2019-05-10,"rank 1 of 11 weeks by ventilation (PBL x wind, 9086 m2/s; season median 5174)"
+fm2019,ventilada,2019-03-25,2019-03-29,2019-03-25 2019-03-26 2019-03-27 2019-03-28 2019-03-29,"rank 2 of 11 weeks by ventilation (PBL x wind, 8404 m2/s; season median 5174)"
+fm2019,festivo,2019-03-18,2019-03-18,2019-03-18,official holiday
+fm2019,festivo,2019-05-01,2019-05-01,2019-05-01,official holiday
+fm2019,semana_santa,2019-04-15,2019-04-26,2019-04-15 2019-04-16 2019-04-17 2019-04-22 2019-04-23 2019-04-24 2019-04-25 2019-04-26,business days of Holy Week and the week after (school holidays)
+fm2019,placebo_2019,2019-03-25,2019-03-29,2019-03-25 2019-03-26 2019-03-27 2019-03-28 2019-03-29,first lockdown weeks (2019: same weeks)
+fm2019,placebo_2019,2019-04-01,2019-04-05,2019-04-01 2019-04-02 2019-04-03 2019-04-04 2019-04-05,first lockdown weeks (2019: same weeks)
+fm2020,festivo,2020-03-16,2020-03-16,2020-03-16,official holiday
+fm2020,confinamiento,2020-03-23,2020-03-27,2020-03-23 2020-03-24 2020-03-25 2020-03-26 2020-03-27,first lockdown weeks (2019: same weeks)
+fm2020,confinamiento,2020-03-30,2020-04-03,2020-03-30 2020-03-31 2020-04-01 2020-04-02 2020-04-03,first lockdown weeks (2019: same weeks)
