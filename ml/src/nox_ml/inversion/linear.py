@@ -81,6 +81,7 @@ HOLIDAYS = (
     "2025-04-17",
     "2025-04-18",
     "2025-05-01",
+    "2025-09-16",  # the rainy months, for the monthly monitoring
     "2025-11-17",
     "2025-12-25",
     "2026-01-01",
@@ -89,6 +90,9 @@ HOLIDAYS = (
     "2026-04-02",
     "2026-04-03",
     "2026-05-01",
+    "2026-09-16",
+    "2026-11-16",
+    "2026-12-25",
 )
 
 AIRPORT_PRIOR = 500.0  # t/yr, assumption (the inventory has no value per airport)
