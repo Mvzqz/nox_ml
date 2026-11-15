@@ -170,9 +170,124 @@ La falsa alarma es la de "baja detectada", en promedio de las seis temporadas.
 | **Costo de llevarlo a producto** | Días de desarrollo y costo de operación | ~2–3 días: que `ficha-medida` acepte un diseño alternado y use su propio placebo (el sorteo por par, con E7 y el satélite), y que `ficha-dias` calcule los días que pide. No tiene costo de operación. El costo real es institucional: coordinar el piloto. |
 | **Veredicto** | Adoptar · seguir con condiciones · descartar | **Seguir con condiciones.** Vale para medidas de ≥ 15–20 % que se puedan alternar por semana con poco arrastre, en feb–may, o repetidas en varias temporadas. No resuelve las medidas de 5–10 % en una temporada. |
 
+## Más confianza (2026-11-15)
+
+Rama `explore/switchback-confidence`. Mismos días y sumas diarias que arriba; script nuevo `confidence.py` (y `summarize_confidence.py`). Criterio fijado de antemano: **aumenta la confianza** si la combinación E7 y satélite queda calibrada (cobertura ≥ 88 %, falsas alarmas ≤ 10 %) y algún diseño con lavado mantiene el mínimo de una temporada ≤ 20 % con arrastre del 50 %.
+
+**Resultado:** la calibración pasa con holgura. El criterio del lavado se queda en el límite (20–21 %), así que **no se cumple de forma robusta**: la confianza sube en la incertidumbre del diseño, no en el piso con arrastre.
+
+### 1. E7 y satélite con su propio placebo
+
+El placebo del mismo diseño (3,000 asignaciones sin inyección, intervalo del 90 % ensanchado 5 %) se calcula con la combinación 0.5/0.5; la inyección se evalúa con baja de 0 a 20 %.
+
+| Diseño | Falsa alarma con 0 % (media, máx. de seis) | Cobertura 5–20 % (media, mín.) | Cobertura con arrastre 50 %, baja 20 % (media) |
+|---|---|---|---|
+| (b) Días alternos | 4.2 % (5.2) | 91.6 % (89.6) | 54 % |
+| (c) Semanas alternas | 3.4 % (5.1) | 93.1 % (90.5) | 81 % |
+| (d) Bloques de 2 semanas | 3.4 % (5.4) | 93.4 % (90.1) | 92 % |
+| (e) Días al azar | 4.4 % (5.2) | 91.2 % (90.0) | 72 % |
+
+- **Calibrada:** cobertura 90–100 % por temporada (baja de 10 %) y falsas alarmas ≤ 5.4 %. Igual que con E7 solo (4.0–4.5 %, cobertura 91.6–94.9 %).
+- **El mínimo se confirma.** Con otra semilla, E7 y satélite con semanas alternas en feb–may 2026 da 14 % y con días alternos 11 %; en feb–may 2025, 20 % y 16 %.
+- **Con arrastre, el rango no cubre** (como con E7): días alternos baja a 35–82 % de cobertura. Solo los bloques de 2 semanas aguantan (88–96 %).
+
+### 2. Arrastre y lavado
+
+Mínimo detectable de E7 y satélite (entre paréntesis, E7 solo) en las dos temporadas más tranquilas, y las seis juntas, con distintos arrastres durante 7 días:
+
+| Diseño | Sin arrastre | 25 % | 50 % | 75 % |
+|---|---|---|---|---|
+| (b) Días alternos, feb–may 2026 | 11 % (15) | 14 % (18) | 20 % (25) | 31 % (37) |
+| (b) Días alternos, feb–may 2025 | 16 % (20) | 19 % (25) | 25 % (32) | 39 % (46) |
+| (c) Semanas alternas, feb–may 2026 | 14 % (15) | 16 % (18) | 19 % (22) | 25 % (27) |
+| (c) Semanas alternas, feb–may 2025 | 19 % (22) | 22 % (24) | 26 % (28) | 32 % (36) |
+| (d) Bloques de 2 semanas, feb–may 2026 | 23 % (24) | 24 % (26) | 26 % (28) | 30 % (29) |
+
+Cada 25 % de arrastre cuesta ~3–6 puntos en días alternos y ~2–3 en semanas. Los bloques de 2 semanas casi no se mueven, pero parten de 23–24 %.
+
+**Lavado:** descartar de los días sin medida los 7 días (o 14) siguientes a un día con medida. Con semanas alternas al azar por par, el lavado deja ~10 días de control de ~31 y falla: el placebo mezcla asignaciones sin días de control, la cobertura cae a 46 % y varias temporadas no alcanzan potencia. Por eso se probó un diseño de **tríos de semanas**: en cada trío, una semana (al azar) lleva la medida, la siguiente se lava y el resto es control; ~1/3 de las semanas con medida (`g_triple_weeks`).
+
+| Con E7 y satélite (E7 solo) | feb–may 2025 | feb–may 2026 | nov–dic 2025 | Seis juntas (sin arrastre) | Cobertura, arrastre 50 % |
+|---|---|---|---|---|---|
+| Tríos, sin arrastre | 17 % (21) | 16 % (17) | 32 % (48) | 9.5 % | 91 % |
+| Tríos, arrastre 50 %, sin lavado | 21 % (24) | 18 % (21) | 40 % (55) | | 89 % |
+| **Tríos, arrastre 50 %, lavado 7 días** | **20–21 % (25–26)** | **21–22 % (23)** | 33 % (50) | 11.4 % | **94 %** |
+| Tríos, cola de 25 % hasta el día 14, lavado 7 | 22 % (27) | 23 % (25) | 38 % (53) | | 91 % |
+| Tríos, cola de 25 %, lavado 14 | 27 % | 28 % | 33 % | 17 % | 47 % |
+
+- **El lavado no baja el mínimo; devuelve la cobertura.** Contra los tríos con arrastre sin lavado, el mínimo no mejora (20–21 % frente a 21 % en 2025; 21–22 % frente a 18 % en 2026, con 4 semillas), pero el rango vuelve a cubrir (94 % frente a 89 %) y ya no depende de adivinar el arrastre exacto.
+- **Cuesta ~2 puntos en las seis juntas** (11.4 % frente a 9.5 %) y 30 % de las semanas como control.
+- **El criterio de 20 % queda en el límite:** 20 % en la semilla del barrido y 20–21 % en otras cuatro (feb–may 2025, E7 y satélite); en feb–may 2026, 21–22 %. Con E7 solo, 23–26 %. Si la cola del arrastre pasa de la primera semana, el lavado de 7 días ya no alcanza (22–23 %) y uno de 14 días deja pocos días de control (47 % de cobertura).
+
+### 3. Menos días con medida
+
+Piloto de N días hábiles normales (la mitad con la medida; ~1.4 N días de calendario), en ventanas repartidas en cada temporada. Mediana de las ventanas y temporadas. Con N de 30 y 40 solo hay feb–may (3 temporadas); de 14 a 24 entran las seis.
+
+**Tabla para un planeador:** mínimo detectable (80 % de potencia, 90 % de confianza) con E7 y satélite. Entre paréntesis, con arrastre del 50 % a la semana siguiente.
+
+| Días con medida (de N) | Días alternos | Semanas alternas | Días al azar | Rango entre temporadas (días alternos, sin arrastre) |
+|---|---|---|---|---|
+| 7 de 14 | 23 % (36) | 30 % (38) | 26 % (37) | 12–39 % |
+| 9 de 18 | 20 % (32) | 28 % (36) | 24 % (35) | 14–36 % |
+| 12 de 24 | 18 % (29) | 29 % (36) | 21 % (32) | 14–29 % |
+| 15 de 30 | 18 % (29) | 22 % (30) | 20 % (29) | 13–22 % |
+| 20 de 40 | 16 % (26) | 19 % (25) | 18 % (28) | 13–19 % |
+
+Con E7 solo, 3–7 puntos más: días alternos 29, 26, 24, 21 y 18 % (sin arrastre) y 42, 40, 37, 33 y 30 % (con arrastre).
+
+- **Cada 10 días hábiles más de piloto bajan el mínimo ~3 puntos** (de 14 a 40 días, de 23 a 16 %), con rendimientos decrecientes. Un piloto de 9 de 18 detecta ~20 % en una temporada típica y 14 % en la mejor ventana; no sirve para medidas de ≤ 10 %.
+- **Con arrastre del 50 %, ningún tamaño probado baja de ~25 %.** Un piloto corto solo sirve si se lava o si la medida tiene poco arrastre.
+- **La variación entre temporadas es mayor que la del tamaño:** nov–dic 2023 y 2025 quedan 5–10 puntos arriba de feb–may 2026 con el mismo N.
+
+### 4. Correlación de la deriva entre años
+
+Se aplicó la misma asignación de calendario (unidades contadas desde el inicio de la temporada) a todas las temporadas y se correlacionó el logaritmo del cociente sin inyección entre años de la misma ventana (3,000 asignaciones).
+
+| Diseño | nov–dic 2023–24 | 2023–25 | 2024–25 | feb–may 2024–25 | 2024–26 | 2025–26 | Error de seis juntas: independiente / misma asignación |
+|---|---|---|---|---|---|---|---|
+| E7, días alternos | +0.36 | +0.29 | −0.12 | +0.05 | −0.07 | +0.10 | 0.035 / 0.035 |
+| E7, semanas alternas | +0.09 | +0.43 | +0.22 | −0.23 | +0.09 | −0.40 | 0.042 / 0.035 |
+| E7, bloques de 2 semanas | +0.83 | +0.68 | +0.64 | −0.39 | +0.22 | −0.41 | 0.054 / 0.056 |
+| E7 y satélite, días alternos | +0.28 | +0.45 | −0.07 | −0.23 | 0.00 | +0.05 | 0.026 / 0.025 |
+| E7 y satélite, semanas alternas | −0.17 | −0.07 | +0.02 | +0.06 | +0.02 | −0.33 | 0.036 / 0.028 |
+| E7 y satélite, bloques de 2 semanas | +0.81 | +0.38 | +0.50 | +0.05 | −0.12 | −0.26 | 0.046 / 0.058 |
+
+- **Con días o semanas alternos, la deriva que queda no se repite de un año a otro.** Las correlaciones van de −0.40 a +0.45 sin patrón (como en las anomalías semanales de [deriva.md](deriva.md), de −0.57 a +0.49) y el error de las seis juntas con la misma asignación es igual o menor que suponiendo independencia (0.035 frente a 0.035 y 0.042; 0.025 frente a 0.026 y 0.036 con el satélite). **La combinación por inverso de la varianza sigue siendo válida.**
+- **Excepción: bloques de 2 semanas en nov–dic** (+0.64 a +0.83, de 4–5 bloques por temporada, así que mide sobre todo el calendario: diciembre contra noviembre). Con la misma asignación el error de las seis juntas sube 26 % con el satélite (0.058 frente a 0.046). Para ese diseño, el sorteo debe ser distinto cada año.
+- **Recomendación:** sortear la asignación de forma independiente cada año; así la correlación entre años no entra, aunque exista. No es necesario ajustar el error de las seis juntas.
+
+### Veredicto actualizado
+
+| Criterio | Escala | Resultado |
+|---|---|---|
+| **¿Funciona?** | 0 no se probó · 1 no funciona · 2 funciona con condiciones · 3 funciona y está validado de forma independiente | **2.** Sigue en 2: el rango de E7 y satélite está calibrado (cobertura 90–100 % por temporada, falsas alarmas ≤ 5.4 %), pero con arrastre del 50 % el mínimo de una temporada queda en 19–26 % sin lavado y en 20–22 % con lavado (tríos de semanas, feb–may). |
+| **Evidencia** | La prueba decisiva y su cifra | Calibración con placebo propio (4 diseños, 6 temporadas, 3,000 asignaciones): cobertura media 91–93 %, falsas alarmas 3.4–4.4 %. Lavado de 7 días en tríos: 20–21 % (E7 y satélite) o 25–26 % (E7) en feb–may 2025, con 94 % de cobertura bajo arrastre. Piloto de 9 de 18 días: 20 % con días alternos. |
+| **Usuario** | Quién lo usaría | Planeadores y autoridad (CU3) y financiadores (CU8), igual que antes; ahora con una tabla de días con medida frente al mínimo detectable. |
+| **Frecuencia** | Usos esperados al año | 1–3, igual que antes. |
+| **Alternativa** | Ninguna · peor · igual · mejor | Mejor que días seguidos (32–47 %, Tabla 9), con ≤ 40 días hábiles; igual de caro en coordinación. |
+| **Decisión que cambia** | Qué haría distinto el usuario | Para un piloto de ~30 días hábiles en feb–may: días alternos (si el arrastre es ≤ 25 %), o tríos de semanas con lavado (si puede ser mayor). Con menos de ~24 días con medida o en nov–dic, no esperar menos de 20–30 %. Sortear cada año de forma independiente. |
+| **Costo de llevarlo a producto** | Días de desarrollo y costo de operación | ~3–4 días (2–3 de antes, más el lavado y los tríos en el placebo de la ficha). Sin costo de operación. |
+| **Veredicto** | Adoptar · seguir con condiciones · descartar | **Seguir con condiciones**, con más confianza en el rango y la combinación de años, y la misma limitación: no baja de ~20 % en una temporada con arrastre del 50 %. |
+
+### Lo que sigue sin probar
+
+- Una medida localizada (contraste entre zonas) y la inyección del satélite en sus columnas.
+- Otros patrones de lavado (por ejemplo, ciclos de 4 semanas con dos de control) y un perfil de arrastre medido de una medida real.
+- Tamaños de piloto con ventanas contiguas en nov–dic más largas de 28 días: no existen en los datos.
+- Las cifras de la tabla de planeador usan 1,500 asignaciones por ventana y 3 ventanas por temporada: dan ±2 puntos.
+
 ## Reproducir
 
-Desde la raíz del repo, con `data/{raw,interim,processed}` disponibles:
+Desde la raíz del repo, con `data/{raw,interim,processed}` disponibles. Las pruebas de esta sección (después de `daily_sums.py`):
+
+```bash
+for t in calibration carry fewer years; do
+  uv run python notebooks/exploraciones/switchback/confidence.py OUT/sums OUT/conf $t   # 2–10 min cada una
+done
+uv run python notebooks/exploraciones/switchback/summarize_confidence.py OUT/conf
+```
+
+Las de la primera parte:
 
 ```bash
 uv run python notebooks/exploraciones/switchback/daily_sums.py OUT/sums                 # ~2 min: sumas diarias de E7 y satélite
