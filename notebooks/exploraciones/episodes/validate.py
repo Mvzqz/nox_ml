@@ -205,11 +205,11 @@ def diagnose(season: str, row: dict) -> dict:
         null = result["null"][name]
         out |= {name: value, f"{name}_lo": null["lo"], f"{name}_hi": null["hi"]}
     n_null = min(result["null"][k]["n"] for k in ("concentration", "weather", "emission"))
-    label = result["verdict"] if n_null >= MIN_NULL else "no_evaluable"
+    label = result["detail"]["verdict"] if n_null >= MIN_NULL else "no_evaluable"
     careful, background_up = prudent(result["ratios"], result["null"])
     return out | {
         "verdict": label,
-        "notes": ";".join(result["notes"]),
+        "notes": ";".join(result["detail"]["notes"]),
         "prudent": careful if label != "no_evaluable" else "no_evaluable",
         "background_up": background_up,
         "n_null": n_null,

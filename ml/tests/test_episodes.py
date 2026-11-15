@@ -55,10 +55,52 @@ def diagnose(**factors):
         ({"background": 2.0}, "accumulation", []),
     ],
 )
-def test_the_verdict_names_the_imposed_cause(factors, expected, notes):
+def test_the_detail_names_the_imposed_cause(factors, expected, notes):
+    result = diagnose(**factors)
+
+    assert result["detail"] == {"verdict": expected, "notes": notes}
+
+
+@pytest.mark.parametrize(
+    ("factors", "expected", "notes"),
+    [
+        ({}, "normal", []),
+        ({"weather": 2.0}, "weather_explains", []),
+        ({"weather": 0.5}, "weather_explains", []),
+        ({"weather": 2.0, "emission": 1.5}, "weather_explains_part", []),
+        ({"emission": 1.6}, "weather_does_not_explain", []),
+        ({"emission": 1.6, "background": 2.0}, "weather_does_not_explain", ["background_up"]),
+        ({"background": 2.0}, "normal", ["background_up"]),
+    ],
+)
+def test_the_prudent_verdict_only_says_whether_the_weather_explains_it(factors, expected, notes):
     result = diagnose(**factors)
 
     assert (result["verdict"], result["notes"]) == (expected, notes)
+
+
+NULL = {name: {"lo": 0.7, "hi": 1.4, "n": 500} for name in episodes.RATIOS}
+
+
+def test_a_holiday_with_usual_weather_is_not_blamed_on_the_weather():
+    # 18 Mar 2024: concentration down, weather usual, emission down but inside its (wider) interval
+    null = NULL | {"emission": {"lo": 0.6, "hi": 1.6, "n": 500}}
+    holiday = {"concentration": 0.56, "weather": 0.84, "emission": 0.67, "background": 1.0, "urban": 1.0}
+
+    assert episodes.verdict(holiday, null) == ("unexplained", [])
+    assert episodes.prudent_verdict(holiday, null) == ("weather_does_not_explain", [])
+
+
+def test_the_weather_against_the_concentration_does_not_explain_it():
+    ratios = {"concentration": 1.5, "weather": 0.6, "emission": 2.5, "background": 1.0, "urban": 1.0}
+
+    assert episodes.prudent_verdict(ratios, NULL) == ("weather_does_not_explain", [])
+
+
+def test_a_ratio_without_data_counts_as_usual():
+    ratios = {"concentration": 1.6, "weather": 1.6, "emission": 1.0, "background": float("nan"), "urban": 1.0}
+
+    assert episodes.prudent_verdict(ratios, NULL) == ("weather_explains", [])
 
 
 def test_the_ratios_recover_the_factors_and_the_shares_add_up():
@@ -106,5 +148,6 @@ def test_the_command_writes_the_diagnosis(tmp_path, monkeypatch):
     assert result.exit_code == 0, result.output
     assert asked == [("2023-11-01", "2023-12-31", 5)]
     saved = json.loads((tmp_path / "episodes" / "2023-12-04_2023-12-08.json").read_text())
-    assert saved["verdict"] == "emission" and "verdict: emission" in result.output
+    assert saved["verdict"] == "weather_does_not_explain" and saved["detail"]["verdict"] == "emission"
+    assert "verdict: weather_does_not_explain" in result.output and "detail" in result.output
     assert CliRunner().invoke(cli.app, [*args[:3], "--data", "2023-11-01"]).exit_code == 2

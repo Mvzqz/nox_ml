@@ -103,17 +103,17 @@ Comando nuevo: `nox-ml episode --days INICIO:FIN --data INICIO:FIN`. No ajusta n
 
 Cada cociente tiene un intervalo nulo del 95 % de 500 episodios falsos con los mismos días de la semana (con 90 %, uno de cada diez episodios sin nada especial salía "inusual" por azar). El veredicto: emisión, clima, ambos, acumulación, normal o, si suben a la vez la emisión y el fondo con clima inusual, emisión o acumulación. Cuando suben la emisión y el fondo con clima normal, la parte urbana decide: si también sube, es emisión (con la nota de que el fondo subió); si no, acumulación.
 
-Diciembre de 2023 (entre paréntesis, el intervalo de los días normales):
+Diciembre de 2023, con el código del 15 de noviembre de 2026 (entre paréntesis, el intervalo de los días normales). El veredicto principal es ahora el prudente ([validacion_episodios.md](validacion_episodios.md)): solo dice si el clima explica el episodio; el detalle conserva la lectura anterior.
 
-| Semana | Concentración | Clima | Emisión | Fondo regional | Parte urbana | Veredicto |
-|---|---|---|---|---|---|---|
-| 11–15 dic (estancada) | 1.55 (0.77–1.31) | 2.20 (0.77–1.33) | 0.70 (0.80–1.23) | 1.56 (0.58–1.66) | 0.71 (0.64–1.46) | Clima; la emisión sale en contra |
-| 18–22 dic | 1.36 (0.75–1.34) | 1.02 (0.68–1.76) | 1.34 (0.63–1.28) | 1.78 (0.57–1.73) | 1.65 (0.67–1.47) | Emisión, con el fondo arriba (falso positivo: el tráfico no sube) |
-| 26–29 dic | 0.81 (0.71–1.43) | 0.72 (0.64–1.79) | 1.12 (0.62–1.36) | 0.77 (0.47–1.92) | 1.21 (0.65–1.57) | Normal |
+| Semana | Concentración | Clima | Emisión | Fondo regional | Parte urbana | Veredicto prudente | Detalle |
+|---|---|---|---|---|---|---|---|
+| 11–15 dic (estancada) | 1.75 (0.81–1.21) | 2.34 (0.72–1.38) | 0.75 (0.77–1.22) | 1.87 (0.60–1.61) | 0.82 (0.69–1.39) | El clima lo explica; fondo arriba | Clima; la emisión sale en contra |
+| 18–22 dic | 1.59 (0.81–1.23) | 1.12 (0.70–1.58) | 1.42 (0.70–1.25) | 2.09 (0.60–1.60) | 1.68 (0.68–1.40) | El clima no lo explica; fondo arriba | Emisión, con el fondo arriba (falso positivo: el tráfico no sube) |
+| 26–29 dic | 1.11 (0.78–1.26) | 0.95 (0.65–1.41) | 1.16 (0.78–1.33) | 1.43 (0.48–1.78) | 1.36 (0.62–1.49) | Normal | Normal |
 
 Lectura:
-- La semana estancada es clima, pero la emisión sale baja (0.70): en estancamientos fuertes la normalización sobrecorrige la ventilación, un sesgo ya conocido del estimador. El veredicto lo marca (`emission_against_weather`) en lugar de reportar una baja de emisión. La parte urbana de la columna también baja: con la capa de mezcla baja el NO₂ se concentra en superficie, pero la columna no crece igual.
-- La semana del 18 de diciembre no se explica por el clima de los modelos. Subieron el fondo regional y la parte que agrega la ciudad (+65 %), y el veredicto dice emisión. Pero el tráfico de Infovial de 2018 en esas fechas es el normal: es un **falso positivo**. La parte urbana de la columna también sube cuando el aire se acumula sobre la ciudad, no solo con más emisión, así que no basta para separar emisión de acumulación local. El veredicto debe leerse como "no lo explica la ventilación", no como "hubo más emisión", hasta tener una referencia de actividad.
+- La semana estancada es clima, pero la emisión sale baja (0.75): en estancamientos fuertes la normalización sobrecorrige la ventilación, un sesgo ya conocido del estimador. El veredicto lo marca (`emission_against_weather`) en lugar de reportar una baja de emisión. La parte urbana de la columna también baja: con la capa de mezcla baja el NO₂ se concentra en superficie, pero la columna no crece igual.
+- La semana del 18 de diciembre no se explica por el clima de los modelos. Subieron el fondo regional y la parte que agrega la ciudad (+68 %), y el detalle dice emisión; el veredicto prudente solo dice que el clima no lo explica. Pero el tráfico de Infovial de 2018 en esas fechas es el normal: es un **falso positivo**. La parte urbana de la columna también sube cuando el aire se acumula sobre la ciudad, no solo con más emisión, así que no basta para separar emisión de acumulación local. El veredicto debe leerse como "no lo explica la ventilación", no como "hubo más emisión", hasta tener una referencia de actividad.
 - El veredicto es una pista, no una prueba; para afirmar un cambio de emisión sostenido hace falta un periodo más largo (sección 4).
 
 ## Decisión para la corrida única del sábado
