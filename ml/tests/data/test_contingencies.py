@@ -80,3 +80,38 @@ def test_a_file_without_the_episode_columns_is_refused(tmp_path):
 
     with pytest.raises(ValueError, match="lacks columns"):
         contingencies.read_episodes(path)
+
+
+def write_year(directory, year, rows):
+    path = directory / f"contingencias_ozono_{year}_episodios.csv"
+    lines = [f"{i},{a},,{s},,test" for i, (a, s) in enumerate(rows, 1)]
+    path.write_text(HEADER + "\n".join(lines) + "\n")
+
+
+def test_every_year_in_the_folder_is_read_and_a_year_without_file_is_not_covered(tmp_path):
+    write_year(tmp_path, 2024, [("2024-02-22", "2024-02-25")])
+    write_year(tmp_path, 2025, [("2025-03-10", "2025-03-12"), ("2025-05-01", "2025-05-02")])
+
+    episodes = contingencies.read_all(tmp_path)
+
+    assert len(episodes) == 3 and episodes["activation"].is_monotonic_increasing
+    assert contingencies.covers(tmp_path, "2024-11-01", "2024-12-31")
+    assert contingencies.covers(tmp_path, "2024-11-01", "2025-02-28")
+    assert not contingencies.covers(tmp_path, "2026-11-01", "2026-12-31")
+    assert not contingencies.covers(tmp_path, "2025-11-01", "2026-02-28")
+
+
+def test_a_folder_without_files_has_no_episodes_and_covers_nothing(tmp_path):
+    episodes = contingencies.read_all(tmp_path)
+
+    assert episodes.empty and list(episodes.columns) == ["episode", "activation", "suspension"]
+    assert len(contingencies.active_days(episodes)) == 0
+    assert not contingencies.covers(tmp_path, "2024-01-01", "2024-12-31")
+
+
+def test_episodes_overlapping_across_files_are_refused(tmp_path):
+    write_year(tmp_path, 2024, [("2024-12-28", "2025-01-03")])
+    write_year(tmp_path, 2025, [("2025-01-02", "2025-01-04")])
+
+    with pytest.raises(ValueError, match="overlap"):
+        contingencies.read_all(tmp_path)

@@ -22,7 +22,7 @@ change the analysis can see is that of the placebo (`events.detection_curve`). W
 whether the claim fits. `days_sheet` answers how many business days a measure needs to show a given drop.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -63,6 +63,13 @@ DRIFT_SD = 0.15
 # 0.5/0.5 combination lowers the spread of random days (0.116 to 0.096) but not that of runs (0.164 to
 # 0.163), so the sheet shows it beside E7 instead of combining them
 SATELLITE_COLUMN = "tau_2h"
+# a measure counts as a block (the drift is added) when at least this share of the business days between its
+# first and last day are measure days. A single gap day in a week (4 of 5) keeps it a block; the slow drift
+# that the rule stands for acts over the whole span, not only over the days the measure touched
+BLOCK_SHARE = 0.8
+# the poorly ventilated placebo needs a pool at least this many times the fake days, or its draws repeat
+# the same few days and say nothing
+MIN_POOL_FACTOR = 2
 
 
 def estimator(question: str, configs: Path = CONFIGS) -> Callable[[], Model]:
@@ -82,6 +89,50 @@ def verdict(ratio: float, placebo_lo: float, placebo_hi: float) -> str:
     return "increase" if ratio > placebo_hi else "undetectable"
 
 
+def change_range(ratio: float, placebo_lo: float, placebo_hi: float) -> tuple[float, float]:
+    """The change (ratio - 1) over the placebo range: it contains 0 exactly when `verdict` is undetectable."""
+    return ratio / placebo_hi - 1, ratio / placebo_lo - 1
+
+
+def stagnation_check(
+    inputs: Inputs,
+    make_model: Callable[[], Model],
+    groups: events.Groups,
+    ratio: float,
+    contiguous: bool,
+    config: Placebo,
+    power: float,
+) -> dict[str, Any]:
+    """Whether the measure days are more stagnant than the normal ones (median ``stagnation`` of
+    `events._daily`) and, if so, the placebo of fake events drawn only from the poorly ventilated normal days
+    (`events.poorly_ventilated_pool`): its range for `ratio` and verdict. ``status``: ``not_needed`` (the
+    measure days are not more stagnant), ``too_few`` (the pool has fewer than `MIN_POOL_FACTOR` times the
+    measure days) or ``done``. It costs `config.refits` more fits."""
+    daily = events._daily(inputs)
+    event = groups.event.intersection(daily.index)
+    normal = groups.normal.intersection(daily.index)
+    if event.empty or normal.empty:
+        return {"status": "not_needed"}
+    event_median = float(daily.loc[event, "stagnation"].median())
+    normal_median = float(daily.loc[normal, "stagnation"].median())
+    out: dict[str, Any] = {"event_median": event_median, "normal_median": normal_median}
+    if event_median <= normal_median:
+        return out | {"status": "not_needed"}
+    pool = events.poorly_ventilated_pool(daily, groups)
+    k = len(groups.event)
+    if len(pool) < MIN_POOL_FACTOR * k:
+        return out | {"status": "too_few", "n_pool": len(pool)}
+    ratios = events._fake_ratios(inputs, make_model, groups.normal, pool, k, config.refits, config.seed)
+    center, lo, hi, _ = _read_placebo(ratios, contiguous, config.level, power)
+    return out | {
+        "status": "done",
+        "n_pool": len(pool),
+        "center": center,
+        "range": change_range(ratio, lo, hi),
+        "verdict": verdict(ratio, lo, hi),
+    }
+
+
 def measure_result(
     inputs: Inputs,
     make_model: Callable[[], Model],
@@ -91,6 +142,7 @@ def measure_result(
     claim: float | None = None,
     power: float = POWER,
     satellite: pd.Series | None = None,
+    reference_covered: bool = True,
 ) -> dict[str, Any]:
     """The change of emission on `days` over the normal business days (ratio - 1), read for a sheet: its
     range (the ratio over the spread of fake events of as many days, the honest uncertainty: the intervals of
@@ -101,29 +153,39 @@ def measure_result(
 
     - ``placebo``: scattered days (a few contingency days), fake events of as many days drawn at random from
       the normal days;
-    - ``drift``: consecutive business days (a measure that runs for weeks): the same fake events, plus the
-      slow drift of the season (`DRIFT_SD`) that days drawn at random average out;
+    - ``drift``: a block of business days (a measure that runs for weeks, with at most 20 % of the business
+      days between its first and last day missing: `BLOCK_SHARE`): the same fake events, plus the slow drift
+      of the season (`DRIFT_SD`) that days drawn at random average out;
     - ``extrapolated``: a measure as long as the reference or more (months against weeks), where fake events
       of its length cannot be drawn. The day-to-day variation of the season (`events.detection_curve` on
       short fake events) gives a log-normal spread with sd ``cv sqrt(1/k + 1/n)`` for k measure days and n
       normal ones, the rule the detection curve follows, plus the drift.
 
     With the `satellite` daily emission (`satellite_daily`), ``satellite`` holds the same reading of it on the
-    same days (`satellite_result`), a second opinion independent of the stations and the transport model."""
+    same days (`satellite_result`), a second opinion independent of the stations (it shares with them the wind
+    and the mixing layer after 2024).
+
+    ``range`` is the ratio over the placebo's range: the fake events are this same estimator without change,
+    so their center is its bias and applies to the real ratio too; the verdict is ``undetectable`` exactly
+    when the range contains 0. ``stagnation`` checks the measure days against the poorly ventilated normal
+    days (`stagnation_check`). `reference_covered` says whether the contingency files cover the season."""
     groups = events.split_days(inputs, days, days.union(excluded))
     if groups.event.empty:
         raise ValueError("no day of the measure is a business day with data")
     k, n = len(groups.event), len(groups.normal)
     ratio, _ = events._fit_ratio(inputs.on_days(groups.event.union(groups.normal)), make_model, groups.event)
     business = groups.normal.union(groups.event)
-    within = business[(business > groups.event.min()) & (business < groups.event.max())]
-    contiguous = k > 1 and not within.isin(groups.normal).any()
+    span = business.union(groups.left_out)
+    span = span[(span >= groups.event.min()) & (span <= groups.event.max())]
+    contiguous = k > 1 and k >= BLOCK_SHARE * len(span)
+    stagnation: dict[str, Any] = {"status": "not_applicable"}
     if k < n - 1:
         method = "drift" if contiguous else "placebo"
         ratios = events._fake_ratios(
             inputs, make_model, groups.normal, groups.normal, k, config.refits, config.seed
         )
         center, lo, hi, detectable = _read_placebo(ratios, contiguous, config.level, power)
+        stagnation = stagnation_check(inputs, make_model, groups, ratio, contiguous, config, power)
     else:
         method = "extrapolated"
         short = [c for c in (3, 5, 9) if c < n // 2] or [1]
@@ -136,15 +198,19 @@ def measure_result(
         "n_days": k,
         "days": {"event": events.day_list(groups.event), "n_normal": n},
         "change": ratio - 1,
-        "range": (ratio * center / hi - 1, ratio * center / lo - 1),
+        "range": change_range(ratio, lo, hi),
         "placebo": {"center": center, "lo": lo, "hi": hi},
         "detectable_drop": detectable,
         "verdict": verdict(ratio, lo, hi),  # the extrapolated spread is centered on 1
+        "stagnation": stagnation,
+        "reference_covered": reference_covered,
         "claim": None,
         "satellite": None
         if satellite is None
         else satellite_result(satellite, groups.event, groups.normal, method != "placebo", config, power),
     }
+    if stagnation["status"] == "done":
+        stagnation["survives"] = stagnation["verdict"] == out["verdict"]
     if claim is not None:
         low, high = out["range"]
         out["claim"] = {"change": claim, "fits": bool(low <= claim <= high)}
@@ -255,15 +321,15 @@ def satellite_result(
         for i in range(config.n):
             fake = rng.permutation(n) < k
             ratios[i] = base[fake].mean() / base[~fake].mean()
-        center, lo, hi, detectable = _read_placebo(ratios, contiguous, config.level, power)
+        _, lo, hi, detectable = _read_placebo(ratios, contiguous, config.level, power)
     else:
         cv = float(np.std(np.log(base / base.mean()), ddof=1))
-        center, lo, hi, detectable = _extrapolate(cv, k, n, config.level, power)
+        _, lo, hi, detectable = _extrapolate(cv, k, n, config.level, power)
     return {
         "n_days": k,
         "n_normal": n,
         "change": ratio - 1,
-        "range": (ratio * center / hi - 1, ratio * center / lo - 1),
+        "range": change_range(ratio, lo, hi),
         "detectable_drop": detectable,
         "verdict": verdict(ratio, lo, hi),
     }
@@ -351,9 +417,14 @@ def season_inputs(data_dir: Path, start: str, end: str, sources: Sources = DEFAU
     return load_inputs(data_dir, start, end, (12, 17), station_sources(sources))
 
 
+def reference_covered(data_dir: Path, start: str, end: str) -> bool:
+    """Whether the contingency files cover every year of the window (`contingencies.covers`)."""
+    return contingencies.covers(data_dir / "raw" / contingencies.EPISODES_DIR, start, end)
+
+
 def reference_exclusions(data_dir: Path, start: str, end: str, days: pd.DatetimeIndex) -> pd.DatetimeIndex:
     """Days that are neither the event nor a normal reference: contingencies and atypical periods."""
-    episodes = contingencies.read_episodes(data_dir / "raw" / contingencies.EPISODES_FILE)
+    episodes = contingencies.read_all(data_dir / "raw" / contingencies.EPISODES_DIR)
     return contingencies.active_days(episodes).union(calendar.atypical_days(start, end)).difference(days)
 
 
@@ -370,14 +441,63 @@ def pct(x: float) -> str:
     return f"{x:+.0%}".replace("+-", "−").replace("-", "−")
 
 
-def render_measure(result: dict[str, Any], title: str, period: tuple[str, str]) -> str:
+def covered_text(covered: bool) -> str:
+    if covered:
+        return "sin contingencias, fin de año ni Semana Santa"
+    return (
+        "sin fin de año ni Semana Santa; **las contingencias del periodo no están cargadas**: pueden quedar "
+        "días de contingencia en la referencia"
+    )
+
+
+def outside_lines(outside: Sequence[str]) -> list[str]:
+    if not outside:
+        return []
+    return [
+        "",
+        f"**Advertencia:** {len(outside)} días de la medida caen fuera de todas las ventanas de datos y no "
+        f"se evaluaron: {', '.join(outside)}.",
+    ]
+
+
+def stagnation_lines(stagnation: dict[str, Any] | None) -> list[str]:
+    """The note or warning under the table when the measure days are more stagnant than the normal ones."""
+    if stagnation is None:
+        return []
+    status = stagnation["status"]
+    if status == "too_few":
+        return [
+            "",
+            "Nota: los días de la medida tienen peor ventilación que los normales, pero hay muy pocos días "
+            f"normales igual de estancados ({stagnation['n_pool']}) para repetir el análisis con ellos.",
+        ]
+    if status != "done":
+        return []
+    if stagnation["survives"]:
+        return [
+            "",
+            "Los días de la medida tienen peor ventilación que los normales; con días falsos igual de "
+            "estancados el veredicto no cambia.",
+        ]
+    low, high = stagnation["range"]
+    return [
+        "",
+        "**Advertencia:** los días de la medida tienen peor ventilación que los normales y, al compararlos "
+        "solo con días normales igual de estancados, el veredicto cambia (rango "
+        f"{pct(low)} a {pct(high)}). El resultado puede deberse al estancamiento y no a la emisión.",
+    ]
+
+
+def render_measure(
+    result: dict[str, Any], title: str, period: tuple[str, str], outside: Sequence[str] = ()
+) -> str:
     low, high = result["range"]
     lines = [
         f"# {title}",
         "",
         f"Días evaluados: {result['n_days']} días hábiles, del {result['days']['event'][0]} al "
         f"{result['days']['event'][-1]}. Referencia: {result['days']['n_normal']} días hábiles normales del "
-        f"periodo {period[0]} a {period[1]} (sin contingencias, fin de año ni Semana Santa).",
+        f"periodo {period[0]} a {period[1]} ({covered_text(result.get('reference_covered', True))}).",
         "",
         VERDICT_TEXT[result["verdict"]],
         "",
@@ -394,6 +514,8 @@ def render_measure(result: dict[str, Any], title: str, period: tuple[str, str]) 
             f"| Cambio anunciado | {pct(result['claim']['change'])}: **{fits}** en el rango compatible |"
         )
     lines += satellite_lines(result.get("satellite"), result)
+    lines += stagnation_lines(result.get("stagnation"))
+    lines += outside_lines(outside)
     share = result["atypical_share"]
     if share >= MOSTLY_ATYPICAL:
         lines += [
@@ -498,7 +620,11 @@ def render_days(
 
 
 def render_seasons(
-    results: list[dict[str, Any]], combined: dict[str, Any], title: str, periods: list[tuple[str, str]]
+    results: list[dict[str, Any]],
+    combined: dict[str, Any],
+    title: str,
+    periods: list[tuple[str, str]],
+    outside: Sequence[str] = (),
 ) -> str:
     low, high = combined["range"]
     lines = [
@@ -525,6 +651,12 @@ def render_seasons(
         lines += satellite_lines(combine_seasons(satellites), combined)
     else:
         lines += ["", "Segunda opinión del satélite: falta en alguna temporada; no se combina."]
+    for (start, end), r in zip(periods, results, strict=True):
+        if not r.get("reference_covered", True):
+            lines += ["", f"**Advertencia:** {start} a {end}: {covered_text(False)}."]
+        if r.get("stagnation", {}).get("status") == "done" and not r["stagnation"]["survives"]:
+            lines += stagnation_lines(r["stagnation"])
+    lines += outside_lines(outside)
     lines += ["", "| Temporada | Días | Cambio | Rango | Peso |", "|---|---|---|---|---|"]
     for (start, end), r, w in zip(periods, results, combined["weights"], strict=True):
         span = f"{pct(r['range'][0])} a {pct(r['range'][1])}"
