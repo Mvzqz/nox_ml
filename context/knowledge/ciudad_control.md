@@ -2,94 +2,117 @@
 
 Fecha: 2026-11-15. Pregunta: la deriva lenta de la ZMVM (semanas enteras ±15 % arriba o abajo, que ven E7 y el satélite solo; [deriva.md](deriva.md)) ¿la comparte otra ciudad? Si sí, una diferencia en diferencias (ZMVM con medida frente a una ciudad de control) la cancela y baja el límite de detección sin datos de tráfico. Rama `explore/control-city`.
 
-**Alcance real:** una temporada (nov–dic 2024) y tres ciudades en el mismo granulo de TEMPO que la ZMVM (Monterrey, Puebla y Toluca como contraste). La descarga de feb–may 2025 se cortó al quinto día (la sesión se cerró por falta de memoria de la máquina) y Guadalajara, que cae en otro granulo, no se descargó. El criterio pedía dos temporadas: **esto es un indicio, no un veredicto.**
+**Resultado: no.** Puebla comparte la deriva de la ZMVM en nov–dic 2024 (r semanal 0.95), pero no en feb–may 2025 (0.19) ni en nov–dic 2025 (0.24–0.43). En una temporada de tres la diferencia deriva menos; en las otras dos, igual o más, y restar Puebla agrega su propio ruido. Se descarta como forma de bajar el límite de detección.
+
+**Alcance:** Puebla en tres temporadas (nov–dic 2024, feb–may 2025, nov–dic 2025); Monterrey solo en nov–dic 2024 y Toluca, como contraste, en nov–dic 2024 y feb–may 2025. Guadalajara no se descargó (cae en otro granulo de TEMPO).
 
 ## Método
 
-- **Emisión diaria con TEMPO solo**, con la misma función `divergence.scan_emission` de `nox-ml flux-divergence` (cuadrícula de 5 km, vida media de 2 h, fondo = percentil 10 del escaneo). Cambia solo la entrada, igual para todas las ciudades: una caja del tamaño del dominio de la ZMVM (0.54° × 0.52°) alrededor de cada centro, el viento de ERA5 a 10 m en el centro (Open-Meteo, hora más cercana) y un cociente NO₂/NOₓ constante (escala todos los días por igual y se cancela en logaritmo).
-- **La ZMVM se calcula dos veces:** con ese mismo método (serie "ZMVM, mismo método") y con la serie oficial de `results/runs/flux_divergence` (viento de aeropuertos y cociente de las estaciones). La réplica correlaciona 0.87 día a día con la oficial; el viento de ERA5 es 1.6 veces el de los aeropuertos.
-- **Días normales:** hábiles, sin periodo atípico (`calendar.atypical_days`); en la ZMVM, además, sin contingencia (`products.reference_exclusions`). Anomalía = logaritmo de la emisión menos la media de la temporada.
-- **Deriva**, con las dos definiciones de [deriva.md](deriva.md): semanal (dispersión de las medias de semanas con ≥ 3 días menos la del ruido diario) y de bloques (dispersión de 9 días seguidos contra el resto, menos la de 9 días al azar). Para la diferencia ZMVM − control se usan los días en que las dos tienen dato.
-- **Mínimo detectable de una medida de una temporada** (90 %, potencia 80 %, la regla de `products`): 1 − exp(−2.49 · √(deriva² + 2·cv²/k)), con k los días normales de la temporada y cv la variación diaria. En la diferencia, cv es el de la serie diferencia: incluye el ruido de la ciudad de control.
+- **Emisión diaria con TEMPO solo**, con la misma función `divergence.scan_emission` de `nox-ml flux-divergence` (cuadrícula de 5 km, vida media de 2 h, fondo = percentil 10 del escaneo). Solo cambia la entrada, que es igual para todas las ciudades: una caja del tamaño del dominio de la ZMVM (0.54° × 0.52°) alrededor de cada centro, el viento de ERA5 a 10 m en el centro (Open-Meteo, hora más cercana) y un cociente NO₂/NOₓ constante (escala todos los días por igual y se cancela en logaritmo).
+- **La ZMVM se calcula dos veces:** con ese mismo método ("mismo método") y con la serie oficial de `results/runs/flux_divergence` (viento de aeropuertos y cociente de las estaciones). En nov–dic 2024 la réplica correlaciona 0.87 día a día con la oficial; el viento de ERA5 es 1.6 veces el de los aeropuertos.
+- **Días normales:** hábiles y sin periodo atípico (`calendar.atypical_days`). En la ZMVM, además, sin contingencia (`products.reference_exclusions`). Anomalía = logaritmo de la emisión menos la media de la temporada.
+- **Deriva**, con las dos definiciones de [deriva.md](deriva.md):
+  - semanal: la dispersión de las medias de las semanas con ≥ 3 días, menos la que pone el ruido diario;
+  - de bloques: la dispersión de 9 días seguidos contra el resto de la temporada, menos la de 9 días al azar.
 
-## Cobertura y validación fuera de la ZMVM (nov–dic 2024, vida media de 2 h)
+  La diferencia ZMVM − Puebla se calcula en los días en que las dos tienen dato.
+- **Criterio** (ajustado a la escala de bloques): funciona si la deriva de la diferencia baja a la mitad o menos de la de la ZMVM sola en al menos dos temporadas. No funciona si la correlación semanal es < 0.3 o si la diferencia no deriva menos.
 
-| Serie | Días normales | Semanas | Deriva semanal | Deriva 9 días | CV diario | Domingo ÷ hábil | Placebo 9 días |
+## Validación del método fuera de la ZMVM
+
+| Temporada | Ciudad | Días normales | Domingo ÷ hábil | Placebo 9 días | Deriva 9 días |
+|---|---|---|---|---|---|
+| nov–dic 2024 | Puebla | 25 | 0.62 | 1.00 | 0.27 |
+| nov–dic 2024 | Monterrey | 17 | 0.63 | 1.01 | — (4 semanas) |
+| nov–dic 2024 | Toluca | 20 | 0.57 | 1.00 | 0.25 |
+| feb–may 2025 | Puebla | 54 | 0.71 | 1.00 | 0.11 |
+| feb–may 2025 | Toluca | 37 | 0.74 | 1.00 | 0.00 |
+| nov–dic 2025 | Puebla | 25 | 0.63 | 1.00 | 0.11 |
+
+En las tres ciudades el método da el placebo en 1.00 y un domingo ÷ hábil de 0.57–0.74, el rango de la ZMVM (0.52–0.62). Monterrey tiene poca cobertura en invierno por las nubes: 17 de 37 días hábiles.
+
+## La prueba decisiva: Puebla como control, tres temporadas
+
+| Temporada | Serie ZMVM | r semanal | r diario | Días pareados | Deriva semanal: ZMVM → diferencia | Deriva 9 días: ZMVM → diferencia | ¿Pasa? |
 |---|---|---|---|---|---|---|---|
-| ZMVM oficial | 26 | 6 | 0.15 | 0.18 | 0.17 | 0.60 | 1.00 |
-| ZMVM, mismo método | 26 | 6 | 0.16 | 0.24 | 0.22 | 0.52 | 1.00 |
-| Monterrey | 17 | 4 | 0.00 | — | 0.37 | 0.63 | 1.01 |
-| Puebla | 25 | 6 | 0.28 | 0.27 | 0.22 | 0.62 | 1.00 |
-| Toluca | 20 | 4 | 0.11 | 0.25 | 0.29 | 0.57 | 1.00 |
+| nov–dic 2024 | mismo método | **0.95** | 0.78 | 25 | 0.18 → 0.03 | 0.25 → **0.00** | sí |
+| nov–dic 2024 | oficial | **0.96** | 0.78 | 25 | 0.15 → 0.11 | 0.16 → **0.09** | justo |
+| feb–may 2025 | mismo método | 0.19 | 0.18 | 49 | 0.13 → 0.14 | 0.08 → 0.16 | no |
+| feb–may 2025 | oficial | 0.20 | 0.29 | 43 | 0.13 → 0.12 | 0.09 → 0.08 | no |
+| nov–dic 2025 | mismo método | 0.43 | 0.24 | 24 | 0.17 → 0.15 | 0.22 → 0.16 | no |
+| nov–dic 2025 | oficial | 0.24 | 0.18 | 24 | 0.00 → 0.09 | 0.02 → 0.05 | no |
 
-- **El método funciona fuera de la ZMVM:** placebo en 1.00–1.01 y domingo de 0.57–0.63 en las tres ciudades, el mismo rango que la ZMVM (0.52–0.60) y que la literatura.
-- **Monterrey tiene poca cobertura en invierno** (17 días normales de 37 hábiles, por nubes): no alcanza para la deriva de bloques. Puebla tiene la misma cobertura que la ZMVM.
+(Las derivas de la ZMVM en esta tabla son las de los días pareados.)
 
-## La prueba decisiva: ¿la diferencia deriva menos?
+- **Solo nov–dic 2024 pasa.** En feb–may 2025 la correlación semanal (0.19–0.20) queda bajo el umbral de 0.3 y la diferencia no deriva menos. En nov–dic 2025 la deriva de la serie oficial ya es casi nula (0.02–0.05, como en [deriva.md](deriva.md)) y restar Puebla la sube.
+- **No es aire de la ZMVM llegando a Puebla:** en nov–dic 2024 ninguna tarde tuvo viento en Puebla desde la ZMVM (rumbo 299° ± 45°), y en feb–may 2025 solo una (`transport_check.py`). En Toluca, que sí recibe aire de la ZMVM (6 de 20 días en nov–dic 2024), la correlación es menor esos días (0.34 contra 0.82).
+- **Lectura:** en nov–dic 2024 algo regional movió a las dos ciudades juntas (química, capa de mezcla o fondo de un episodio sinóptico). Es la temporada en que E7 y el satélite también coinciden más (0.95, [deriva.md](deriva.md)). Pero no es un rasgo estable: la deriva de la ZMVM es casi toda propia en las otras dos temporadas. Encaja con [deriva.md](deriva.md): no hay un control externo que la quite de forma sistemática.
+- **Monterrey** (solo nov–dic 2024): r semanal 0.52 con el mismo método, r diario 0.11, y la diferencia deriva igual o más (0.16 → 0.19). Tampoco sirve.
 
-| Control | Serie ZMVM | r semanal | r diario | Días pareados | Deriva semanal: ZMVM → diferencia | Deriva 9 días: ZMVM → diferencia | Mínimo detectable de una temporada: ZMVM → diferencia |
-|---|---|---|---|---|---|---|---|
-| Puebla | mismo método | **0.95** | 0.78 | 25 | 0.18 → **0.03** | 0.25 → **0.00** | 35 % → **14 %** |
-| Puebla | oficial | **0.96** | 0.78 | 25 | 0.15 → 0.11 | 0.16 → **0.09** | 32 % → 19 % |
-| Toluca (contraste) | mismo método | 0.95 | 0.79 | 20 | 0.13 → 0.00 | 0.19 → 0.02 | → 14 % |
-| Toluca (contraste) | oficial | 0.86 | 0.77 | 20 | 0.12 → 0.00 | 0.11 → 0.14 | → 14 % |
-| Monterrey | mismo método | 0.52 | 0.11 | 16 | 0.16 → 0.19 | — | → 24 % |
-| Monterrey | oficial | 0.79 | 0.42 | 16 | 0.18 → 0.10 | — | → 19 % |
+## Inyecciones de bajas con diferencia en diferencias
 
-(Las derivas "ZMVM" de esta tabla son las de los días pareados, por eso difieren un poco de la tabla anterior.)
+`inject.py`: en los días pareados, una medida es un bloque de k días seguidos. Se inyecta una baja solo en la ZMVM y se estima con la ZMVM sola (bloque − resto) y con la diferencia (lo mismo sobre ZMVM − Puebla). El rango sale del placebo del mismo estimador: los bloques de la temporada que no se traslapan con el probado. El mínimo detectable "por dispersión" es 1 − exp(−2.49 · σ), con σ la desviación de los bloques sin inyección; es la regla de `products`.
 
-- **Puebla comparte la deriva de la ZMVM:** sus semanas altas y bajas son las mismas (r = 0.95–0.96) y también sus días (0.78). Con el mismo método en las dos ciudades, la diferencia no deriva y el mínimo detectable de una medida de una temporada baja de ~35 % a ~14 %, aun con el ruido de Puebla sumado.
-- **Con la serie oficial de la ZMVM la mejora es menor:** la deriva de bloques baja a la mitad (0.16 → 0.09), la semanal solo de 0.15 a 0.11. Con la vida media de 4 h la diferencia con la serie oficial no mejora (bloques 0.14 → 0.21) y con el mismo método sí (0.27 → 0.00). La cancelación es más limpia cuando las dos ciudades usan el mismo viento y el mismo cociente: parte de lo que se cancela puede ser error común del método (viento de ERA5, química), no solo deriva física.
-- **No es aire de la ZMVM llegando a Puebla:** en nov–dic 2024 ninguna tarde tuvo viento en Puebla desde la ZMVM (rumbo 299° ± 45°; `transport_check.py`). En Toluca, que sí recibe aire de la ZMVM (6 de 20 días), la correlación es menor esos días (0.34 contra 0.82): la señal común no viene del transporte.
-- **Monterrey no comparte la deriva** con el mismo método (r diario 0.11, la diferencia deriva igual o más). Con la serie oficial la correlación semanal es 0.79, pero con solo 4 semanas.
-- **Lectura física (hipótesis):** que una ciudad a 100 km, sin intercambio de aire esos días, suba y baje con la ZMVM y una a 700 km no, apunta a algo regional y sinóptico (química, vida media del NOₓ, capa de mezcla, fondo regional) más que a la actividad de la ZMVM. Encaja con lo que encontró [deriva.md](deriva.md): la afluencia del transporte público no la sigue y la diferencia oriente − poniente de la ZMVM no deriva.
+Dispersión de bloques de 9 días (σ) y mínimo detectable por dispersión, ZMVM sola → diferencia:
 
-**Cuidado con las cifras:** seis semanas por temporada. La deriva estimada con 6 semanas tiene un error del orden de su propio valor; una deriva de 0.00 significa "no se distingue del ruido diario", no "cero". Por eso el criterio pedía dos temporadas.
+| Temporada | Mismo método | Serie oficial |
+|---|---|---|
+| nov–dic 2024 | 0.27 → 0.09 (49 % → 19 %) | 0.19 → 0.13 (37 % → 27 %) |
+| feb–may 2025 | 0.13 → 0.20 (28 % → 40 %) | 0.14 → 0.14 (29 % → 30 %) |
+| nov–dic 2025 | 0.24 → 0.19 (45 % → 38 %) | 0.07 → 0.10 (15 % → 23 %) |
 
-## Frente al criterio fijado
+Las tres temporadas juntas, bloques de 9 días (74 bloques con el mismo método, 68 con la serie oficial):
 
-- **Funciona** si la deriva de la diferencia baja a ≤ la mitad de la de la ZMVM sola en al menos dos temporadas (criterio ajustado a la escala de bloques de 9 días). En nov–dic 2024 Puebla lo cumple con el mismo método (0.25 → 0.00) y justo con la serie oficial (0.16 → 0.09); falta la segunda temporada.
-- **No funciona** si la correlación semanal es < 0.3 o la diferencia no deriva menos: no pasa con Puebla; Monterrey queda en el límite (0.52 con el mismo método, la diferencia no deriva menos).
+| | Falsas alarmas | Detecta −10 / −15 / −20 % | Cobertura del rango de 90 % | Mínimo detectable (80 % de las veces) |
+|---|---|---|---|---|
+| ZMVM sola, mismo método | 38 % | 34 / 49 / 54 % | 62 % | 40 % |
+| Diferencia, mismo método | 32 % | 35 / 53 / 62 % | 68 % | 34 % |
+| ZMVM sola, serie oficial | 51 % | 32 / 43 / 47 % | 49 % | 35 % |
+| Diferencia, serie oficial | 41 % | 32 / 38 / 47 % | 59 % | 29 % |
+
+- **El placebo dentro de la temporada está mal calibrado para los dos estimadores** (falsas alarmas de 32–51 %, cobertura de 49–68 % frente al 90 % nominal). Con 24–54 días pareados, los bloques que no se traslapan son pocos y no recogen toda la deriva. Por eso las fichas suman la deriva aparte (`products.DRIFT_SD`). Las tasas sirven para comparar los dos estimadores entre sí, no como calibración absoluta.
+- **La diferencia mejora poco y solo por nov–dic 2024:** el mínimo detectable con 9 días baja de 40 % a 34 % (mismo método) o de 35 % a 29 % (oficial). Fuera de esa temporada, la dispersión sube o se queda igual.
+- Con bloques de 20 días (solo feb–may 2025 tiene días suficientes), la diferencia empeora con el mismo método (15 % → 32 %) y mejora con la serie oficial (28 % → 19 %): no hay una dirección estable.
 
 ## Valor de cada ciudad por sí misma
 
-- **Puebla–Tlaxcala:** buena cobertura de TEMPO en invierno, domingo y placebo razonables. Es el mejor control y una ciudad sin un sistema de este tipo; su propia deriva es mayor que la de la ZMVM (0.27), así que por sí sola tendría un límite peor (~50 % por temporada).
-- **Monterrey:** el método da un domingo de 0.63 y placebo en 1, pero en invierno solo hay 17 días normales sin nubes; con eso su límite por temporada sería ~23 % (con 4 semanas no se mide su deriva). Para el Hub del Campus Monterrey es un punto de partida barato (satélite + ERA5, sin estaciones), pero conviene probar feb–may, más despejado, y su peso industrial, antes de ofrecerlo (frente F8).
-- **Toluca:** sirve solo de contraste: recibe aire de la ZMVM algunos días.
+- **Puebla–Tlaxcala:** buena cobertura de TEMPO, domingo y placebo razonables. Su deriva de bloques (0.11–0.27) es parecida a la de la ZMVM. El mismo método satelital le daría un límite parecido al de la ZMVM: ~25–50 % por temporada con 9 días seguidos. Es una ciudad sin un sistema de este tipo, pero no un control.
+- **Monterrey:** el método da un domingo de 0.63 y el placebo en 1, pero en invierno solo hay 17 días normales sin nubes. Para el Hub del Campus Monterrey es un punto de partida barato (satélite + ERA5, sin estaciones). Antes de ofrecerlo conviene probar feb–may, más despejado, y el peso de su industria (frente F8).
+- **Toluca:** solo sirve de contraste, porque recibe aire de la ZMVM algunos días.
 
 ## Veredicto
 
 | Criterio | Resultado |
 |---|---|
-| **¿Funciona?** | 2: funciona con condiciones, en una temporada. Puebla comparte la deriva (r semanal 0.95) y la diferencia baja de 0.25 a 0.00 (9 días, mismo método) o de 0.16 a 0.09 (serie oficial). Falta la segunda temporada que pide el criterio |
-| **Evidencia** | nov–dic 2024: mínimo detectable de una medida de una temporada de ~35 % a ~14 % (mismo método) o de 32 % a 19 % (serie oficial), con placebo de Puebla en 1.00 y domingo 0.62 |
-| **Usuario** | Evaluadores de medidas y SEDEMA/CAMe (CU2, CU7, CU8): medidas sostenidas de la ZMVM que no se aplican en Puebla |
-| **Frecuencia** | 1–3 evaluaciones al año (medidas de temporada: programas de verificación, Hoy No Circula, contingencias extendidas), si se valida |
-| **Alternativa** | Mejor que lo que existe: la deriva no la quitaba ninguna corrección (clima, columna lejana, afluencia, zonas) y no requiere datos de tráfico |
-| **Decisión que cambia** | Medidas de 15–20 % por temporada pasan a ser evaluables (hoy solo ≥ 30 %); una medida que cubra también Puebla (p. ej., megalopolitana de la CAMe) no se puede evaluar así |
-| **Costo de llevarlo a producto** | 3–5 días: generalizar el dominio de `divergence` y la descarga de `tempo` a una caja por ciudad, agregar el control a las fichas y validar con inyecciones. Operación: ~25 GB de descarga por temporada (granulos completos, recorte local), sin costo de cómputo relevante |
-| **Veredicto** | **Seguir con condiciones:** (1) repetir en feb–may 2025 y nov–dic 2025 con Puebla (y Guadalajara como control lejano); (2) calibrar con inyecciones de bloques de 9 y 20 días en la ZMVM con la diferencia; (3) usar la serie oficial y el mismo método y adoptar solo si las dos bajan la deriva a la mitad |
+| **¿Funciona?** | 1: no funciona. Pasa en 1 de 3 temporadas (nov–dic 2024: r semanal 0.95, deriva de 9 días 0.25 → 0.00); en feb–may 2025 r = 0.19 y en nov–dic 2025 la diferencia no deriva menos |
+| **Evidencia** | Deriva de bloques de 9 días, ZMVM → ZMVM − Puebla: 0.25 → 0.00, 0.08 → 0.16 y 0.22 → 0.16 (mismo método); con inyecciones en las tres temporadas, el mínimo detectable con 9 días baja solo de 40 % a 34 % (de 35 % a 29 % con la serie oficial), todo por nov–dic 2024 |
+| **Usuario** | Habría sido el evaluador de medidas (CU2, CU7, CU8) |
+| **Frecuencia** | — |
+| **Alternativa** | Igual que lo que existe: la ZMVM sola con la deriva sumada (`products.DRIFT_SD`) |
+| **Decisión que cambia** | Ninguna. Confirma que la deriva es sobre todo propia de la ZMVM (emisión real o meteorología local), no regional, y que sin un dato de actividad no se baja el límite de ~30 % por temporada |
+| **Costo de llevarlo a producto** | No aplica (habrían sido 3–5 días y ~25 GB de descarga por temporada) |
+| **Veredicto** | **Descartar** como control. Queda la herramienta de divergencia de flujo para cualquier caja (`flux.py`), útil para el frente de Monterrey y para otras ciudades con TEMPO |
 
 ## Reproducir
 
-Scripts en `notebooks/exploraciones/control_city/` (corren con `.venv/bin/python`, desde la raíz):
+Scripts en `notebooks/exploraciones/control_city/`, desde la raíz, con `.venv/bin/python` (todo con `nice -n 15`):
 
 ```sh
-nice -n 15 .venv/bin/python notebooks/exploraciones/control_city/download_tempo.py 2024-11-01 2024-12-31 monterrey puebla toluca --workers 1
-.venv/bin/python notebooks/exploraciones/control_city/download_wind.py
-nice -n 15 .venv/bin/python notebooks/exploraciones/control_city/flux.py 2024-11-01 2024-12-31 zmvm monterrey puebla toluca
-.venv/bin/python notebooks/exploraciones/control_city/compare.py 2024-11-01 2024-12-31 monterrey puebla toluca           # vida media de 2 h
-.venv/bin/python notebooks/exploraciones/control_city/compare.py 2024-11-01 2024-12-31 monterrey puebla toluca --column tau_4h
-.venv/bin/python notebooks/exploraciones/control_city/summary.py
+python notebooks/exploraciones/control_city/download_tempo.py 2024-11-01 2024-12-31 monterrey puebla toluca --workers 1
+python notebooks/exploraciones/control_city/download_tempo.py 2025-02-15 2025-05-31 puebla toluca --workers 1
+python notebooks/exploraciones/control_city/download_tempo.py 2025-11-01 2025-12-31 puebla --workers 1
+python notebooks/exploraciones/control_city/download_wind.py
+python notebooks/exploraciones/control_city/flux.py 2024-11-01 2024-12-31 zmvm monterrey puebla toluca      # y 2025-02-15 2025-05-31, 2025-11-01 2025-12-31
+python notebooks/exploraciones/control_city/compare.py 2024-11-01 2024-12-31 monterrey puebla toluca        # una por temporada; --column tau_4h
+python notebooks/exploraciones/control_city/summary.py
+python notebooks/exploraciones/control_city/inject.py puebla 2024-11-01:2024-12-31 2025-02-15:2025-05-31 2025-11-01:2025-12-31 [--zmvm zmvm_official]
 cd notebooks/exploraciones/control_city && ../../../.venv/bin/python transport_check.py puebla 2024-11-01:2024-12-31
 ```
 
-Las series diarias y las comparaciones quedan en `notebooks/exploraciones/control_city/out/`. Datos nuevos (anotados en `data/raw/MANIFEST.md`): `data/raw/tempo_{monterrey,puebla,toluca}/` y `data/raw/era5_openmeteo_cities/`. La descarga de 2024 usó una primera versión propia del recorte (sin `latitude_bounds`); la actual reutiliza `nox_ml.data.tempo` (`list_granules`, `download_granule`, `subset_granule`) con la caja de cada ciudad y descarga cada granulo una sola vez para todas las ciudades que cubre.
+Las series diarias, las comparaciones y las inyecciones quedan en `notebooks/exploraciones/control_city/out/`. Los datos nuevos están anotados en `data/raw/MANIFEST.md`: `data/raw/tempo_{monterrey,puebla,toluca}/` y `data/raw/era5_openmeteo_cities/`. La descarga reutiliza `nox_ml.data.tempo` (`list_granules`, `download_granule`, `subset_granule`) con la caja de cada ciudad, y baja cada granulo una sola vez para todas las ciudades que cubre. Los recortes de nov–dic 2024 salieron de una primera versión propia, sin `latitude_bounds`.
 
 ## Lo que faltó
 
-- **Segunda y tercera temporada** (feb–may 2025: 5 días descargados de 106; nov–dic 2025). Es lo que decide el criterio.
-- **Guadalajara** (granulo G07, otra descarga): el control lejano que más limpio separaría una deriva regional de una sinóptica.
-- **Comparación con E7:** no hay serie diaria de E7 guardada en `results/runs/`; con la correlación E7–satélite de 0.95 en esta temporada ([deriva.md](deriva.md)), se espera lo mismo.
-- **Inyecciones** de bajas en la ZMVM con la diferencia, para calibrar falsas alarmas y cobertura como en la segunda opinión del satélite ([fichas.md](fichas.md)).
-- Probar el viento a 100 m y si la cancelación sobrevive con el viento de aeropuerto también en Puebla (aeropuerto MMPB, IEM).
+- **Guadalajara** (granulo G07), el control lejano. Con Puebla, una ciudad vecina con el mismo clima sinóptico, la correlación ya falla en 2 de 3 temporadas. Es poco probable que una ciudad lejana correlacione más.
+- **Comparación con E7:** no hay serie diaria de E7 guardada en `results/runs/`.
+- **feb–may 2026** y el viento de aeropuerto también en Puebla (MMPB, IEM): no cambiarían el veredicto con 2 de 3 temporadas en contra.

@@ -1,0 +1,107 @@
+{
+  "start": "2025-02-15",
+  "end": "2025-05-31",
+  "column": "tau_4h",
+  "cities": {
+    "zmvm_official": {
+      "n_days": 46,
+      "n_weeks": 10,
+      "drift": 0.1277227238659836,
+      "block_drift": 0.11487055777307992,
+      "cv": 0.24279633311844942,
+      "sunday": 0.6145798657925899,
+      "saturday": 0.9185128929799675,
+      "placebo_9d": 0.995452641547877,
+      "placebo_9d_mdc": 0.2402045071510195,
+      "mdc_season": 0.2877572716642677
+    },
+    "zmvm": {
+      "n_days": 51,
+      "n_weeks": 11,
+      "drift": 0.21123229809625302,
+      "block_drift": 0.16440009768006056,
+      "cv": 0.3602759317422645,
+      "sunday": 0.5515659752429027,
+      "saturday": 0.9220632518616398,
+      "placebo_9d": 0.9862314900526845,
+      "placebo_9d_mdc": 0.30815637294241727,
+      "mdc_season": 0.4255680663455279
+    },
+    "puebla": {
+      "n_days": 54,
+      "n_weeks": 12,
+      "drift": 0.07938109975985709,
+      "block_drift": 0.12221111234138272,
+      "cv": 0.2585806087917527,
+      "sunday": 0.7094893619832594,
+      "saturday": 0.9663630876499748,
+      "placebo_9d": 0.9956238838013501,
+      "placebo_9d_mdc": 0.2221954137894141,
+      "r_weekly_zmvm": -0.03529729946954081,
+      "diff_zmvm": {
+        "drift": 0.22403537956557684,
+        "block_drift": 0.26639806903285906,
+        "n_paired_days": 48,
+        "ref_block_drift_paired": 0.17439725030099437,
+        "ref_weekly_drift_paired": 0.21463255277260831,
+        "weekly_drift_paired": 0.24289473948461965,
+        "n_weeks": 11,
+        "r_daily": -0.18581003291616488,
+        "cv_paired": 0.48144349644610196,
+        "mdc_season": 0.45414510569337097
+      },
+      "r_weekly_zmvm_official": 0.32506509737415684,
+      "diff_zmvm_official": {
+        "drift": 0.06426574826082637,
+        "block_drift": 0.12897082200497761,
+        "n_paired_days": 43,
+        "ref_block_drift_paired": 0.08243412697820918,
+        "ref_weekly_drift_paired": 0.1461130401498282,
+        "weekly_drift_paired": 0.10962525468991169,
+        "n_weeks": 10,
+        "r_daily": 0.3229442451947698,
+        "cv_paired": 0.2900302252768392,
+        "mdc_season": 0.1929023931609114
+      },
+      "mdc_season": 0.20933642047056178
+    },
+    "toluca": {
+      "n_days": 37,
+      "n_weeks": 9,
+      "drift": 0.1893548612701889,
+      "block_drift": 0.06572776846282748,
+      "cv": 0.33435472902245655,
+      "sunday": 0.7024422720223623,
+      "saturday": 0.8364536441213001,
+      "placebo_9d": 0.9949178892377271,
+      "placebo_9d_mdc": 0.29440385733780017,
+      "r_weekly_zmvm": 0.20716430942456257,
+      "diff_zmvm": {
+        "drift": 0.2297157177001699,
+        "block_drift": 0.25299264154489515,
+        "n_paired_days": 34,
+        "ref_block_drift_paired": 0.09687612375994074,
+        "ref_weekly_drift_paired": 0.1820091512920034,
+        "weekly_drift_paired": 0.23408743767377097,
+        "n_weeks": 9,
+        "r_daily": -0.14420702744590586,
+        "cv_paired": 0.5049710764592823,
+        "mdc_season": 0.46364323110718075
+      },
+      "r_weekly_zmvm_official": 0.49470761355800663,
+      "diff_zmvm_official": {
+        "drift": 0.0747158811120547,
+        "block_drift": 0.16803203477843537,
+        "n_paired_days": 34,
+        "ref_block_drift_paired": 0.0,
+        "ref_weekly_drift_paired": 0.16538999723473496,
+        "weekly_drift_paired": 0.17051880564496735,
+        "n_weeks": 9,
+        "r_daily": 0.34929633951476846,
+        "cv_paired": 0.3655336483470567,
+        "mdc_season": 0.22792085764361003
+      },
+      "mdc_season": 0.3927291186157871
+    }
+  }
+}

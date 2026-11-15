@@ -13,7 +13,7 @@ Se migra por partes desde la carpeta de investigación (`reports/RESUMEN.md`, `r
 - [`controles_de_verdad.md`](controles_de_verdad.md): controles con verdad conocida: el confinamiento de 2020 frente a 2019 (cambio real) y gemelos con emisión conocida sobre los receptores reales (origen del sesgo del domingo).
 - [`sesgo_domingo.md`](sesgo_domingo.md): el sesgo del domingo: qué lo explica (fin de año, transporte) y qué no (el método, el peso de TEMPO, la ponderación de Infovial).
 - [`deriva.md`](deriva.md): la deriva lenta de E7 dentro de cada temporada: el satélite ve la misma, qué la acompaña y por qué la columna lejana no sirve para corregirla.
-- [`ciudad_control.md`](ciudad_control.md): frente F9, Puebla como ciudad de control con el satélite: comparte la deriva de la ZMVM en nov–dic 2024 y la diferencia casi no deriva; falta una segunda temporada.
+- [`ciudad_control.md`](ciudad_control.md): frente F9, Puebla como ciudad de control con el satélite: comparte la deriva de la ZMVM solo en 1 de 3 temporadas; se descarta.
 - [`fichas.md`](fichas.md): las fichas (evaluar una medida o verificar un anuncio; días necesarios), qué estimador responde cada pregunta y su validación.
 - [`ensambles.md`](ensambles.md): los ensambles del avance 5 (X1, X2, X5, X6): resultados frente a su base, error anidado del stacking, colapso del promedio bayesiano y por qué ninguno mejora a E5b.
 - [`pipeline.md`](pipeline.md): actualización automática de la temporada en curso (`nox-ml update`, `fetch-tempo`): qué corre, nombres de archivos, retrasos, cómo programarla y fallas conocidas.
