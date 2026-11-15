@@ -1,9 +1,11 @@
+# pyright: reportOptionalMemberAccess=false, reportArgumentType=false
 """OpenAQ station data: matching to SIMAT stations, paging and the qc-simat table."""
 
 import http.client
 import io
 import urllib.error
 from email.message import Message
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -148,13 +150,114 @@ def test_a_window_extends_the_files_of_the_full_season_and_replaces_the_hours_it
             raw(["2026-11-02 10:00", "2026-11-03 10:00"], 0.02),
         ]
     )
-    monkeypatch.setattr(openaq, "fetch", lambda start, end, catalog: next(fetched))
+    monkeypatch.setattr(openaq, "fetch", lambda start, end, catalog, skipped=None: next(fetched))
 
     openaq.run_fetch("2026-11-01", "2026-11-03", tmp_path, window)
-    raw_path, table_path = openaq.run_fetch("2026-11-02", "2026-11-04", tmp_path, window)
+    result = openaq.run_fetch("2026-11-02", "2026-11-04", tmp_path, window)
+    raw_path, table_path = result.raw, result.interim
 
     assert raw_path.name == "openaq_2026-11-01_2027-01-01.parquet"
     assert table_path.name == "openaq_nox_2026-11-01_2027-01-01.parquet"
     merged = pd.read_parquet(raw_path)
     assert list(merged["value"]) == [0.01, 0.02, 0.02]  # the repeated hour is the new value
     assert len(pd.read_parquet(table_path)) == 3
+    assert result.new_hours == 1  # the 3rd of november; the 2nd was already there
+
+
+def season_catalog(tmp_path):
+    import geopandas as gpd
+    from shapely.geometry import Point
+
+    (tmp_path / "interim").mkdir(exist_ok=True)
+    gpd.GeoDataFrame({"cve_estac": ["MER"]}, geometry=[Point(-99.12, 19.43)], crs=4326).to_file(
+        tmp_path / "interim" / "estaciones.gpkg"
+    )
+
+
+def raw_rows(hours, values, sensor=1):
+    return pd.DataFrame(
+        {
+            "sensor": sensor,
+            "location": 1,
+            "station": "MER",
+            "parameter": "nox",
+            "h": pd.to_datetime(hours),
+            "value": values,
+        }
+    )
+
+
+def test_no_new_measurements_leave_the_season_files_as_they_are(tmp_path, monkeypatch):
+    season_catalog(tmp_path)
+    window = ("2026-06-01", "2026-11-01")
+    data = iter([raw_rows(["2026-10-22 10:00"], [0.01]), raw_rows([], [])])
+    monkeypatch.setattr(openaq, "fetch", lambda start, end, catalog, skipped=None: next(data))
+    first = openaq.run_fetch("2026-10-20", "2026-11-01", tmp_path, window)
+    before = first.raw.read_bytes()
+
+    second = openaq.run_fetch("2026-10-23", "2026-11-01", tmp_path, window)
+
+    assert second.new_hours == 0 and second.raw == first.raw and second.interim == first.interim
+    assert first.raw.read_bytes() == before
+
+
+def test_nothing_at_all_and_no_season_file_is_not_an_error_with_a_window(tmp_path, monkeypatch):
+    season_catalog(tmp_path)
+    monkeypatch.setattr(openaq, "fetch", lambda start, end, catalog, skipped=None: raw_rows([], []))
+
+    result = openaq.run_fetch("2026-11-01", "2026-11-05", tmp_path, ("2026-11-01", "2027-01-01"))
+
+    assert result.raw is None and result.interim is None and result.new_hours == 0
+    assert not (tmp_path / "raw").exists()
+    with pytest.raises(RuntimeError, match="no measurements"):  # without a window it stays an error
+        openaq.run_fetch("2026-11-01", "2026-11-05", tmp_path)
+
+
+def test_a_missing_value_never_replaces_a_stored_one():
+    old = raw_rows(["2026-11-01 10:00", "2026-11-01 11:00"], [0.01, 0.02])
+    new = raw_rows(["2026-11-01 11:00", "2026-11-01 12:00"], [float("nan"), 0.03])
+
+    merged = openaq.merge_raw(old, new)
+
+    assert list(merged["value"]) == [0.01, 0.02, 0.03]
+
+
+def test_the_skipped_sensors_are_reported(tmp_path):
+    locations = [location(1, 19.4005, -99.1005, parameters=("nox", "no2"))]
+
+    def get(path, params):
+        if path == "/locations":
+            return {"results": locations}
+        if path == "/sensors/10/measurements":
+            raise urllib.error.HTTPError(path, 500, "Internal Server Error", Message(), None)
+        return {"results": []}
+
+    skipped: list[str] = []
+    with pytest.warns(UserWarning):
+        openaq.fetch("2026-03-01", "2026-03-02", CATALOG, get, skipped)
+
+    assert len(skipped) == 1 and "sensor 10" in skipped[0]
+
+
+def test_a_writer_that_fails_leaves_the_raw_file_intact(tmp_path, monkeypatch):
+    season_catalog(tmp_path)
+    window = ("2026-11-01", "2027-01-01")
+    monkeypatch.setattr(
+        openaq, "fetch", lambda start, end, catalog, skipped=None: raw_rows(["2026-11-01 10:00"], [0.01])
+    )
+    done = openaq.run_fetch("2026-11-01", "2026-11-03", tmp_path, window)
+    before = done.raw.read_bytes()
+    monkeypatch.setattr(
+        openaq, "fetch", lambda start, end, catalog, skipped=None: raw_rows(["2026-11-02 10:00"], [0.02])
+    )
+
+    def broken(self, path, *a, **k):
+        Path(path).write_bytes(b"half")
+        raise OSError("disk full")
+
+    monkeypatch.setattr(pd.DataFrame, "to_parquet", broken)
+    with pytest.raises(OSError):
+        openaq.run_fetch("2026-11-02", "2026-11-04", tmp_path, window)
+
+    assert done.raw.read_bytes() == before
+    assert not list(done.raw.parent.glob(".*tmp"))
