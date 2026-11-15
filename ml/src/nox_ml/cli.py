@@ -98,7 +98,8 @@ def fetch_openaq(
 
     Needs an OpenAQ API key in OPENAQ_API_KEY. Writes raw/openaq/ and interim/openaq_nox_<start>_<end>.parquet
     (the table of qc-simat). Takes about a second per request (the key's rate limit)."""
-    raw, interim = openaq.run_fetch(start, end, data_dir)
+    fetched = openaq.run_fetch(start, end, data_dir)
+    raw, interim = fetched.raw, fetched.interim
     typer.echo(f"Written to {raw} and {interim}")
 
 
@@ -132,7 +133,8 @@ def fetch_tempo(
     domain and deleted; manifest.csv records URL, size and status."""
     counts = tempo.fetch_window(raw_dir, start, end, progress=typer.echo, workers=workers)
     typer.echo(
-        f"{counts['found']} granules in {start}..{end}: {counts['new']} new, "
+        f"{counts['found']} granules in {start}..{end}: {counts['new']} new "
+        f"({counts['redownloaded']} with a missing file), "
         f"{counts['skipped']} already there, {counts['failed']} failed."
     )
     if counts["failed"]:
@@ -164,27 +166,49 @@ def update(
     flux-divergence and the weekly index of the stations, in that order, up to `through`.
 
     Every file keeps the name of the full season window and grows in place; each step is idempotent, so it can
-    run daily. A failed step does not stop the independent ones (exit code 1 at the end). Writes
-    runs/monitor/status.json. Needs OPENAQ_API_KEY and Earthdata credentials in ~/.netrc."""
-    last = through or monitor.default_through(pd.Timestamp.now(tz="UTC").date(), lag)
+    run daily. A failed step does not stop the independent ones (exit code 1 at the end); warnings (QC
+    failures, failed granules, skipped sensors) do not change the exit code but are in the status. For 21
+    days after a season ends the previous one is also updated (not with --season). A second update at the
+    same time exits with code 3. Writes runs/monitor/status.json. Needs OPENAQ_API_KEY and Earthdata
+    credentials in ~/.netrc."""
+    now = pd.Timestamp.now(tz="UTC").date()
+    last = through or monitor.default_through(now, lag)
     try:
         last = pd.Timestamp(last).date().isoformat()
         window = _window(season) if season else monitor.season_of(last)
     except ValueError as error:
         typer.echo(f"Invalid through {through} or season {season}: {error}", err=True)
         raise typer.Exit(2) from error
-    if window is None:
+    today = last if through else now.isoformat()  # an explicit through (a backfill) is its own "today"
+    closing_window = None if season else monitor.closing_window(window[0] if window else last, today)
+    if closing_window and pd.Timestamp(closing_window[0]).year <= products.LAST_SIMAT_YEAR:
+        closing_window = None
+    closing_job = (
+        monitor.Job(closing_window[0], closing_window[1], closing_window[1], data_dir, runs_dir)
+        if closing_window
+        else None
+    )
+    closing: tuple[monitor.Job, ...] = (closing_job,) if closing_job else ()
+    if window is None and closing_job is None:
         typer.echo(f"{last} is in no season (january to mid-february): nothing to update.")
         return
-    start, end = window
-    if pd.Timestamp(start).year <= products.LAST_SIMAT_YEAR:
-        typer.echo(f"{start}: SIMAT covers it, there is nothing to download.", err=True)
-        raise typer.Exit(2)
-    if pd.Timestamp(last) < pd.Timestamp(start):
-        typer.echo(f"{last} is before the season {start}:{end}: nothing to update.")
-        return
-    job = monitor.Job(start, end, min(last, end), data_dir, runs_dir)
-    status = monitor.run_update(job)
+    if window is None:  # between seasons: only the one that just ended
+        assert closing_job is not None
+        job, closing = closing_job, ()
+    else:
+        start, end = window
+        if pd.Timestamp(start).year <= products.LAST_SIMAT_YEAR:
+            typer.echo(f"{start}: SIMAT covers it, there is nothing to download.", err=True)
+            raise typer.Exit(2)
+        if pd.Timestamp(last) < pd.Timestamp(start):
+            typer.echo(f"{last} is before the season {start}:{end}: nothing to update.")
+            return
+        job = monitor.Job(start, end, min(last, end), data_dir, runs_dir)
+    try:
+        status = monitor.run_update(job, closing=closing)
+    except monitor.UpdateRunningError as error:
+        typer.echo(f"{error}. Nothing was done.", err=True)
+        raise typer.Exit(3) from error
     typer.echo(monitor.summary(status))
     typer.echo(f"Written to {runs_dir / 'monitor' / monitor.STATUS_FILE}")
     if not status["ok"]:

@@ -3,6 +3,9 @@
 """Downloading TEMPO granules without the network: CMR and the download are replaced by fakes."""
 
 import json
+import os
+import subprocess
+import time
 from pathlib import Path
 
 import netCDF4
@@ -67,6 +70,11 @@ def fake_download(calls: list[str], fail: set[str] = frozenset()):
             write_full_granule(dst, OUTSIDE if "T190000Z" in href else INSIDE)
 
     return download
+
+
+def counted(counts: dict) -> dict:
+    """The four basic counts of `fetch_window`."""
+    return {k: counts[k] for k in ("found", "new", "failed", "skipped")}
 
 
 def test_months_of_a_window_are_cut_to_it():
@@ -135,8 +143,8 @@ def test_fetch_window_stores_subsets_and_a_second_call_downloads_nothing(tmp_pat
     first = tempo.fetch_window(raw, "2026-11-01", "2026-11-01", get, fake_download(calls))
     second = tempo.fetch_window(raw, "2026-11-01", "2026-11-01", get, fake_download(calls))
 
-    assert first == {"found": 3, "new": 3, "failed": 0, "skipped": 0}
-    assert second == {"found": 3, "new": 0, "failed": 0, "skipped": 3}
+    assert counted(first) == {"found": 3, "new": 3, "failed": 0, "skipped": 0}
+    assert counted(second) == {"found": 3, "new": 0, "failed": 0, "skipped": 3}
     assert len(calls) == 3  # the one with no pixels is in the manifest, so it is not downloaded again
     assert sorted(p.name for p in raw.glob("*_zmvm.nc")) == [
         "TEMPO_NO2_L2_V04_20261101T195519Z_S010G06_zmvm.nc",
@@ -159,7 +167,77 @@ def test_files_without_a_manifest_row_are_skipped_and_a_failed_granule_is_retrie
     first = tempo.fetch_window(raw, "2026-11-01", "2026-11-01", get, fake_download(calls, {bad}))
     second = tempo.fetch_window(raw, "2026-11-01", "2026-11-01", get, fake_download(calls))
 
-    assert first == {"found": 2, "new": 0, "failed": 1, "skipped": 1}
-    assert second == {"found": 2, "new": 1, "failed": 0, "skipped": 1}
+    assert counted(first) == {"found": 2, "new": 0, "failed": 1, "skipped": 1}
+    assert counted(second) == {"found": 2, "new": 1, "failed": 0, "skipped": 1}
     assert existing.read_bytes() == b"older download, no manifest row"
     assert tempo.read_manifest(raw / tempo.MANIFEST)[bad.rsplit("/", 1)[1]]["status"] == "ok"
+
+
+def test_a_granule_that_breaks_in_an_unexpected_way_is_recorded_and_does_not_abort_the_step(tmp_path):
+    raw = tmp_path / "tempo"
+    get = lambda url: feed("20261101T195519Z", "20261101T205519Z")  # noqa: E731
+    bad = HREF.format(day="2026.11.01", stamp="20261101T205519Z")
+    inner = fake_download([])
+
+    def download(href, dst):
+        if href == bad:
+            raise ValueError("poison")
+        inner(href, dst)
+
+    counts = tempo.fetch_window(raw, "2026-11-01", "2026-11-01", get, download)
+
+    assert counted(counts) == {"found": 2, "new": 1, "failed": 1, "skipped": 0}
+    status = tempo.read_manifest(raw / tempo.MANIFEST)[bad.rsplit("/", 1)[1]]["status"]
+    assert status.startswith("error: ValueError")
+    assert counts["errors"] == [f"{bad.rsplit('/', 1)[1]}: {status}"]
+
+
+def test_a_manifest_row_ok_without_its_subset_is_downloaded_again_and_counted(tmp_path):
+    raw = tmp_path / "tempo"
+    get = lambda url: feed("20261101T195519Z", "20261101T190000Z")  # noqa: E731
+    calls: list[str] = []
+    tempo.fetch_window(raw, "2026-11-01", "2026-11-01", get, fake_download(calls))
+    (raw / "TEMPO_NO2_L2_V04_20261101T195519Z_S010G06_zmvm.nc").unlink()
+
+    counts = tempo.fetch_window(raw, "2026-11-01", "2026-11-01", get, fake_download(calls))
+
+    assert counted(counts) == {"found": 2, "new": 1, "failed": 0, "skipped": 1}  # "no pixels" is not repeated
+    assert counts["redownloaded"] == 1 and len(calls) == 3
+    assert (raw / "TEMPO_NO2_L2_V04_20261101T195519Z_S010G06_zmvm.nc").exists()
+
+
+def test_old_temporary_folders_and_part_files_are_deleted_at_the_start(tmp_path):
+    raw = tmp_path / "tempo"
+    raw.mkdir()
+    old, young = raw / "tmpabc", raw / "tmpnew"
+    for folder in (old, young):
+        folder.mkdir()
+        (folder / "granule.nc").write_bytes(b"x")
+    stale_part = raw / "g_zmvm.part"
+    stale_part.write_bytes(b"x")
+    long_ago = time.time() - 2 * tempo.ORPHAN_AGE_S
+    for path in (old, stale_part):
+        os.utime(path, (long_ago, long_ago))
+
+    tempo.fetch_window(raw, "2026-11-01", "2026-11-01", lambda url: feed(), fake_download([]))
+
+    assert not old.exists() and not stale_part.exists() and young.exists()
+
+
+def test_curl_only_speaks_https_verifies_tls_and_reports_its_error(tmp_path, monkeypatch):
+    argv = []
+
+    def run(command, **kwargs):
+        argv.extend(command)
+        return subprocess.CompletedProcess(command, 35, b"", b"curl: (35) SSL connect error\n")
+
+    monkeypatch.setattr(tempo.subprocess, "run", run)
+
+    with pytest.raises(RuntimeError, match=r"curl error 35: curl: \(35\) SSL connect error"):
+        tempo.download_granule("https://data.example/g.nc", tmp_path / "g.nc")
+
+    assert argv[:2] == ["curl", "-sSfL"] and "-n" in argv
+    assert argv[argv.index("--proto") + 1] == "=https"
+    assert argv[argv.index("--proto-redir") + 1] == "=https"
+    assert "-k" not in argv and "--insecure" not in argv
+    assert argv[-1] == "https://data.example/g.nc"

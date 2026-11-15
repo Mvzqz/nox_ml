@@ -13,6 +13,7 @@ download with the credentials of ``~/.netrc``) and keeps only the subset over th
 
 import csv
 import json
+import shutil
 import subprocess
 import tempfile
 import threading
@@ -26,6 +27,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from nox_ml.atomic import atomic_path
 from nox_ml.data.domain import BBOX, CORE_LAT, CORE_LON, LAT, LON
 from nox_ml.data.qc import Check
 from nox_ml.data.weather import http_get
@@ -66,6 +68,8 @@ MANIFEST_FIELDS = (
 )
 DONE_STATUSES = ("ok", "no pixels")  # a granule with another status (a failed download) is tried again
 DOWNLOAD_TIMEOUT_S = 1800
+ORPHAN_AGE_S = 3600  # a temporary folder or .part file older than this is left over from a killed run
+ERROR_CHARS = 300  # of an error message kept in the manifest
 # variables kept in the subset, by NetCDF group
 KEEP = {
     "product": [
@@ -326,7 +330,8 @@ def run_qc(
     stations = catalog[catalog["in_domain"]]
     checks += pair_checks(match_stations(px[px["valid"]], no2, stations))
 
-    px.drop(columns="units").to_parquet(out_dir / f"tempo_pixels_{start}_{table_end or end}.parquet")
+    with atomic_path(out_dir / f"tempo_pixels_{start}_{table_end or end}.parquet") as tmp:
+        px.drop(columns="units").to_parquet(tmp)
     return checks
 
 
@@ -335,16 +340,21 @@ def run_qc(
 
 def download_granule(href: str, dst: Path) -> None:
     """Download `href` to `dst` with curl and the Earthdata credentials of ``~/.netrc`` (the login redirect
-    needs cookies: a throwaway jar next to `dst`). Raises RuntimeError when curl fails."""
+    needs cookies: a throwaway jar next to `dst`). Only https, also through redirects; TLS is always verified.
+    Raises RuntimeError with curl's own message (it never prints the credentials) when curl fails."""
     with tempfile.TemporaryDirectory(dir=dst.parent) as jar:
         cookies = str(Path(jar) / "cookies")
-        command = ["curl", "-sfL", "-n", "-c", cookies, "-b", cookies, "--retry", "3"]
+        command = ["curl", "-sSfL", "-n", "--proto", "=https", "--proto-redir", "=https"]
+        command += ["-c", cookies, "-b", cookies, "--retry", "3"]
         result = subprocess.run(
             [*command, "-m", str(DOWNLOAD_TIMEOUT_S), "-o", str(dst), href], capture_output=True
         )
     if result.returncode != 0:
         dst.unlink(missing_ok=True)
-        raise RuntimeError(f"curl error {result.returncode}")
+        message = " ".join(result.stderr.decode(errors="replace").split())[:ERROR_CHARS]
+        raise RuntimeError(
+            f"curl error {result.returncode}: {message}" if message else f"curl error {result.returncode}"
+        )
 
 
 def subset_granule(src: Path, dst: Path) -> int:
@@ -416,14 +426,34 @@ def _fetch_one(raw_dir: Path, scan: pd.Timestamp, href: str, download: Downloade
                 pixels = subset_granule(src, part)
             if pixels:
                 part.rename(dst)
-    except (RuntimeError, OSError) as error:  # a failed granule is tried again by the next call
-        return row | {"status": f"error: {error}"}
+    except Exception as error:  # a poison granule must not abort the step; the next call tries it again
+        message = " ".join(str(error).split())[:ERROR_CHARS]
+        return row | {"status": f"error: {type(error).__name__}" + (f": {message}" if message else "")}
     return row | {
         "pixels_with_margin": pixels,
         "downloaded_utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "seconds": round(time.time() - started),
         "status": "ok" if pixels else "no pixels",
     }
+
+
+def clean_orphans(raw_dir: Path, now: float | None = None) -> int:
+    """Delete the temporary folders (``tmp*``, the originals being downloaded) and ``.part`` files that a
+    killed run left in `raw_dir` and nobody touched for `ORPHAN_AGE_S`. Returns how many."""
+    limit = (time.time() if now is None else now) - ORPHAN_AGE_S
+    removed = 0
+    for path in [*raw_dir.glob("tmp*"), *raw_dir.glob("*.part")]:
+        try:
+            if path.stat().st_mtime >= limit:
+                continue
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+            removed += 1
+        except OSError:
+            continue
+    return removed
 
 
 def fetch_window(
@@ -434,23 +464,35 @@ def fetch_window(
     download: Downloader = download_granule,
     workers: int = 2,
     progress: Callable[[str], None] | None = None,
-) -> dict[str, int]:
+) -> dict[str, Any]:
     """Download the afternoon granules scanned from `start` to `end` (inclusive dates, UTC) that `raw_dir`
     does not have yet and keep their subsets (`_zmvm.nc`), recording each one in ``manifest.csv``.
 
-    A granule is skipped when its subset exists or the manifest says it was downloaded (a granule with no
-    pixel in the domain leaves no file), so a repeated call only fetches what is new. Returns the counts
-    ``found``, ``new``, ``failed`` and ``skipped``."""
+    A granule is skipped when its subset exists or the manifest says it has no pixel in the domain (it leaves
+    no file), so a repeated call only fetches what is new. A manifest row ``ok`` whose subset is missing is
+    downloaded again. Leftover temporary folders of killed runs are deleted first. Returns the counts
+    ``found``, ``new``, ``failed``, ``skipped`` and ``redownloaded`` (of ``new``, the ones the manifest had as
+    ``ok`` without their file), and ``errors``: the failed granules with their status."""
     raw_dir.mkdir(parents=True, exist_ok=True)
+    clean_orphans(raw_dir)
     manifest = raw_dir / MANIFEST
-    known = {name for name, row in read_manifest(manifest).items() if row["status"] in DONE_STATUSES}
+    rows = read_manifest(manifest)
+    empty = {name for name, row in rows.items() if row["status"] == "no pixels"}
+    lost = {name for name, row in rows.items() if row["status"] == "ok"}
     found = list_granules(start, end, get)
     todo = [
         (t, href)
         for t, href in found
-        if not (raw_dir / subset_name(href)).exists() and href.rsplit("/", 1)[1] not in known
+        if not (raw_dir / subset_name(href)).exists() and href.rsplit("/", 1)[1] not in empty
     ]
-    counts = {"found": len(found), "new": 0, "failed": 0, "skipped": len(found) - len(todo)}
+    counts: dict[str, Any] = {
+        "found": len(found),
+        "new": 0,
+        "failed": 0,
+        "skipped": len(found) - len(todo),
+        "redownloaded": 0,
+        "errors": [],
+    }
     new_file = not manifest.exists()
     with open(manifest, "a", newline="") as handle, ThreadPoolExecutor(workers) as pool:
         writer = csv.DictWriter(handle, MANIFEST_FIELDS, restval="")
@@ -460,9 +502,14 @@ def fetch_window(
             as_completed([pool.submit(_fetch_one, raw_dir, t, href, download) for t, href in todo]), 1
         ):
             row = future.result()
-            writer.writerow(row)
+            writer.writerow(row)  # every result, "no pixels" included, is on disk as soon as it is known
             handle.flush()
-            counts["new" if row["status"] in DONE_STATUSES else "failed"] += 1
+            if row["status"] in DONE_STATUSES:
+                counts["new"] += 1
+                counts["redownloaded"] += row["granule"] in lost
+            else:
+                counts["failed"] += 1
+                counts["errors"].append(f"{row['granule']}: {row['status']}")
             if progress:
                 progress(f"[{done}/{len(todo)}] {row['granule']} {row['status']}")
     return counts
