@@ -39,14 +39,14 @@ Para cada capacidad: estado y precisión, cómo se compara con las alternativas 
 - **Detalle por fuente:** no separa autos de camiones ni ubica fuentes individuales; la escala es de regiones de ~18 km y fuentes puntuales grandes.
 - **Noche y madrugada:** solo tardes.
 - **Tiempo real:** depende de la publicación de los datos. Con OpenAQ y TEMPO el retraso es de días, ya no el de SIMAT (que aún no publica 2025); alcanza para un reporte mensual, no para alertas.
-- **Toneladas absolutas confiables:** ver la capacidad 8.
+- **Toneladas absolutas confiables:** ver la capacidad 9.
 
 ## Escala relevante para la salud
 
 - La OMS (guías de 2021) fijó la guía de NO₂ en 10 µg/m³ como media anual y 25 µg/m³ como media de 24 horas; no hay un umbral seguro.
 - La exposición de largo plazo es la que más pesa: los meta-análisis encuentran ~2 % más mortalidad por todas las causas por cada 10 µg/m³ de NO₂ promedio de largo plazo (1.02, IC 95 % 1.01–1.04, revisión para las guías de la OMS) y un riesgo de 1.047 (1.023–1.072) por cada 10 ppb (Stieb et al., 2021).
 - El NO₂ del tráfico se asocia con ~4 millones de casos nuevos de asma infantil al año en el mundo, ~13 % de la incidencia (Achakulwisut et al., 2019).
-- Una baja de pocos días casi no cambia la exposición anual; una baja sostenida de pocos puntos porcentuales sí. **El sistema mide bien justo esa escala si se acumulan suficientes días (capacidad 4).** Una baja de emisión se traduce en una baja menor de concentración (fondo regional y química del ozono).
+- Una baja de pocos días casi no cambia la exposición anual; una baja sostenida de pocos puntos porcentuales sí. **El sistema todavía no mide bien esa escala:** con la deriva lenta de cada temporada, una baja de pocos puntos solo se vería sumando muchas temporadas (capacidad 3; ver la Lectura). Una baja de emisión se traduce en una baja menor de concentración (fondo regional y química del ozono).
 - Pendiente de verificar con la fuente primaria: el efecto de corto plazo (Orellano et al., 2020) y el promedio anual de NO₂ de la ciudad (informe anual de SEDEMA).
 
 ## Otras razones para medir la emisión de NOₓ, además de la salud

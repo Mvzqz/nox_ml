@@ -5,6 +5,7 @@ Commands are added as research scripts are migrated.
 
 import json
 from enum import StrEnum
+from itertools import pairwise
 from pathlib import Path
 from typing import Annotated
 
@@ -501,6 +502,17 @@ def ficha_medida(
     except ValueError as error:
         typer.echo(f"Invalid days {days} or windows {data}: {error}", err=True)
         raise typer.Exit(2) from error
+    ordered = sorted(windows)
+    if any(later[0] <= earlier[1] for earlier, later in pairwise(ordered)):
+        typer.echo(f"The --data windows overlap: {data}", err=True)
+        raise typer.Exit(2)
+    outside = [
+        f"{day:%Y-%m-%d}"
+        for day in event
+        if not any(start <= f"{day:%Y-%m-%d}" <= end for start, end in windows)
+    ]
+    if outside:
+        typer.echo(f"Warning: {len(outside)} measure days outside every --data window: {outside}", err=True)
     results = []
     for start, end in windows:
         season = event[(event >= start) & (event <= end)]
@@ -512,18 +524,30 @@ def ficha_medida(
         satellite = products.satellite_daily(data_dir, start, end)
         results.append(
             products.measure_result(
-                inputs, products.estimator("change"), season, excluded, claim=claim, satellite=satellite
+                inputs,
+                products.estimator("change"),
+                season,
+                excluded,
+                claim=claim,
+                satellite=satellite,
+                reference_covered=products.reference_covered(data_dir, start, end),
             )
         )
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"medida_{event[0]:%Y-%m-%d}_{event[-1]:%Y-%m-%d}.md"
     combined = None
     if len(results) == 1:
-        out.write_text(products.render_measure(results[0], title, windows[0]))
+        out.write_text(products.render_measure(results[0], title, windows[0], outside))
     else:
         combined = products.combine_seasons(results, claim=claim)
-        out.write_text(products.render_seasons(results, combined, title, windows))
-    record = {"title": title, "windows": windows, "seasons": results, "combined": combined}
+        out.write_text(products.render_seasons(results, combined, title, windows, outside))
+    record = {
+        "title": title,
+        "windows": windows,
+        "outside_windows": outside,
+        "seasons": results,
+        "combined": combined,
+    }
     out.with_suffix(".json").write_text(json.dumps(record, indent=2, default=float) + "\n")
     typer.echo(out.read_text())
     typer.echo(f"Written to {out} and {out.with_suffix('.json')}")
