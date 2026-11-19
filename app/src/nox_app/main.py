@@ -537,7 +537,8 @@ def episode_markdown(result: dict) -> str:
     return "\n".join(lines)
 
 
-def show_episode(result: dict) -> None:
+def show_episode(result: dict, key: str = "episode") -> None:
+    """The diagnosis of one episode; `key` tells its buttons apart when a page shows two episodes."""
     title, _, color = VERDICTS.get(verdict_of(result), (result["verdict"], "", "gray"))
     st.markdown(f"## :{color}[{title.upper()}]")
     st.markdown(episode_story(result))
@@ -577,15 +578,25 @@ def show_episode(result: dict) -> None:
 
     c1, c2, c3 = st.columns(3)
     c1.download_button(
-        "Exportar ficha (Markdown)", episode_markdown(result), "episodio.md", icon=":material/download:"
+        "Exportar ficha (Markdown)",
+        episode_markdown(result),
+        "episodio.md",
+        icon=":material/download:",
+        key=f"{key}_md",
     )
     c2.download_button(
-        "Datos (JSON)", json.dumps(result, indent=2), "episodio.json", icon=":material/data_object:"
+        "Datos (JSON)",
+        json.dumps(result, indent=2),
+        "episodio.json",
+        icon=":material/data_object:",
+        key=f"{key}_json",
     )
     if (
         season
         and live()
-        and c3.button("¿Hubo una medida esos días? Evalúala", icon=":material/arrow_forward:")
+        and c3.button(
+            "¿Hubo una medida esos días? Evalúala", icon=":material/arrow_forward:", key=f"{key}_measure"
+        )
     ):
         go("medida", prefill=(season, start, end), measure_mode=MODES[1])
 
@@ -600,7 +611,7 @@ def episode_page() -> None:
     if saved:
         source("saved")
         st.caption(f"Semana del boletín: {saved['start']} a {saved['end']} (datos de OpenAQ).")
-        show_episode(saved)
+        show_episode(saved, key="bulletin")
         st.divider()
         st.caption("Para diagnosticar otro periodo, elige abajo.")
 

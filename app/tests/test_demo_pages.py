@@ -1,8 +1,12 @@
 """Every page of the demo that reads saved results renders without an error (the live pages need data/)."""
 
+import json
+from pathlib import Path
+
 import pytest
 from streamlit.testing.v1 import AppTest
 
+ROOT = Path(__file__).resolve().parents[2]
 SETUP = """
 import streamlit as st
 import nox_app.main as m
@@ -48,6 +52,21 @@ def test_without_the_system_every_page_shows_saved_results(page):
     app = AppTest.from_string(
         SETUP.replace("{page}", page).replace("{live}", "False"), default_timeout=60
     ).run()
+
+    assert not app.exception
+    assert not app.error
+
+
+@pytest.mark.parametrize("live", ["True", "False"])
+def test_a_bulletin_week_opens_its_episode(live):
+    """'Ver por qué' stores the week and opens the episode page, which online also shows an example below."""
+    week = json.loads((ROOT / "results/runs/demo/bulletin_2026-10.json").read_text())[0]
+    app = AppTest.from_string(
+        SETUP.replace("{page}", "episode_page").replace("{live}", live), default_timeout=60
+    )
+    app.session_state["episode_saved"] = week
+
+    app.run()
 
     assert not app.exception
     assert not app.error
