@@ -6,6 +6,7 @@ from streamlit.testing.v1 import AppTest
 SETUP = """
 import streamlit as st
 import nox_app.main as m
+m.live = lambda: {live}
 m.PAGES.update({n: st.Page(lambda: None, title=n, url_path=n) for n in m.PAGE_KEYS})
 m.{page}()
 """
@@ -24,14 +25,29 @@ SAVED_PAGES = [
 
 @pytest.mark.parametrize("page", SAVED_PAGES)
 def test_page_renders(page):
-    app = AppTest.from_string(SETUP.replace("{page}", page), default_timeout=60).run()
+    app = AppTest.from_string(
+        SETUP.replace("{page}", page).replace("{live}", "True"), default_timeout=60
+    ).run()
 
     assert not app.exception
     assert not app.error
 
 
 def test_a_change_with_regional_accumulation_is_not_credited_to_the_measure():
-    app = AppTest.from_string(SETUP.replace("{page}", "measure_page"), default_timeout=60).run()
+    app = AppTest.from_string(
+        SETUP.replace("{page}", "measure_page").replace("{live}", "True"), default_timeout=60
+    ).run()
     app.selectbox[0].set_value("Semana antes de Navidad 2023").run()
 
     assert any("NO ATRIBUIBLE" in m.value for m in app.markdown)
+
+
+@pytest.mark.parametrize("page", ["episode_page", *SAVED_PAGES])
+def test_without_the_system_every_page_shows_saved_results(page):
+    """The online demo installs only the app: no nox-ml command and no data/."""
+    app = AppTest.from_string(
+        SETUP.replace("{page}", page).replace("{live}", "False"), default_timeout=60
+    ).run()
+
+    assert not app.exception
+    assert not app.error

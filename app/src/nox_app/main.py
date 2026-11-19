@@ -122,10 +122,21 @@ def read_csv(path: Path) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
-def nox_ml() -> str:
-    """The nox-ml executable of this environment."""
+def nox_ml() -> str | None:
+    """The nox-ml executable of this environment, or None (e.g. the online demo, which installs only the app)."""
     local = Path(sys.executable).parent / "nox-ml"
-    return str(local) if local.exists() else (shutil.which("nox-ml") or "nox-ml")
+    return str(local) if local.exists() else shutil.which("nox-ml")
+
+
+def live() -> bool:
+    """Whether new periods can be computed here: the nox-ml command and the station and satellite data."""
+    return nox_ml() is not None and (ROOT / "data" / "interim").is_dir()
+
+
+OFFLINE = (
+    "En la versión en línea solo están los **resultados ya calculados**: calcular periodos nuevos necesita el "
+    "sistema completo y sus datos (~3 GB)."
+)
 
 
 @st.cache_data(show_spinner=False)
@@ -135,7 +146,7 @@ def run_cli(args: tuple[str, ...]) -> tuple[int, str, str, dict[str, str]]:
     *cli, out_flag = args
     with tempfile.TemporaryDirectory() as tmp:
         done = subprocess.run(
-            [nox_ml(), *cli, out_flag, tmp], cwd=ROOT, capture_output=True, text=True, timeout=900
+            [nox_ml() or "nox-ml", *cli, out_flag, tmp], cwd=ROOT, capture_output=True, text=True, timeout=900
         )
         files = {str(p.relative_to(tmp)): p.read_text() for p in Path(tmp).rglob("*") if p.is_file()}
     return done.returncode, done.stdout, done.stderr, files
@@ -571,7 +582,11 @@ def show_episode(result: dict) -> None:
     c2.download_button(
         "Datos (JSON)", json.dumps(result, indent=2), "episodio.json", icon=":material/data_object:"
     )
-    if season and c3.button("¿Hubo una medida esos días? Evalúala", icon=":material/arrow_forward:"):
+    if (
+        season
+        and live()
+        and c3.button("¿Hubo una medida esos días? Evalúala", icon=":material/arrow_forward:")
+    ):
         go("medida", prefill=(season, start, end), measure_mode=MODES[1])
 
 
@@ -588,6 +603,18 @@ def episode_page() -> None:
         show_episode(saved)
         st.divider()
         st.caption("Para diagnosticar otro periodo, elige abajo.")
+
+    if not live():
+        source("saved")
+        st.info(OFFLINE)
+        examples = {
+            "Semana estancada, 11–15 dic 2023": "stagnant_week",
+            "Semana antes de Navidad, 18–22 dic 2023": "pre_christmas",
+            "Semana después de Navidad, 26–29 dic 2023": "post_christmas",
+        }
+        name = st.selectbox("Ejemplo", list(examples))
+        show_episode(read_json(RUNS / "episodes" / f"{examples[name]}.json"))
+        return
 
     source("live")
     period = pick_period(
@@ -716,7 +743,11 @@ def measure_page() -> None:
     )
     if "measure_mode" in st.session_state:
         st.session_state["measure_mode_radio"] = st.session_state.pop("measure_mode")
-    mode = st.radio("Modo", MODES, horizontal=True, key="measure_mode_radio")
+    if live():
+        mode = st.radio("Modo", MODES, horizontal=True, key="measure_mode_radio")
+    else:
+        st.info(OFFLINE)
+        mode = MODES[0]
 
     if mode == MODES[0]:
         source("saved")
@@ -922,6 +953,9 @@ def pilot_page() -> None:
     st.caption(
         "Calcula cuántos días hábiles hacen falta con la medida continua, desde la variación de una temporada concreta. Es más conservadora que la simulación."
     )
+    if not live():
+        st.info(OFFLINE)
+        return
     season = st.selectbox("Temporada", list(SEASONS), index=1, key="pilot_live_season")
     if st.button("Calcular días necesarios"):
         with st.spinner("Midiendo la variación de la temporada (~75 s)…"):

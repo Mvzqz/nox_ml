@@ -1,0 +1,7 @@
+# For the online demo (Streamlit Community Cloud), which installs only the app: the live runs need nox-ml and
+# data/, so they are replaced by the saved results there. Versions as in uv.lock.
+streamlit==1.66.1
+altair==6.3.0
+pydeck==0.9.3
+pandas==3.1.0
+pyarrow==26.0.0
