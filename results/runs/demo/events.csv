@@ -1,18 +1,37 @@
 start,end,kind,name
-2023-11-20,2023-11-20,Festivo,Día festivo
+2019-02-04,2019-02-04,Festivo,Festivo del 04/02/2019
+2019-03-18,2019-03-18,Festivo,Festivo del 18/03/2019
+2019-04-15,2019-04-28,Semana Santa,Semana Santa y Pascua 2019
+2019-04-18,2019-04-18,Festivo,Festivo del 18/04/2019
+2019-04-19,2019-04-19,Festivo,Festivo del 19/04/2019
+2019-05-01,2019-05-01,Festivo,Festivo del 01/05/2019
+2019-12-12,2020-01-06,Fin de año,Guadalupe–Reyes 2019
+2020-02-03,2020-02-03,Festivo,Festivo del 03/02/2020
+2020-03-16,2020-03-16,Festivo,Festivo del 16/03/2020
+2020-04-06,2020-04-19,Semana Santa,Semana Santa y Pascua 2020
+2020-04-09,2020-04-09,Festivo,Festivo del 09/04/2020
+2020-04-10,2020-04-10,Festivo,Festivo del 10/04/2020
+2020-05-01,2020-05-01,Festivo,Festivo del 01/05/2020
+2020-12-12,2021-01-06,Fin de año,Guadalupe–Reyes 2020
+2021-03-29,2021-04-11,Semana Santa,Semana Santa y Pascua 2021
+2021-12-12,2022-01-06,Fin de año,Guadalupe–Reyes 2021
+2022-04-11,2022-04-24,Semana Santa,Semana Santa y Pascua 2022
+2022-12-12,2023-01-06,Fin de año,Guadalupe–Reyes 2022
+2023-04-03,2023-04-16,Semana Santa,Semana Santa y Pascua 2023
+2023-11-20,2023-11-20,Festivo,Festivo del 20/11/2023
 2023-12-12,2024-01-06,Fin de año,Guadalupe–Reyes 2023
-2023-12-25,2023-12-25,Festivo,Día festivo
-2024-01-01,2024-01-01,Festivo,Día festivo
-2024-02-05,2024-02-05,Festivo,Día festivo
+2023-12-25,2023-12-25,Festivo,Festivo del 25/12/2023
+2024-01-01,2024-01-01,Festivo,Festivo del 01/01/2024
+2024-02-05,2024-02-05,Festivo,Festivo del 05/02/2024
 2024-02-22,2024-02-25,Contingencia,Contingencia por ozono #1
 2024-03-06,2024-03-07,Contingencia,Contingencia por ozono #2
-2024-03-18,2024-03-18,Festivo,Día festivo
+2024-03-18,2024-03-18,Festivo,Festivo del 18/03/2024
 2024-03-23,2024-03-24,Contingencia,Contingencia por ozono #3
 2024-03-25,2024-04-07,Semana Santa,Semana Santa y Pascua 2024
-2024-03-28,2024-03-28,Festivo,Día festivo
-2024-03-29,2024-03-29,Festivo,Día festivo
+2024-03-28,2024-03-28,Festivo,Festivo del 28/03/2024
+2024-03-29,2024-03-29,Festivo,Festivo del 29/03/2024
 2024-04-30,2024-05-01,Contingencia,Contingencia por ozono #4
-2024-05-01,2024-05-01,Festivo,Día festivo
+2024-05-01,2024-05-01,Festivo,Festivo del 01/05/2024
 2024-05-03,2024-05-04,Contingencia,Contingencia por ozono #5
 2024-05-09,2024-05-10,Contingencia,Contingencia por ozono #6
 2024-05-13,2024-05-16,Contingencia,Contingencia por ozono #7
@@ -20,25 +39,30 @@ start,end,kind,name
 2024-05-22,2024-05-24,Contingencia,Contingencia por ozono #9
 2024-05-25,2024-05-26,Contingencia,Contingencia por ozono #10
 2024-05-30,2024-05-31,Contingencia,Contingencia por ozono #11
-2024-11-18,2024-11-18,Festivo,Día festivo
+2024-11-18,2024-11-18,Festivo,Festivo del 18/11/2024
 2024-12-12,2025-01-06,Fin de año,Guadalupe–Reyes 2024
-2024-12-25,2024-12-25,Festivo,Día festivo
-2025-01-01,2025-01-01,Festivo,Día festivo
-2025-02-03,2025-02-03,Festivo,Día festivo
-2025-03-17,2025-03-17,Festivo,Día festivo
+2024-12-25,2024-12-25,Festivo,Festivo del 25/12/2024
+2025-01-01,2025-01-01,Festivo,Festivo del 01/01/2025
+2025-02-03,2025-02-03,Festivo,Festivo del 03/02/2025
+2025-03-17,2025-03-17,Festivo,Festivo del 17/03/2025
 2025-04-14,2025-04-27,Semana Santa,Semana Santa y Pascua 2025
-2025-04-17,2025-04-17,Festivo,Día festivo
-2025-04-18,2025-04-18,Festivo,Día festivo
-2025-05-01,2025-05-01,Festivo,Día festivo
-2025-09-16,2025-09-16,Festivo,Día festivo
-2025-11-17,2025-11-17,Festivo,Día festivo
+2025-04-17,2025-04-17,Festivo,Festivo del 17/04/2025
+2025-04-18,2025-04-18,Festivo,Festivo del 18/04/2025
+2025-05-01,2025-05-01,Festivo,Festivo del 01/05/2025
+2025-09-16,2025-09-16,Festivo,Festivo del 16/09/2025
+2025-11-17,2025-11-17,Festivo,Festivo del 17/11/2025
 2025-12-12,2026-01-06,Fin de año,Guadalupe–Reyes 2025
-2025-12-25,2025-12-25,Festivo,Día festivo
-2026-01-01,2026-01-01,Festivo,Día festivo
-2026-02-02,2026-02-02,Festivo,Día festivo
-2026-03-16,2026-03-16,Festivo,Día festivo
+2025-12-25,2025-12-25,Festivo,Festivo del 25/12/2025
+2026-01-01,2026-01-01,Festivo,Festivo del 01/01/2026
+2026-02-02,2026-02-02,Festivo,Festivo del 02/02/2026
+2026-03-16,2026-03-16,Festivo,Festivo del 16/03/2026
 2026-03-30,2026-04-12,Semana Santa,Semana Santa y Pascua 2026
-2026-04-02,2026-04-02,Festivo,Día festivo
-2026-04-03,2026-04-03,Festivo,Día festivo
-2026-05-01,2026-05-01,Festivo,Día festivo
-2026-09-16,2026-09-16,Festivo,Día festivo
+2026-04-02,2026-04-02,Festivo,Festivo del 02/04/2026
+2026-04-03,2026-04-03,Festivo,Festivo del 03/04/2026
+2026-05-01,2026-05-01,Festivo,Festivo del 01/05/2026
+2026-09-16,2026-09-16,Festivo,Festivo del 16/09/2026
+2026-11-16,2026-11-16,Festivo,Festivo del 16/11/2026
+2026-12-12,2027-01-06,Fin de año,Guadalupe–Reyes 2026
+2026-12-25,2026-12-25,Festivo,Festivo del 25/12/2026
+2027-03-22,2027-04-04,Semana Santa,Semana Santa y Pascua 2027
+2027-12-12,2028-01-06,Fin de año,Guadalupe–Reyes 2027
