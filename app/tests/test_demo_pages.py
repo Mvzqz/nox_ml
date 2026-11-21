@@ -7,7 +7,8 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from nox_app.common import short_date
+from nox_app.charts import round_ticks
+from nox_app.common import legend_html, short_date
 
 ROOT = Path(__file__).resolve().parents[2]
 SETUP = """
@@ -47,8 +48,8 @@ def test_page_renders(role, page, live):
 def test_a_viewer_does_not_see_the_pilots_section():
     planner, viewer = app("home.home_page", "planner"), app("home.home_page", "viewer")
 
-    assert "2. Planes y Pilotos" in [h.value for h in planner.header]
-    assert "2. Planes y Pilotos" not in [h.value for h in viewer.header]
+    assert any("2. Planes y Pilotos" in h.value for h in planner.header)
+    assert not any("2. Planes y Pilotos" in h.value for h in viewer.header)
 
 
 def test_a_bulletin_week_opens_its_diagnosis_with_its_dates():
@@ -71,7 +72,7 @@ def test_the_baseline_switch_reads_the_diagnosis_with_atypical_days():
     assert any("incluye feriados" in m.value for m in episode.markdown)
 
 
-@pytest.mark.parametrize("pilot_id", ["m01", "m02", "m03", "m04", "m05", "m06", "m07", "r01", "r02", "r03"])
+@pytest.mark.parametrize("pilot_id", ["m01", "m02", "m03", "m04", "m05", "m06", "m07"])
 def test_every_saved_pilot_opens(pilot_id):
     assert ok(app("pilots.pilots_page", pilot_id=pilot_id))
 
@@ -81,7 +82,8 @@ def test_a_pilot_that_crosses_a_holiday_gives_both_readings_and_its_key_messages
     text = " ".join(m.value for m in page.markdown)
 
     assert "Incluyendo los días atípicos" in text
-    assert "Mensajes clave para toma de decisiones" in text
+    assert "Mensajes clave para toma de decisiones" in text and "Viabilidad operativa" not in text
+    assert not page.get("subheader") or "Bitácora" not in [s.value for s in page.subheader]
     assert "Inconcluyente" in text and "Extender el piloto" in text
 
 
@@ -102,18 +104,25 @@ def test_duplicating_a_started_pilot_makes_an_editable_draft():
     assert variant.date_input
 
 
-def test_a_note_is_added_to_the_log():
-    page = app("pilots.pilots_page", pilot_id="m05")
-    page.text_area[0].set_value("Reunión con la Alcaldía.")
-    page.button(key="FormSubmitter:note_m05-Agregar nota").click().run()
-
-    notes = next(p for p in page.session_state["pilots"] if p["id"] == "m05")["notes"]
-    assert notes[-1]["text"] == "Reunión con la Alcaldía."
-
-
 def test_the_planner_saves_a_draft_without_dates():
     page = app("pilots.planning_page")
     page.button(key="plan_save").click().run()
 
     saved = page.session_state["pilots"][0]
-    assert saved["draft"] and saved["origin"] == "Planificado" and saved["target"] == -0.10
+    assert saved["draft"] and saved["target"] == -0.10
+
+
+def test_a_legend_lists_each_mark_with_its_colour_and_meaning():
+    html = legend_html(
+        [
+            ("dash", "#1E3A8A", "NOₓ sin el efecto del clima", "descontando el viento"),
+            ("box", "#D97706", "Día atípico", ""),
+        ]
+    )
+
+    assert html.count('role="list"') == 1 and "dashed #1E3A8A" in html and "background:#D97706" in html
+    assert "NOₓ sin el efecto del clima" in html and "descontando el viento" in html
+
+
+def test_axis_ticks_fall_on_round_steps_and_include_zero():
+    assert round_ticks(-0.17, 0.09) == [-0.15, -0.1, -0.05, 0.0, 0.05]

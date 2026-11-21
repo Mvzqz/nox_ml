@@ -1,11 +1,11 @@
 # pyright: reportArgumentType=false, reportCallIssue=false, reportAttributeAccessIssue=false, reportOptionalMemberAccess=false
 # pyright: reportOptionalSubscript=false, reportReturnType=false
 # ruff: noqa: E501  (user-facing Spanish strings read better unwrapped)
-"""Section 2, Planes y Pilotos (planner): the unified history of planned and retrospective pilots, their
-life cycle, report and log, and the planner of new pilots."""
+"""Section 2, Planes y Pilotos (planner): the history of pilots planned with the app, their life cycle,
+report and log, and the planner of new pilots. Only pilots designed here are evaluated: a measure applied
+before did not follow the app's design rules."""
 
 import math
-import re
 from datetime import date, timedelta
 
 import pandas as pd
@@ -13,16 +13,12 @@ import streamlit as st
 
 from nox_app import charts, rules
 from nox_app.common import (
-    OFFLINE,
+    ICONS,
     RUNS,
-    SEASONS,
     add_pilot,
-    cli_error,
-    coverage,
     event_tuples,
     go,
     is_planner,
-    live,
     metric,
     new_pilot_id,
     pct,
@@ -30,9 +26,9 @@ from nox_app.common import (
     pilot,
     pilots,
     read_csv,
-    run_cli,
     short_date,
     show_chart,
+    show_legend,
     today,
 )
 
@@ -42,7 +38,8 @@ VERDICT_COLORS = {
     rules.INCONCLUSIVE: "orange",
     rules.INSUFFICIENT: "red",
 }
-STATUS_COLORS = {rules.DRAFT: "gray", rules.SCHEDULED: "blue", rules.RUNNING: "violet", rules.WAITING: "orange",
+STATUS_ICONS = {rules.WAITING: ICONS["caution"], rules.PRELIMINARY: ICONS["caution"]}
+STATUS_COLORS = {rules.DRAFT: "gray", rules.SCHEDULED: "blue", rules.RUNNING: "blue", rules.WAITING: "orange",
                  rules.PRELIMINARY: "orange", rules.CONSOLIDATED: "green"}  # fmt: skip
 EVALUATED = (rules.PRELIMINARY, rules.CONSOLIDATED)
 DESIGNS = {"a_contiguous": "Continuo", "b_alternate_days": "Días alternos", "c_alternate_weeks": "Semanas alternas",
@@ -68,9 +65,17 @@ def badge(text: str, color: str) -> str:
     return f":{color}-badge[{text}]"
 
 
-def origin_badge(p: dict) -> str:
-    out = badge(p["origin"], "blue" if p["origin"] == rules.PLANNED else "gray")
-    return out + (" " + badge("Ejemplo simulado", "violet") if p.get("mock") else "")
+def status_badge(state: str) -> str:
+    icon = STATUS_ICONS.get(state)
+    return badge(f"{icon} {state}" if icon else state, STATUS_COLORS[state])
+
+
+def verdict_heading(v: str) -> str:
+    return f"### :{VERDICT_COLORS[v]}[{v}]"
+
+
+def mock_badge(p: dict) -> str:
+    return " " + badge("Ejemplo simulado", "gray") if p.get("mock") else ""
 
 
 def weeks_of(p: dict) -> float:
@@ -80,17 +85,25 @@ def weeks_of(p: dict) -> float:
 # ---------------------------------------------------------------- history
 
 
+def compact_period(start: str | None, end: str | None) -> str:
+    """'1 jun – 24 jul 2026': the year once when both dates share it, so the table column stays narrow."""
+    if not (start and end) or start[:4] != end[:4]:
+        return period_label(start, end)
+    return f"{short_date(start)[:-5]} – {short_date(end)}"
+
+
 def history_table(rows: list[dict]) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
                 "id": p["id"],
                 "Piloto": p["name"],
-                "Origen": p["origin"],
                 "Estado": rules.status(p, today()),
-                "Fechas": period_label(p.get("start"), p.get("end")),
+                "Fechas": compact_period(p.get("start"), p.get("end")),
                 "Meta": pct(p["target"]) if p.get("target") is not None else "—",
-                "Veredicto": verdict_of(p) or "—",
+                "Veredicto": (verdict_of(p) or "—").split(" — ")[
+                    0
+                ],  # the short name; the report has the rest
             }
             for p in rows
         ]
@@ -98,17 +111,13 @@ def history_table(rows: list[dict]) -> pd.DataFrame:
 
 
 def pilot_history(key: str) -> None:
-    """Planned and retrospective pilots in one table, with filters; a selected row opens its report."""
-    c1, c2, c3 = st.columns([1.2, 2, 1.6])
-    origins = c1.multiselect(
-        "Origen", [rules.PLANNED, rules.RETROSPECTIVE], key=f"{key}_origin", placeholder="Todos"
-    )
-    statuses = c2.multiselect("Estado", rules.STATUSES, key=f"{key}_status", placeholder="Todos")
-    text = c3.text_input("Buscar", key=f"{key}_text", placeholder="Nombre del piloto")
+    """Every pilot in one table, with filters; a selected row opens its report."""
+    c1, c2 = st.columns([2, 1.6])
+    statuses = c1.multiselect("Estado", rules.STATUSES, key=f"{key}_status", placeholder="Todos")
+    text = c2.text_input("Buscar", key=f"{key}_text", placeholder="Nombre del piloto")
     rows = [
         p for p in pilots()
-        if (not origins or p["origin"] in origins) and (not statuses or rules.status(p, today()) in statuses)
-        and text.lower() in p["name"].lower()
+        if (not statuses or rules.status(p, today()) in statuses) and text.lower() in p["name"].lower()
     ]  # fmt: skip
     if not rows:
         st.info("Ningún piloto cumple esos filtros.")
@@ -117,6 +126,13 @@ def pilot_history(key: str) -> None:
     picked = st.dataframe(
         table.drop(columns="id"),
         hide_index=True,
+        column_config={  # fixed widths: the grid measures columns before the brand font loads
+            "Piloto": st.column_config.TextColumn(width=290),
+            "Estado": st.column_config.TextColumn(width=175),
+            "Fechas": st.column_config.TextColumn(width=165),
+            "Meta": st.column_config.TextColumn(width=60),
+            "Veredicto": st.column_config.TextColumn(width=180),
+        },
         width="stretch",
         on_select="rerun",
         selection_mode="single-row",
@@ -139,10 +155,11 @@ def pilot_hero() -> None:
         return
     v = verdict_of(p)
     st.markdown(
-        f"**{p['name']}** · {period_label(p['start'], p['end'])}  \n{origin_badge(p)} {badge(rules.status(p, today()), STATUS_COLORS[rules.status(p, today())])}"
+        f"**{p['name']}** · {period_label(p['start'], p['end'])}  \n{status_badge(rules.status(p, today()))}{mock_badge(p)}"
     )
-    st.markdown(f"### :{VERDICT_COLORS[v]}[{v}]")
+    st.markdown(verdict_heading(v))
     show_chart(charts.pilot_bars(p.get("target"), p.get("result")))
+    show_legend(charts.pilot_legend())
     if st.button("Ver reporte del piloto", key="hero_pilot", icon=":material/arrow_forward:"):
         go("pilotos", pilot_id=p["id"])
 
@@ -151,7 +168,7 @@ def pilot_hero() -> None:
 
 
 def key_messages(p: dict, v: str) -> list[tuple[str, str]]:
-    """'Mensajes clave para toma de decisiones': NOx evidence, qualitative health co-benefits, operations."""
+    """'Mensajes clave para toma de decisiones': NOx evidence and qualitative health co-benefits."""
     r, target = p.get("result"), p.get("target")
     goal = f"la meta de {pct(target)}" if target is not None else None
     if v == rules.CONFIRMED:
@@ -175,7 +192,6 @@ def key_messages(p: dict, v: str) -> list[tuple[str, str]]:
     return [
         ("Evidencia de NOₓ", evidence),
         ("Co-beneficios en salud", health),
-        ("Viabilidad operativa", p.get("operations", "Sin información operativa.")),
     ]
 
 
@@ -214,7 +230,7 @@ def coverage_note(p: dict) -> None:
 
 
 def report_markdown(p: dict, v: str) -> str:
-    lines = [f"# Reporte de piloto: {p['name']}", "", f"- Origen: {p['origin']}", f"- Fechas: {period_label(p.get('start'), p.get('end'))}",
+    lines = [f"# Reporte de piloto: {p['name']}", "", f"- Fechas: {period_label(p.get('start'), p.get('end'))}",
              f"- Estado: {rules.status(p, today())}", f"- Meta propuesta: {pct(p['target']) if p.get('target') is not None else 'sin meta'}"]  # fmt: skip
     if r := p.get("result"):
         lines.append(f"- Impacto real detectado: {pct(r['change'])} (rango {pct(r['lo'])} a {pct(r['hi'])})")
@@ -247,33 +263,15 @@ def edit_dates(p: dict) -> None:
         picked = st.date_input("Fechas del piloto", value=value, min_value=first, format="DD/MM/YYYY")
         if st.form_submit_button("Guardar fechas") and len(picked) == 2:
             p.update(start=picked[0].isoformat(), end=picked[1].isoformat(), draft=False)
-            p.setdefault("notes", []).append(
-                {"date": today().isoformat(), "text": f"Fechas fijadas: {period_label(*picked)}."}
-            )
             st.rerun()
-
-
-def log(p: dict) -> None:
-    """The pilot's notes in date order; the planner can add one."""
-    notes = sorted(p.get("notes", []), key=lambda n: n["date"])
-    for n in notes:
-        st.markdown(f"**{short_date(n['date'])}** · {n['text']}")
-    if not notes:
-        st.caption("Sin notas todavía.")
-    if is_planner():
-        with st.form(f"note_{p['id']}", clear_on_submit=True, border=False):
-            text = st.text_area("Nueva nota", placeholder="Qué pasó, qué se decidió…", height=80)
-            if st.form_submit_button("Agregar nota") and text.strip():
-                p.setdefault("notes", []).append({"date": today().isoformat(), "text": text.strip()})
-                st.rerun()
 
 
 def pilot_detail(p: dict) -> None:
     state = rules.status(p, today())
     c1, c2 = st.columns([4, 1], vertical_alignment="bottom")
     c1.markdown(f"## {p['name']}")
-    c1.markdown(f"{origin_badge(p)} {badge(state, STATUS_COLORS[state])}")
-    if is_planner() and c2.button("Duplicar piloto", icon=":material/content_copy:", key=f"dup_{p['id']}"):
+    c1.markdown(f"{status_badge(state)}{mock_badge(p)}")
+    if is_planner() and c2.button("Duplicar piloto", icon=ICONS["duplicate"], key=f"dup_{p['id']}"):
         copy = rules.duplicate(p, new_pilot_id(), today())
         add_pilot(copy)
         go("pilotos", pilot_id=copy["id"])
@@ -295,13 +293,13 @@ def pilot_detail(p: dict) -> None:
                  rules.SCHEDULED: f"El piloto empieza el {short_date(p['start'])}." if p.get("start") else "",
                  rules.DRAFT: "Borrador: fija las fechas para programarlo."}[state])  # fmt: skip
     if note := double_reading(p):
-        st.markdown(f":orange[:material/event:] {note}")
+        st.markdown(f":orange[{ICONS['calendar']}] {note}")
 
     v = verdict_of(p)
     if v is not None:
         st.divider()
         st.subheader("Reporte del piloto")
-        st.markdown(f"### :{VERDICT_COLORS[v]}[{v}]")
+        st.markdown(verdict_heading(v))
         if state == rules.PRELIMINARY and rules.coverage_level(p.get("coverage")) == "valid":
             st.caption(
                 "Evaluación preliminar: se consolida unas 6 semanas después de terminar, cuando se validan los datos tardíos."
@@ -313,9 +311,7 @@ def pilot_detail(p: dict) -> None:
             metric(c1, "Impacto real detectado", pct(r["change"]), f"rango {pct(r['lo'])} a {pct(r['hi'])}")
             metric(c2, "Meta propuesta", pct(p["target"]) if p.get("target") is not None else "Sin meta")
             show_chart(charts.pilot_bars(p.get("target"), r))
-            st.caption(
-                "**Barra del resultado:** verde si todo el rango es una baja; ámbar si cruza 0 %. **Línea negra:** el rango del resultado."
-            )
+            show_legend(charts.pilot_legend())
         st.markdown("#### Mensajes clave para toma de decisiones")
         for title, text in key_messages(p, v):
             st.markdown(f"**{title}.** {text}")
@@ -327,11 +323,7 @@ def pilot_detail(p: dict) -> None:
             key=f"report_{p['id']}",
         )
     if p.get("mock"):
-        st.caption(":violet[Ejemplo con datos simulados para mostrar el flujo; no es un piloto real.]")
-
-    st.divider()
-    st.subheader("Bitácora")
-    log(p)
+        st.caption(":gray[Ejemplo con datos simulados para mostrar el flujo; no es un piloto real.]")
 
 
 def pilots_page() -> None:
@@ -375,11 +367,7 @@ def strategies(effect: float, kind: str, carry: bool) -> pd.DataFrame:
 
 def planning_page() -> None:
     st.title("Planear un piloto")
-    tab_new, tab_past = st.tabs(["Piloto nuevo (Planificado)", "Evaluar un periodo pasado (Retrospectivo)"])
-    with tab_new:
-        plan_new()
-    with tab_past:
-        plan_past()
+    plan_new()
 
 
 def plan_new() -> None:
@@ -407,9 +395,8 @@ def plan_new() -> None:
         f"### Mejor diseño: **{best['Diseño'].lower()}**, {n} {'temporada' if n == 1 else 'temporadas'} ({rules.viability(n).lower()})"
     )
     show_chart(charts.strategy_bars(rows))
-    st.caption(
-        f"Una temporada = {SEASON_LENGTH[kind]}. **Verde:** se ve en una temporada. **Azul:** en 2 o 3. **Gris:** inviable."
-    )
+    show_legend(charts.strategy_legend())
+    st.caption(f"Una temporada = {SEASON_LENGTH[kind]}.")
     if carry:
         st.warning(
             "Si el efecto dura más que la semana con medida, deja una semana de separación entre la semana con medida y la sin medida."
@@ -433,69 +420,8 @@ def plan_new() -> None:
                            help="Sin fechas se guarda como borrador.")  # fmt: skip
     if st.button("Guardar piloto", type="primary", key="plan_save"):
         dated = len(picked) == 2
-        p = {"id": new_pilot_id(), "name": name, "origin": rules.PLANNED, "created": today().isoformat(), "design": design,
+        p = {"id": new_pilot_id(), "name": name, "created": today().isoformat(), "design": design,
              "target": -effect, "draft": not dated, "start": picked[0].isoformat() if dated else None,
-             "end": picked[1].isoformat() if dated else None, "operations": "Por definir.",
-             "notes": [{"date": today().isoformat(), "text": f"Piloto creado: {design.lower()}, meta {pct(-effect)}."}]}  # fmt: skip
+             "end": picked[1].isoformat() if dated else None}  # fmt: skip
         add_pilot(p)
         go("pilotos", pilot_id=p["id"])
-
-
-def parse_sheet(sheet: str) -> dict:
-    """The change and its range from a `ficha-medida` sheet (its Markdown is the contract of the command)."""
-    num = r"([−+-]?\d+)%"
-    value = lambda s: int(s.replace("−", "-")) / 100  # noqa: E731
-    change = re.search(r"descontado el clima \| " + num, sheet)
-    rng = re.search(r"Rango compatible[^|]*\| " + num + r" a " + num, sheet)
-    if not (change and rng):
-        return {}
-    return {"change": value(change.group(1)), "lo": value(rng.group(1)), "hi": value(rng.group(2))}
-
-
-def plan_past() -> None:
-    st.markdown(
-        "**¿Una medida que ya ocurrió cambió la emisión?** Se registra como piloto *Retrospectivo* en el mismo historial."
-    )
-    if not live():
-        st.info(OFFLINE + " Los pilotos retrospectivos ya calculados están en el historial.")
-        return
-    name = st.text_input("Nombre de la medida", "Hoy No Circula sabatino", key="past_name")
-    season = st.selectbox("Temporada", list(SEASONS), index=1, key="past_season")
-    a, b = (date.fromisoformat(x) for x in SEASONS[season])
-    picked = st.date_input(
-        "Días de la medida",
-        value=(a, a + timedelta(days=4)),
-        min_value=a,
-        max_value=b,
-        format="DD/MM/YYYY",
-        key="past_days",
-    )
-    target = st.number_input(
-        "Meta o efecto anunciado (%; 0 si no hay)", -100, 0, -10, step=5, key="past_target"
-    )
-    if len(picked) != 2 or not st.button("Evaluar y registrar", type="primary", key="past_save"):
-        return
-    start, end = picked
-    with st.spinner("Estimando con días normales al azar (~45 s)…"):
-        args = (
-            "ficha-medida",
-            "--days",
-            f"{start}:{end}",
-            "--data",
-            ":".join(SEASONS[season]),
-            "--title",
-            name,
-        )
-        code, out, err, files = run_cli((*args, "--out-dir"))
-    sheet = next((t for path, t in files.items() if path.endswith(".md")), None)
-    result = parse_sheet(sheet or "")
-    if code or not result:
-        st.error("No se pudo evaluar ese periodo: " + cli_error(code, out, err))
-        return
-    p = {"id": new_pilot_id(), "name": name, "origin": rules.RETROSPECTIVE, "created": today().isoformat(),
-         "start": start.isoformat(), "end": end.isoformat(), "target": target / 100 if target else None, "result": result,
-         "coverage": coverage(start.isoformat(), end.isoformat()), "design": "Continuo",
-         "operations": "Medida ya aplicada; evaluada después con los datos de la red.",
-         "notes": [{"date": today().isoformat(), "text": "Evaluado en vivo con ficha-medida."}]}  # fmt: skip
-    add_pilot(p)
-    go("pilotos", pilot_id=p["id"])

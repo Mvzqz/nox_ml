@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import streamlit as st
 
 from nox_app import emissions, home, onboarding, pilots
-from nox_app.common import PAGES, PLANNER, ROLES, VIEWER, is_planner, keep
+from nox_app.common import ICONS, PAGES, PLANNER, ROLES, STYLE, VIEWER, is_planner, keep
 
 
 def header() -> None:
@@ -41,17 +41,18 @@ def header() -> None:
 
 def main() -> None:
     st.set_page_config(page_title="Monitor NOx CDMX", layout="wide", page_icon=":material/air:")
+    st.html(STYLE)
     header()
     onboarding.storage()
     PAGES.update(
         inicio=st.Page(home.home_page, title="Inicio", icon=":material/home:", default=True),
         boletin=st.Page(
-            emissions.bulletin_page, title="Boletines", url_path="boletin", icon=":material/newspaper:"
+            emissions.bulletin_page, title="Boletines", url_path="boletin", icon=ICONS["emissions"]
         ),
         episodio=st.Page(
-            emissions.episode_page, title="¿Fue el clima?", url_path="clima", icon=":material/cloud:"
+            emissions.episode_page, title="¿Fue el clima?", url_path="clima", icon=ICONS["weather"]
         ),
-        pilotos=st.Page(pilots.pilots_page, title="Pilotos", url_path="pilotos", icon=":material/science:"),
+        pilotos=st.Page(pilots.pilots_page, title="Pilotos", url_path="pilotos", icon=ICONS["pilots"]),
         planear=st.Page(
             pilots.planning_page, title="Planear piloto", url_path="planear", icon=":material/edit_calendar:"
         ),
@@ -61,7 +62,9 @@ def main() -> None:
         groups["2. Planes y Pilotos"] = ["pilotos", "planear"]
     page = st.navigation({g: [PAGES[k] for k in keys] for g, keys in groups.items()})
     onboarding.show()
-    page.run()
+    section2 = page in (PAGES["pilotos"], PAGES["planear"])
+    with st.container(key="sage_page" if section2 else "cobalt_page"):
+        page.run()
 
 
 if __name__ == "__main__":

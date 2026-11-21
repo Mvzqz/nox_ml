@@ -14,22 +14,6 @@
   },
   "coverage": 0.86,
   "description": "Restricción sabatina a vehículos con holograma 1, en semanas alternas durante 8 semanas.",
-  "operations": "Lo opera la Secretaría con la infraestructura actual de fotomultas; extenderlo requiere coordinar con el Estado de México.",
-  "notes": [
-   {
-    "date": "2026-04-10",
-    "text": "Diseño aprobado: semanas alternas, meta −10 %."
-   },
-   {
-    "date": "2026-06-01",
-    "text": "Arranca el piloto."
-   },
-   {
-    "date": "2026-09-10",
-    "text": "Evaluación consolidada."
-   }
-  ],
-  "origin": "Planificado",
   "mock": true
  },
  {
@@ -52,23 +36,11 @@
   },
   "coverage": 0.81,
   "description": "Carril exclusivo para carga en horario nocturno, en semanas alternas durante 6 semanas.",
-  "operations": "Requiere señalización móvil y dos patrullas por turno; los transportistas pidieron avisos con una semana de anticipación.",
-  "notes": [
-   {
-    "date": "2026-07-20",
-    "text": "Diseño aprobado."
-   },
-   {
-    "date": "2026-09-16",
-    "text": "Feriado del 16 de septiembre dentro del periodo."
-   }
-  ],
-  "origin": "Planificado",
   "mock": true
  },
  {
   "id": "m03",
-  "name": "Verificación vehicular reforzada en Iztapalapa",
+  "name": "Verificación reforzada en Iztapalapa",
   "created": "2026-06-15",
   "start": "2026-08-03",
   "end": "2026-08-28",
@@ -81,56 +53,28 @@
   },
   "coverage": 0.42,
   "description": "Operativo de verificación en vía pública durante 4 semanas.",
-  "operations": "Operativo intensivo en personal; dos estaciones de la zona estuvieron fuera de servicio buena parte del periodo.",
-  "notes": [
-   {
-    "date": "2026-08-12",
-    "text": "Dos estaciones de la zona sin datos desde el 10 de agosto."
-   }
-  ],
-  "origin": "Planificado",
   "mock": true
  },
  {
   "id": "m04",
-  "name": "Reparto nocturno de mercancías en el Centro",
+  "name": "Reparto nocturno en el Centro",
   "created": "2026-09-01",
   "start": "2026-10-12",
   "end": "2026-11-13",
   "design": "Continuo",
   "target": -0.06,
   "description": "Las entregas a comercios del Centro se mueven de 7–11 h a 22–6 h.",
-  "operations": "Depende de la adhesión voluntaria de distribuidores; 60 % se inscribió.",
-  "notes": [
-   {
-    "date": "2026-10-12",
-    "text": "Arranca el piloto."
-   },
-   {
-    "date": "2026-11-13",
-    "text": "Termina el piloto; esperando datos."
-   }
-  ],
-  "origin": "Planificado",
   "mock": true
  },
  {
   "id": "m05",
-  "name": "Ciclovía recreativa entre semana en Reforma",
+  "name": "Ciclovía entre semana en Reforma",
   "created": "2026-10-01",
   "start": "2026-11-09",
   "end": "2026-12-18",
   "design": "Días alternos",
   "target": -0.05,
   "description": "Cierre de un carril de Reforma a autos los martes y jueves de 6 a 10 h.",
-  "operations": "Lo opera el programa Muévete en Bici con el personal actual.",
-  "notes": [
-   {
-    "date": "2026-11-09",
-    "text": "Arranca el piloto."
-   }
-  ],
-  "origin": "Planificado",
   "mock": true
  },
  {
@@ -142,19 +86,11 @@
   "design": "Semanas alternas",
   "target": -0.12,
   "description": "Prohibición de circular a vehículos de más de 3.5 t de 7 a 10 h en vías primarias.",
-  "operations": "Requiere acuerdo con la Cámara de Autotransporte; pendiente la publicación en la Gaceta.",
-  "notes": [
-   {
-    "date": "2026-11-02",
-    "text": "Programado para la temporada feb–may 2027."
-   }
-  ],
-  "origin": "Planificado",
   "mock": true
  },
  {
   "id": "m07",
-  "name": "Zona de bajas emisiones en el Centro Histórico",
+  "name": "Bajas emisiones, Centro Histórico",
   "created": "2026-11-15",
   "start": null,
   "end": null,
@@ -162,86 +98,6 @@
   "design": "Bloques de dos semanas",
   "target": -0.15,
   "description": "Acceso solo a vehículos con holograma 0 y 00 al perímetro A.",
-  "operations": "Por definir con la Alcaldía Cuauhtémoc.",
-  "notes": [
-   {
-    "date": "2026-11-15",
-    "text": "Borrador: falta fijar fechas."
-   }
-  ],
-  "origin": "Planificado",
   "mock": true
- },
- {
-  "id": "r01",
-  "name": "Confinamiento por COVID-19, fase 2",
-  "origin": "Retrospectivo",
-  "created": "2026-03-01",
-  "start": "2020-03-30",
-  "end": "2020-04-20",
-  "design": "Continuo",
-  "target": null,
-  "result": {
-   "change": -0.5034,
-   "lo": -0.6096,
-   "hi": -0.3684
-  },
-  "coverage": 0.888,
-  "description": "Cierre de actividades no esenciales. Se compara con las mismas semanas de 2019 para descontar la temporada.",
-  "operations": "No replicable como política: sirve de referencia de cuánto puede bajar la emisión con una caída fuerte del tráfico.",
-  "notes": [
-   {
-    "date": "2026-03-01",
-    "text": "Registrado como referencia retrospectiva."
-   }
-  ]
- },
- {
-  "id": "r02",
-  "name": "Confinamiento por COVID-19, fase 3",
-  "origin": "Retrospectivo",
-  "created": "2026-03-01",
-  "start": "2020-04-21",
-  "end": "2020-05-31",
-  "design": "Continuo",
-  "target": null,
-  "result": {
-   "change": -0.4862,
-   "lo": -0.5907,
-   "hi": -0.3551
-  },
-  "coverage": 0.908,
-  "description": "Cierre de actividades no esenciales. Se compara con las mismas semanas de 2019 para descontar la temporada.",
-  "operations": "No replicable como política: sirve de referencia de cuánto puede bajar la emisión con una caída fuerte del tráfico.",
-  "notes": [
-   {
-    "date": "2026-03-01",
-    "text": "Registrado como referencia retrospectiva."
-   }
-  ]
- },
- {
-  "id": "r03",
-  "name": "Contingencias por ozono con restricción vehicular, 2024",
-  "origin": "Retrospectivo",
-  "created": "2026-03-01",
-  "start": "2024-02-23",
-  "end": "2024-05-31",
-  "design": "9 días de contingencia",
-  "target": null,
-  "result": {
-   "change": 0.0864,
-   "lo": -0.0526,
-   "hi": 0.2839
-  },
-  "coverage": 0.82,
-  "description": "Días con la Fase I activada (doble Hoy No Circula y restricciones a la industria), frente a días normales de la misma temporada.",
-  "operations": "Se activa con poca anticipación y dura 1 a 3 días: demasiado corto para que la medida se note en la emisión.",
-  "notes": [
-   {
-    "date": "2026-03-01",
-    "text": "Registrado como referencia retrospectiva."
-   }
-  ]
  }
 ]

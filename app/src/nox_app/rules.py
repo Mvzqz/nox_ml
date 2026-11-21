@@ -16,7 +16,6 @@ COVERAGE_VALID, COVERAGE_PRELIMINARY = 0.75, 0.50
 DRAFT, SCHEDULED, RUNNING, WAITING = "Borrador", "Programado", "En curso", "Sin datos suficientes aún"
 PRELIMINARY, CONSOLIDATED = "Evaluación preliminar", "Evaluado (Consolidado)"
 STATUSES = [DRAFT, SCHEDULED, RUNNING, WAITING, PRELIMINARY, CONSOLIDATED]
-PLANNED, RETROSPECTIVE = "Planificado", "Retrospectivo"
 
 CONFIRMED, NO_CHANGE = "Reducción confirmada", "Sin cambio detectable"
 INCONCLUSIVE, INSUFFICIENT = "Inconcluyente — Extender piloto ayudaría", "Datos insuficientes"
@@ -60,20 +59,15 @@ def dates_editable(pilot: dict, today: date) -> bool:
 
 
 def duplicate(pilot: dict, new_id: str, today: date) -> dict:
-    """A draft copy with the same design and target, without dates (the planner sets new ones) and with a
-    fresh log."""
-    copy = {
-        k: v for k, v in pilot.items() if k not in ("result", "result_with_atypical", "coverage", "notes")
-    }
+    """A draft copy with the same design and target, without dates (the planner sets new ones) or results."""
+    copy = {k: v for k, v in pilot.items() if k not in ("result", "result_with_atypical", "coverage")}
     copy.update(
         id=new_id,
         name=f"{pilot['name']} (variante)",
-        origin=PLANNED,
         draft=True,
         start=None,
         end=None,
         created=today.isoformat(),
-        notes=[{"date": today.isoformat(), "text": f"Creado como variante de «{pilot['name']}»."}],
     )
     return copy
 

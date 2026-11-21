@@ -13,6 +13,7 @@ import streamlit as st
 
 from nox_app import charts
 from nox_app.common import (
+    ICONS,
     MONTH_NAMES,
     OFFLINE,
     SEASONS,
@@ -32,6 +33,7 @@ from nox_app.common import (
     series,
     short_date,
     show_chart,
+    show_legend,
 )
 
 VERDICTS = {
@@ -40,6 +42,16 @@ VERDICTS = {
     "weather_explains_part": ("El clima lo explica en parte", "blue"),
     "weather_does_not_explain": ("El clima no lo explica", "orange"),
 }
+VERDICT_ICONS = {"weather_explains": ICONS["weather"], "weather_explains_part": ICONS["weather"],
+                 "weather_does_not_explain": ICONS["caution"]}  # fmt: skip
+
+
+def verdict_label(verdict: str) -> str:
+    """The verdict with its icon, for badges and headings."""
+    icon = VERDICT_ICONS.get(verdict)
+    return f"{icon} {VERDICTS[verdict][0]}" if icon else VERDICTS[verdict][0]
+
+
 OLD_TO_PRUDENT = {"weather": "weather_explains", "emission": "weather_does_not_explain"}
 WEEKDAYS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
 LONG_EPISODE = 14  # days; longer periods mix the change into its own reference days
@@ -131,23 +143,22 @@ def bulletin_hero(bulletin: dict, compact: bool = False) -> None:
             highlight=False,
         )
     )
+    show_legend(charts.series_legend(highlight=False))
 
 
 def week_row(week: dict, key: str) -> None:
     result = variant(week)
-    c = st.columns([2, 1.2, 1.2, 2, 1.6], vertical_alignment="center")
+    c = st.columns([1.8, 1.5, 1.5, 2, 1.6], vertical_alignment="center")
     c[0].markdown(f"**{short_date(week['start'])[:-5]} – {short_date(week['end'])}**")
     if "ratios" not in result:
-        c[3].markdown(":gray[Sin datos de la red esa semana]")
+        c[3].markdown(":gray[Sin datos de la red]")
         return
-    title, color = VERDICTS[verdict_of(result)]
+    color = VERDICTS[verdict_of(result)][1]
     c[1].markdown(f"Observado {pct(result['ratios']['concentration'] - 1)}")
     c[2].markdown(f"Por clima {pct(result['ratios']['weather'] - 1)}")
-    c[3].markdown(f":{color}-badge[{title}]")
+    c[3].markdown(f":{color}-badge[{verdict_label(verdict_of(result))}]")
     odd = verdict_of(result) != "normal"
-    if c[4].button(
-        "¿Fue el clima?", key=key, type="primary" if odd else "secondary", icon=":material/arrow_forward:"
-    ):
+    if c[4].button("¿Fue el clima?", key=key, type="primary" if odd else "secondary", icon=ICONS["weather"]):
         go("episodio", episode_week={"month": week["month"], "start": week["start"]})
 
 
@@ -164,9 +175,6 @@ def bulletin_page() -> None:
     )
     baseline_toggle()
     bulletin_hero(bulletin)
-    st.caption(
-        "**Línea continua:** NOₓ observado. **Punteada:** sin el efecto del clima. **Banda gris:** cuánto varía un día normal. **Marcas ámbar:** días atípicos."
-    )
 
     st.subheader("Semanas del mes")
     st.caption("Las semanas resaltadas salieron de lo común: ábrelas para ver si el clima lo explica.")
@@ -174,8 +182,9 @@ def bulletin_page() -> None:
         week_row({**week, "month": month}, key=f"week_{month}_{i}")
 
     first = date.fromisoformat(f"{month}-01")
-    with st.expander("Calendario del mes"):
+    with st.expander("Calendario del mes", icon=ICONS["calendar"]):
         show_chart(charts.heatmap(first, (pd.Timestamp(first) + pd.offsets.MonthEnd(0)).date()))
+        show_legend(charts.calendar_legend())
     rows = [
         {"semana": w["start"], "veredicto": VERDICTS[verdict_of(variant(w))][0] if "ratios" in variant(w) else "sin datos",
          "nox_observado": variant(w).get("ratios", {}).get("concentration"), "esperado_por_clima": variant(w).get("ratios", {}).get("weather")}
@@ -339,21 +348,17 @@ def show_diagnosis(diagnosis: dict, key: str) -> None:
     season = season_of(start)
     if season:
         show_chart(charts.time_series(series(season), start, end, included))
-        st.caption(
-            "**Línea continua:** NOₓ observado. **Punteada:** sin el efecto del clima. **Banda gris:** cuánto varía un día normal. **Zona azul:** los días elegidos. **Marcas ámbar:** días atípicos."
-        )
+        show_legend(charts.series_legend())
     st.markdown(comparison(result, included))
     if season and result.get("references"):
-        with st.expander("¿Con qué días se comparó?"):
+        with st.expander("¿Con qué días se comparó?", icon=ICONS["calendar"]):
             a, b = SEASONS[season]
             lo, hi = (
                 max(date.fromisoformat(a), start - timedelta(days=35)),
                 min(date.fromisoformat(b), end + timedelta(days=35)),
             )
             show_chart(charts.heatmap(lo, hi, (start, end), result["references"]))
-            st.caption(
-                "**Borde oscuro:** los días elegidos. **Punto:** los días normales con los que se compararon."
-            )
+            show_legend(charts.calendar_legend(references=True))
     with st.expander("¿Qué significa cada cosa?"):
         st.markdown(GLOSSARY)
     c1, c2, _ = st.columns(3)

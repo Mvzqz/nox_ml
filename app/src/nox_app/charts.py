@@ -3,6 +3,7 @@
 """The four charts of context/UI_BUSINESS_CONTEXT.md, section 4: at most two variables (days and NOx); the
 normal range, the weather and the atypical days go as background bands, dashed lines or quiet marks."""
 
+import math
 from collections.abc import Sequence
 from datetime import date
 
@@ -10,11 +11,66 @@ import altair as alt
 import pandas as pd
 
 from nox_app import rules
-from nox_app.common import DAY_ABBR, EVENT_COLORS, MONTHS, events
+from nox_app.common import (
+    AMBER,
+    BAND,
+    BORDER,
+    COBALT,
+    COBALT_HOVER,
+    DAY_ABBR,
+    EVENT_COLORS,
+    INK,
+    MONTHS,
+    MUTED,
+    NORMAL_RANGE,
+    OBSERVED_LINE,
+    SAGE,
+    events,
+)
 
-INK, TEAL, GREEN, AMBER, GREY, BLUE = "#1d3557", "#2a9d8f", "#2a9d8f", "#e9a23b", "#adb5bd", "#4a7fd4"
 SPANISH_DAY = "date(datum.value) + ' ' + " + str(MONTHS) + "[month(datum.value)]"
 OBSERVED, ADJUSTED = "NOₓ observado", "NOₓ sin el efecto del clima"
+CHOSEN = "#DBE3F0"  # the chosen days: cobalt at 8 % over the page
+
+
+# Legends, drawn as a list under each chart (common.show_legend): (swatch kind, colour, label, meaning).
+def series_legend(highlight: bool = True) -> list[tuple[str, str, str, str]]:
+    items = [
+        ("line", OBSERVED_LINE, OBSERVED, "lo que miden las estaciones"),
+        ("dash", COBALT, ADJUSTED, "descontando lo que hizo el viento"),
+        ("band", NORMAL_RANGE, "Rango normal", "cuánto varía un día normal"),
+        ("box", AMBER, "Día atípico", "feriado, fin de año, Semana Santa o contingencia"),
+    ]
+    return items + ([("box", CHOSEN, "Días elegidos", "el periodo que se diagnostica")] if highlight else [])
+
+
+def calendar_legend(references: bool = False) -> list[tuple[str, str, str, str]]:
+    items = [("box", BORDER, "Día normal", ""), ("box", BAND, "Fin de semana", "")]
+    items += [("box", color, kind, "") for kind, color in EVENT_COLORS.items()]
+    if references:
+        items += [
+            ("outline", COBALT, "Días elegidos", ""),
+            ("dot", COBALT, "Día de comparación", "día normal con el que se comparó"),
+        ]
+    return items
+
+
+def pilot_legend() -> list[tuple[str, str, str, str]]:
+    return [
+        ("box", BAND, "Línea base", "sin cambio (0 %)"),
+        ("box", MUTED, "Meta esperada", "la baja propuesta"),
+        ("box", SAGE, "Resultado: baja confirmada", "todo el rango está debajo de 0 %"),
+        ("box", AMBER, "Resultado: incierto", "el rango cruza 0 %"),
+        ("range", INK, "Rango del resultado", "valores compatibles con los datos"),
+    ]
+
+
+def strategy_legend() -> list[tuple[str, str, str, str]]:
+    return [
+        ("box", SAGE, rules.viability(1), "se ve en una temporada"),
+        ("box", COBALT_HOVER, rules.viability(2), "hacen falta 2 o 3 temporadas"),
+        ("box", BAND, rules.viability(4), "más de 3 temporadas"),
+    ]
 
 
 def time_series(
@@ -35,10 +91,10 @@ def time_series(
         [t.assign(serie=OBSERVED, value=t[f"obs{suffix}"]), t.assign(serie=ADJUSTED, value=t[f"adj{suffix}"])]
     ).dropna(subset=["value"])
     x = alt.X("day:T", title=None, axis=alt.Axis(labelExpr=SPANISH_DAY, tickCount=8, grid=False))
-    band = alt.Chart(t).mark_area(color=GREY, opacity=0.3).encode(x=x, y="band_lo:Q", y2="band_hi:Q")
+    band = alt.Chart(t).mark_area(color=NORMAL_RANGE).encode(x=x, y="band_lo:Q", y2="band_hi:Q")
     chosen = (
         alt.Chart(pd.DataFrame({"a": [a], "b": [b + pd.Timedelta(days=1)]}))
-        .mark_rect(color=BLUE, opacity=0.1)
+        .mark_rect(color=COBALT, opacity=0.08)
         .encode(x="a:T", x2="b:T")
     )
     odd = events()[lambda e: (e["end"] >= t["day"].min()) & (e["start"] <= t["day"].max())].assign(
@@ -46,7 +102,7 @@ def time_series(
     )
     marks = (
         alt.Chart(odd)
-        .mark_rect(color=AMBER, opacity=0.18)
+        .mark_rect(color=AMBER, opacity=0.2)
         .encode(x="start:T", x2="stop:T", tooltip=[alt.Tooltip("name:N", title="Día atípico")])
     )
     line = (
@@ -57,8 +113,8 @@ def time_series(
             y=alt.Y("value:Q", title="Frente a un día normal", axis=alt.Axis(format="+%")),
             color=alt.Color(
                 "serie:N",
-                scale=alt.Scale(domain=[OBSERVED, ADJUSTED], range=[INK, TEAL]),
-                legend=alt.Legend(title=None, orient="top"),
+                scale=alt.Scale(domain=[OBSERVED, ADJUSTED], range=[OBSERVED_LINE, COBALT]),
+                legend=None,
             ),
             strokeDash=alt.StrokeDash(
                 "serie:N", scale=alt.Scale(domain=[OBSERVED, ADJUSTED], range=[[1, 0], [5, 4]]), legend=None
@@ -70,8 +126,8 @@ def time_series(
             ],
         )
     )
-    zero = alt.Chart(pd.DataFrame({"y": [0.0]})).mark_rule(color=GREY, strokeDash=[2, 2]).encode(y="y:Q")
-    layers = [band, marks, chosen, zero, line] if highlight else [band, marks, zero, line]
+    zero = alt.Chart(pd.DataFrame({"y": [0.0]})).mark_rule(color=BAND, strokeDash=[2, 2]).encode(y="y:Q")
+    layers = [band, *([marks] if len(odd) else []), *([chosen] if highlight else []), zero, line]
     return alt.layer(*layers).properties(height=height)
 
 
@@ -105,41 +161,55 @@ def heatmap(
     )
     domain, colors = (
         ["Día normal", "Fin de semana", *EVENT_COLORS],
-        ["#eef1f4", "#d5dbe1", *EVENT_COLORS.values()],
+        [BORDER, BAND, *EVENT_COLORS.values()],
     )
     base = alt.Chart(days).encode(
         x=alt.X("week:O", sort=list(days["week"].unique()), title="Semana del", axis=alt.Axis(labelAngle=0)),
-        y=alt.Y("weekday:N", sort=DAY_ABBR, title=None),
+        y=alt.Y(
+            "weekday:N",
+            sort=DAY_ABBR,
+            title=None,
+            axis=alt.Axis(labelOverlap=False, ticks=False, domain=False),
+        ),
     )
     cells = base.mark_rect(cornerRadius=2).encode(
         color=alt.Color(
             "kind:N",
             scale=alt.Scale(domain=domain, range=colors),
-            legend=alt.Legend(title=None, orient="bottom"),
+            legend=None,
         ),
-        stroke=alt.condition("datum.chosen", alt.value(INK), alt.value(None)),
-        strokeWidth=alt.condition("datum.chosen", alt.value(2.5), alt.value(0)),
+        stroke=alt.condition("datum.chosen", alt.value(COBALT), alt.value("#FFFFFF")),
+        strokeWidth=alt.condition("datum.chosen", alt.value(2.5), alt.value(2)),
         tooltip=[
             alt.Tooltip("date:N", title="Día"),
             alt.Tooltip("kind:N", title="Tipo"),
             alt.Tooltip("name:N", title="Evento"),
         ],
     )
-    height = 180
+    height = 7 * 28  # one 28 px row per weekday, so every label fits
     if not len(references):
         return cells.properties(height=height)
-    dots = base.transform_filter("datum.reference").mark_point(filled=True, size=40, color=INK, opacity=0.9)
+    dots = base.transform_filter("datum.reference").mark_point(
+        filled=True, size=40, color=COBALT, opacity=0.9
+    )
     return (cells + dots).properties(height=height)
+
+
+def round_ticks(lo: float, hi: float) -> list[float]:
+    """Axis ticks on round steps (2, 5 or 10 %) inside [lo, hi], always including 0."""
+    step = next(s for s in (0.02, 0.05, 0.10, 0.20) if (hi - lo) / s <= 10)
+    first = math.ceil(lo / step)
+    return [round(i * step, 4) for i in range(first, math.floor(hi / step) + 1)]
 
 
 def pilot_bars(target: float | None, result: dict | None) -> alt.LayerChart:
     """Baseline (0 %), target and real result with its range, as horizontal bars from 0: green when the whole
     range is a drop, amber when it crosses 0."""
-    rows = [{"row": "Línea base", "value": 0.0, "color": GREY}]
+    rows = [{"row": "Línea base", "value": 0.0, "color": BAND}]
     if target is not None:
-        rows.append({"row": "Meta esperada", "value": target, "color": BLUE})
+        rows.append({"row": "Meta esperada", "value": target, "color": MUTED})
     if result is not None:
-        color = GREEN if result["hi"] < 0 else AMBER if result["lo"] < 0 else GREY
+        color = SAGE if result["hi"] < 0 else AMBER if result["lo"] < 0 else BAND
         rows.append(
             {
                 "row": "Resultado real",
@@ -150,29 +220,39 @@ def pilot_bars(target: float | None, result: dict | None) -> alt.LayerChart:
             }
         )
     d = pd.DataFrame(rows)
-    d["label"] = d["value"].map(lambda v: f"{v * 100:+.0f} %".replace("-", "−"))
-    y = alt.Y("row:N", sort=[r["row"] for r in rows], title=None)
-    x = alt.X("value:Q", title="Cambio de la emisión", axis=alt.Axis(format="+%"))
+    d["label"] = d["value"].map(lambda v: "0 %" if v == 0 else f"{v * 100:+.0f} %".replace("-", "−"))
+    ends = [0.0, *d["value"], *(([result["lo"], result["hi"]]) if result else [])]
+    margin = 0.15 * (max(ends) - min(ends)) or 0.05
+    y = alt.Y("row:N", sort=[r["row"] for r in rows], title=None, axis=alt.Axis(ticks=False, domain=False))
+    x = alt.X(
+        "value:Q",
+        title="Cambio de la emisión",
+        axis=alt.Axis(format="+%", grid=False, values=round_ticks(min(ends) - margin, max(ends) + margin)),
+        scale=alt.Scale(domain=[min(ends) - margin, max(ends) + margin], nice=False),
+    )
     bars = (
-        alt.Chart(d)
-        .mark_bar(height=22)
+        alt.Chart(d[d["value"] != 0])
+        .mark_bar(height=22, cornerRadius=2)
         .encode(x=x, x2=alt.X2(datum=0), y=y, color=alt.Color("color:N", scale=None))
     )
-    layers = [bars]
+    baseline = (
+        alt.Chart(d[d["row"] == "Línea base"]).mark_tick(color=MUTED, thickness=3, size=22).encode(x=x, y=y)
+    )
+    layers = [bars, baseline]
     if result is not None:
         ci = d[d["row"] == "Resultado real"]
         layers.append(alt.Chart(ci).mark_rule(color=INK, strokeWidth=2).encode(x="lo:Q", x2="hi:Q", y=y))
-        layers.append(alt.Chart(ci).mark_tick(color=INK, thickness=2, size=18).encode(x="lo:Q", y=y))
-        layers.append(alt.Chart(ci).mark_tick(color=INK, thickness=2, size=18).encode(x="hi:Q", y=y))
-    layers.append(
+        layers.append(alt.Chart(ci).mark_tick(color=INK, thickness=2, size=16).encode(x="lo:Q", y=y))
+        layers.append(alt.Chart(ci).mark_tick(color=INK, thickness=2, size=16).encode(x="hi:Q", y=y))
+    layers.append(  # the value above the end of each bar, clear of the bar and of the range
         alt.Chart(d)
-        .mark_text(align="left", dx=6, dy=-14, fontSize=12, color=INK)
+        .mark_text(align="center", baseline="bottom", dy=-14, fontSize=12, fontWeight=600, color=INK)
         .encode(x=x, y=y, text="label:N")
     )
     layers.append(
-        alt.Chart(pd.DataFrame({"x": [0.0]})).mark_rule(color=INK, strokeDash=[3, 3]).encode(x="x:Q")
+        alt.Chart(pd.DataFrame({"x": [0.0]})).mark_rule(color=MUTED, strokeDash=[3, 3]).encode(x="x:Q")
     )
-    return alt.layer(*layers).properties(height=60 * len(rows) + 30)
+    return alt.layer(*layers).properties(height=64 * len(rows) + 30)
 
 
 def strategy_bars(rows: pd.DataFrame, cap: int = 6) -> alt.LayerChart:
@@ -197,8 +277,8 @@ def strategy_bars(rows: pd.DataFrame, cap: int = 6) -> alt.LayerChart:
             y=y,
             color=alt.Color(
                 "viability:N",
-                scale=alt.Scale(domain=domain, range=[GREEN, BLUE, GREY]),
-                legend=alt.Legend(title=None, orient="top"),
+                scale=alt.Scale(domain=domain, range=[SAGE, COBALT_HOVER, BAND]),
+                legend=None,
             ),
             tooltip=["Diseño", alt.Tooltip("label:N", title="Temporadas")],
         )

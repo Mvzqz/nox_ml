@@ -54,14 +54,11 @@ def test_dates_are_fixed_once_the_pilot_starts():
     assert not rules.dates_editable(PILOT, date(2026, 6, 1))
 
 
-def test_a_duplicate_is_an_editable_draft_without_the_results_or_the_log():
-    copy = rules.duplicate(
-        {**PILOT, "notes": [{"date": "2026-06-01", "text": "x"}]}, "p9", date(2026, 11, 20)
-    )
+def test_a_duplicate_is_an_editable_draft_without_the_results():
+    copy = rules.duplicate(PILOT, "p9", date(2026, 11, 20))
 
-    assert copy["id"] == "p9" and copy["origin"] == rules.PLANNED and copy["draft"]
+    assert copy["id"] == "p9" and copy["draft"]
     assert "result" not in copy and "coverage" not in copy and copy["start"] is None
-    assert [n["date"] for n in copy["notes"]] == ["2026-11-20"]
     assert rules.dates_editable(copy, date(2026, 11, 20))
 
 
