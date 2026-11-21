@@ -89,26 +89,23 @@ def compact_period(start: str | None, end: str | None) -> str:
     return f"{short_date(start)[:-5]} – {short_date(end)}"
 
 
-def history_table(rows: list[dict]) -> pd.DataFrame:
-    return pd.DataFrame(
-        [
-            {
-                "id": p["id"],
-                "Piloto": p["name"],
-                "Estado": rules.status(p, today()),
-                "Fechas": compact_period(p.get("start"), p.get("end")),
-                "Meta": pct(p["target"]) if p.get("target") is not None else "—",
-                "Veredicto": (verdict_of(p) or "—").split(" — ")[
-                    0
-                ],  # the short name; the report has the rest
-            }
-            for p in rows
-        ]
-    )
+HISTORY_COLUMNS = [3, 2.2, 0.7, 1.9, 1]  # pilot (name and dates), status, target, verdict, button
+
+
+def history_row(p: dict, key: str) -> None:
+    """One pilot: its name, status and verdict as coloured badges, and a button to open its report."""
+    c = st.columns(HISTORY_COLUMNS, vertical_alignment="center")
+    c[0].markdown(f"**{p['name']}**  \n:gray[{compact_period(p.get('start'), p.get('end'))}]")
+    c[1].markdown(status_badge(rules.status(p, today())))
+    c[2].markdown(pct(p["target"]) if p.get("target") is not None else "—")
+    v = verdict_of(p)
+    c[3].markdown(badge(v.split(" — ")[0], VERDICT_COLORS[v]) if v else ":gray[—]")  # the short name
+    if c[4].button("Abrir", key=f"{key}_open_{p['id']}", icon=":material/arrow_forward:"):
+        go("pilotos", pilot_id=p["id"])
 
 
 def pilot_history(key: str) -> None:
-    """Every pilot in one table, with filters; a selected row opens its report."""
+    """Every pilot in one list, with filters; each row opens its report, like the bulletin history."""
     c1, c2 = st.columns([2, 1.6])
     statuses = c1.multiselect("Estado", rules.STATUSES, key=f"{key}_status", placeholder="Todos")
     text = c2.text_input("Buscar", key=f"{key}_text", placeholder="Nombre del piloto")
@@ -119,25 +116,12 @@ def pilot_history(key: str) -> None:
     if not rows:
         st.info("Ningún piloto cumple esos filtros.")
         return
-    table = history_table(rows)
-    picked = st.dataframe(
-        table.drop(columns="id"),
-        hide_index=True,
-        column_config={  # fixed widths: the grid measures columns before the brand font loads
-            "Piloto": st.column_config.TextColumn(width=290),
-            "Estado": st.column_config.TextColumn(width=175),
-            "Fechas": st.column_config.TextColumn(width=165),
-            "Meta": st.column_config.TextColumn(width=60),
-            "Veredicto": st.column_config.TextColumn(width=180),
-        },
-        width="stretch",
-        on_select="rerun",
-        selection_mode="single-row",
-        key=f"{key}_table",
-    )
-    st.caption("Selecciona una fila para abrir el piloto.")
-    if picked.selection.rows:
-        go("pilotos", pilot_id=table.iloc[picked.selection.rows[0]]["id"])
+    with st.container(border=True, key=f"card_{key}_history"):
+        head = st.columns(HISTORY_COLUMNS)
+        for col, name in zip(head, ["Piloto y fechas", "Estado", "Meta", "Veredicto", ""], strict=True):
+            col.caption(f"**{name}**" if name else "")
+        for p in rows:
+            history_row(p, key)
 
 
 def latest_evaluated() -> dict | None:

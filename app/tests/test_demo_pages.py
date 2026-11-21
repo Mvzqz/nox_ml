@@ -134,3 +134,12 @@ def test_a_kpi_reads_against_the_normal_range(value, status):
 
 def test_axis_ticks_fall_on_round_steps_and_include_zero():
     assert round_ticks(-0.17, 0.09) == [-0.15, -0.1, -0.05, 0.0, 0.05]
+
+
+def test_each_row_of_the_pilot_history_opens_its_pilot():
+    page = app("pilots.pilots_page")
+    assert not page.dataframe  # a list with buttons, no selectable table
+    page.button(key="pilots_page_open_m03").click().run()
+
+    assert page.session_state["pilot_open"] == "m03"  # the page reran and opened that pilot's report
+    assert any("Verificación reforzada en Iztapalapa" in m.value for m in page.markdown)
