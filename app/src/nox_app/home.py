@@ -1,3 +1,4 @@
+# ruff: noqa: E501  (user-facing Spanish strings read better unwrapped)
 """Home: 1. Emisiones (latest bulletin and history) and, for planners, 2. Planes y Pilotos (latest pilot and
 the unified history)."""
 
@@ -5,10 +6,14 @@ import streamlit as st
 
 from nox_app import emissions, pilots
 from nox_app.common import bulletins, go, is_planner
+from nox_app.design import page_header
 
 
 def home_page() -> None:
-    st.title("Monitor de NOₓ · Ciudad de México")
+    page_header(
+        "Monitor de NOₓ · Ciudad de México",
+        "Cómo va el NOₓ de la ciudad, descontando el efecto del clima, y qué cambian las medidas que se ponen a prueba.",
+    )
 
     st.header("1. Emisiones", divider="blue")
     latest = bulletins()[0]

@@ -13,7 +13,6 @@ import streamlit as st
 
 from nox_app import charts
 from nox_app.common import (
-    ICONS,
     MONTH_NAMES,
     OFFLINE,
     SEASONS,
@@ -26,15 +25,13 @@ from nox_app.common import (
     go,
     keep,
     live,
-    metric,
     pct,
     run_cli,
     season_of,
     series,
     short_date,
-    show_chart,
-    show_legend,
 )
+from nox_app.design import ICONS, kpi, page_header, show_chart, show_legend, status_of
 
 VERDICTS = {
     "normal": ("Normal", "gray"),
@@ -121,15 +118,30 @@ def month_summary(bulletin: dict) -> dict:
     }
 
 
+def normal_range(bulletin: dict, ratio: str) -> tuple[float, float] | None:
+    """The normal range of a week's change, averaged over the month's weeks (each from 500 normal weeks
+    drawn at random). A month averages more days than a week, so this range is on the generous side: a month
+    outside it is clearly outside."""
+    nulls = [variant(w)["null"][ratio] for w in bulletin["weeks"] if ratio in variant(w).get("null", {})]
+    if not nulls:
+        return None
+    return sum(n["lo"] for n in nulls) / len(nulls) - 1, sum(n["hi"] for n in nulls) / len(nulls) - 1
+
+
 def bulletin_hero(bulletin: dict, compact: bool = False) -> None:
     s = month_summary(bulletin)
+    obs_range, adj_range = normal_range(bulletin, "concentration"), normal_range(bulletin, "emission")
     c1, c2, c3 = st.columns(3)
-    metric(c1, "NOₓ observado", pct(s["observed"]), "frente a días normales",
-           help="Promedio de los días del mes, cada uno frente a días normales del mismo día de la semana.")  # fmt: skip
-    metric(c2, "NOₓ sin el efecto del clima", pct(s["adjusted"]), "lo que el clima no explica",
-           help="Lo observado, descontando lo que hizo el viento: se acerca a la emisión.")  # fmt: skip
-    metric(c3, "Semanas fuera de lo común", f"{s['odd']} de {s['weeks']}",
-           f"cobertura de la red {s['coverage']:.0%}" if s["coverage"] else "")  # fmt: skip
+    kpi(c1, "NOₓ observado", pct(s["observed"]), "frente a días normales",
+        status=status_of(s["observed"], *obs_range) if obs_range else None,
+        help="Promedio de los días del mes, cada uno frente a días normales del mismo día de la semana.")  # fmt: skip
+    kpi(c2, "NOₓ sin el efecto del clima", pct(s["adjusted"]), "lo que el clima no explica",
+        status=status_of(s["adjusted"], *adj_range) if adj_range else None,
+        help="Lo observado, descontando lo que hizo el viento: se acerca a la emisión.")  # fmt: skip
+    kpi(c3, "Semanas fuera de lo común", f"{s['odd']} de {s['weeks']}",
+        f"cobertura de la red {s['coverage']:.0%}" if s["coverage"] else "",
+        status="normal" if s["odd"] == 0 else None,
+        text="Todas dentro de lo normal" if s["odd"] == 0 else "Revísalas abajo")  # fmt: skip
     first = date.fromisoformat(f"{bulletin['month']}-01")
     last = (pd.Timestamp(first) + pd.offsets.MonthEnd(0)).date()
     show_chart(
@@ -143,7 +155,7 @@ def bulletin_hero(bulletin: dict, compact: bool = False) -> None:
             highlight=False,
         )
     )
-    show_legend(charts.series_legend(highlight=False))
+    show_legend(charts.series_legend(highlight=False, atypical=charts.atypical_days(first, last)))
 
 
 def week_row(week: dict, key: str) -> None:
@@ -167,12 +179,13 @@ def bulletin_page() -> None:
     titles = {m["month"]: month_title(m["month"]) for m in months}
     if "bulletin_month" in st.session_state:
         st.session_state["bulletin_select"] = st.session_state.pop("bulletin_month")
+    page_header(
+        "Boletines",
+        "Diagnóstico neutral de cómo estuvo el NOₓ cada mes y por qué. Datos de la red de monitoreo (OpenAQ) y del satélite TEMPO.",
+    )
     month = st.selectbox("Boletín", list(titles), format_func=titles.get, key="bulletin_select")
     bulletin = next(m for m in months if m["month"] == month)
-    st.title(f"Boletín de NOₓ · {titles[month]}")
-    st.caption(
-        "Diagnóstico neutral de cómo estuvo el NOₓ y por qué. Datos de la red de monitoreo (OpenAQ) y del satélite TEMPO."
-    )
+    st.header(f"Boletín de NOₓ · {titles[month]}", divider="blue")
     baseline_toggle()
     bulletin_hero(bulletin)
 
@@ -328,27 +341,28 @@ def show_diagnosis(diagnosis: dict, key: str) -> None:
     st.markdown(f"## :{color}[{title.upper()}]")
     st.markdown(story(result))
 
-    r = result["ratios"]
+    r, null = result["ratios"], result.get("null", {})
+
+    def status(ratio: str) -> str | None:  # against the 95 % band of 500 normal periods
+        band = null.get(ratio)
+        return status_of(r[ratio], band["lo"], band["hi"]) if band and r.get(ratio) is not None else None
+
+    weather = status("weather")
     c1, c2, c3 = st.columns(3)
-    metric(
-        c1,
-        "NOₓ observado",
-        pct(r["concentration"] - 1),
-        "frente a días normales",
-        help="Lo que midieron las estaciones.",
-    )
-    metric(c2, "Esperado solo por el clima", pct(r["weather"] - 1), "con la emisión de siempre",
-           help="Lo que habría en el aire si se emitiera lo de siempre y solo cambiaran el viento y el aire de esos días.")  # fmt: skip
+    kpi(c1, "NOₓ observado", pct(r["concentration"] - 1), "frente a días normales", status=status("concentration"),
+        help="Lo que midieron las estaciones.")  # fmt: skip
+    kpi(c2, "Esperado solo por el clima", pct(r["weather"] - 1), "con la emisión de siempre",
+        status=weather, text={"above": "El clima juntó más NOₓ", "below": "El clima dispersó el NOₓ", "normal": "Clima de un día normal"}.get(weather or ""),
+        help="Lo que habría en el aire si se emitiera lo de siempre y solo cambiaran el viento y el aire de esos días.")  # fmt: skip
     if r.get("background") is not None:
-        metric(
-            c3, "Contaminación en toda la región", pct(r["background"] - 1), "satélite, fuera de la ciudad"
-        )
+        kpi(c3, "Contaminación en toda la región", pct(r["background"] - 1), "satélite, fuera de la ciudad",
+            status=status("background"))  # fmt: skip
 
     start, end = date.fromisoformat(result["days"][0]), date.fromisoformat(result["days"][-1])
     season = season_of(start)
     if season:
         show_chart(charts.time_series(series(season), start, end, included))
-        show_legend(charts.series_legend())
+        show_legend(charts.series_legend(atypical=charts.atypical_days(start, end, pad=28)))
     st.markdown(comparison(result, included))
     if season and result.get("references"):
         with st.expander("¿Con qué días se comparó?", icon=ICONS["calendar"]):
@@ -391,9 +405,9 @@ SOURCES = ["Una semana de los boletines", "Ejemplos de diciembre de 2023", "Otro
 
 
 def episode_page() -> None:
-    st.title("¿Fue el clima?")
-    st.markdown(
-        "**¿Por qué una semana tuvo más (o menos) NOₓ?** A veces es el clima, porque con poco viento la contaminación se junta, y a veces cambió la emisión. Elige los días y te decimos si el clima basta para explicarlo."
+    page_header(
+        "¿Fue el clima?",
+        "¿Por qué unos días tuvieron más (o menos) NOₓ? Con poco viento la contaminación se junta aunque se emita lo mismo. Elige los días y te decimos si el clima basta para explicarlo.",
     )
 
     weeks = bulletin_weeks()

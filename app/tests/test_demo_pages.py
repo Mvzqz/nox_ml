@@ -8,7 +8,8 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 from nox_app.charts import round_ticks
-from nox_app.common import legend_html, short_date
+from nox_app.common import short_date
+from nox_app.design import STATUS, legend_html, status_of
 
 ROOT = Path(__file__).resolve().parents[2]
 SETUP = """
@@ -112,16 +113,23 @@ def test_the_planner_saves_a_draft_without_dates():
     assert saved["draft"] and saved["target"] == -0.10
 
 
-def test_a_legend_lists_each_mark_with_its_colour_and_meaning():
+def test_a_legend_lists_each_mark_and_dims_the_ones_absent_from_the_period():
     html = legend_html(
         [
-            ("dash", "#1E3A8A", "NOₓ sin el efecto del clima", "descontando el viento"),
-            ("box", "#D97706", "Día atípico", ""),
+            ("dash", "#0F172A", "NOₓ sin el efecto del clima", "descontando el viento"),
+            ("box", "#D97706", "Día atípico", "feriado", True),
         ]
     )
 
-    assert html.count('role="list"') == 1 and "dashed #1E3A8A" in html and "background:#D97706" in html
-    assert "NOₓ sin el efecto del clima" in html and "descontando el viento" in html
+    assert html.count('role="listitem"') == 2 and "#0F172A" in html and "background:#D97706" in html
+    assert (
+        "descontando el viento" in html and "sin registros en este periodo" in html and "opacity:0.45" in html
+    )
+
+
+@pytest.mark.parametrize(("value", "status"), [(0.40, "above"), (0.10, "normal"), (-0.30, "below")])
+def test_a_kpi_reads_against_the_normal_range(value, status):
+    assert status_of(value, -0.22, 0.33) == status and status in STATUS
 
 
 def test_axis_ticks_fall_on_round_steps_and_include_zero():

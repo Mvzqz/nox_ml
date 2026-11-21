@@ -10,7 +10,8 @@ borderColor = "#E2E8F0"
 linkColor = "#1D4ED8"
 blueColor = "#1E3A8A"
 greenColor = "#0F766E"              # sage: section 2 and confirmed drops
-orangeColor = "#D97706"             # amber: holidays, atypical weather, preliminary states
+orangeColor = "#D97706"
+redColor = "#B42318"                # above normal: more NOx than usual (design.ABOVE)             # amber: holidays, atypical weather, preliminary states
 grayColor = "#475569"
 # Typography (section 6): Outfit SemiBold for headings, Public Sans for everything else (Google Fonts).
 font = "Public Sans:https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap, Helvetica Neue, Helvetica, Arial, sans-serif"

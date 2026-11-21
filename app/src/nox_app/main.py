@@ -16,27 +16,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import streamlit as st
 
 from nox_app import emissions, home, onboarding, pilots
-from nox_app.common import ICONS, PAGES, PLANNER, ROLES, STYLE, VIEWER, is_planner, keep
+from nox_app.common import PAGES, PLANNER, ROLES, VIEWER, is_planner, keep
+from nox_app.design import ICONS, STYLE
 
 
 def header() -> None:
-    """Demo role switch (no real accounts yet) and the button that reopens the walkthrough."""
+    """Demo role switch (no real accounts yet); the walkthrough button sits next to each page title."""
     if "_role" not in st.session_state:
         st.session_state["_role"] = PLANNER if st.query_params.get("rol") == PLANNER else VIEWER
     st.session_state["role"] = st.session_state["_role"]
-    st.sidebar.radio(
-        "Rol (demo)",
-        list(ROLES),
-        format_func=ROLES.get,
-        key="role",
-        on_change=keep,
-        args=("role",),
-        help="Consulta solo ve Emisiones; Planeación también gestiona pilotos.",
-    )
-    _, right = st.columns([5, 1])
-    right.button(
-        "¿Qué es NOₓ?", icon=":material/help:", on_click=onboarding.reopen, key="help_button", width="stretch"
-    )
+    with st.sidebar.container(border=True, key="card_role"):  # set apart from the navigation above it
+        st.radio(
+            "Rol (demo)",
+            list(ROLES),
+            format_func=ROLES.get,
+            key="role",
+            on_change=keep,
+            args=("role",),
+            help="Consulta solo ve Emisiones; Planeación también gestiona pilotos.",
+        )
 
 
 def main() -> None:

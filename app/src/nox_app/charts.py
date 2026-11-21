@@ -11,40 +11,54 @@ import altair as alt
 import pandas as pd
 
 from nox_app import rules
-from nox_app.common import (
+from nox_app.common import DAY_ABBR, MONTHS, events
+from nox_app.design import (
+    ABOVE,
+    ADJUSTED_COLOR,
     AMBER,
     BAND,
+    BELOW,
     BORDER,
+    CHOSEN,
     COBALT,
     COBALT_HOVER,
-    DAY_ABBR,
+    DASH,
     EVENT_COLORS,
     INK,
-    MONTHS,
+    LINE_WIDTH,
     MUTED,
-    NORMAL_RANGE,
-    OBSERVED_LINE,
+    OBSERVED_COLOR,
+    RANGE_EDGE,
+    RANGE_FILL,
     SAGE,
-    events,
 )
 
 SPANISH_DAY = "date(datum.value) + ' ' + " + str(MONTHS) + "[month(datum.value)]"
 OBSERVED, ADJUSTED = "NOₓ observado", "NOₓ sin el efecto del clima"
-CHOSEN = "#DBE3F0"  # the chosen days: cobalt at 8 % over the page
+SHORT = {OBSERVED: "Observado", ADJUSTED: "Sin clima"}  # direct labels at the end of each line
+UNCERTAIN = "#94A3B8"  # a result whose range crosses 0 %: neutral, neither a drop nor a rise
 
 
-# Legends, drawn as a list under each chart (common.show_legend): (swatch kind, colour, label, meaning).
-def series_legend(highlight: bool = True) -> list[tuple[str, str, str, str]]:
+def atypical_days(start: date | str, end: date | str, pad: int = 0) -> int:
+    """Atypical days (holidays, contingencies...) inside the period a time series shows."""
+    a, b = pd.Timestamp(start) - pd.Timedelta(days=pad), pd.Timestamp(end) + pd.Timedelta(days=pad)
+    e = events()
+    e = e[(e["end"] >= a) & (e["start"] <= b)]
+    return int(sum((min(r.end, b) - max(r.start, a)).days + 1 for r in e.itertuples()))
+
+
+# Legends, drawn as a list under each chart (design.show_legend): (swatch, colour, label, meaning[, absent]).
+def series_legend(highlight: bool = True, atypical: int = 1) -> list[tuple]:
     items = [
-        ("line", OBSERVED_LINE, OBSERVED, "lo que miden las estaciones"),
-        ("dash", COBALT, ADJUSTED, "descontando lo que hizo el viento"),
-        ("band", NORMAL_RANGE, "Rango normal", "cuánto varía un día normal"),
-        ("box", AMBER, "Día atípico", "feriado, fin de año, Semana Santa o contingencia"),
+        ("line", OBSERVED_COLOR, OBSERVED, "lo que miden las estaciones"),
+        ("dash", ADJUSTED_COLOR, ADJUSTED, "descontando lo que hizo el viento"),
+        ("range", RANGE_FILL, "Rango normal", "cuánto varía un día normal"),
+        ("box", AMBER, "Día atípico", "feriado, fin de año, Semana Santa o contingencia", atypical == 0),
     ]
     return items + ([("box", CHOSEN, "Días elegidos", "el periodo que se diagnostica")] if highlight else [])
 
 
-def calendar_legend(references: bool = False) -> list[tuple[str, str, str, str]]:
+def calendar_legend(references: bool = False) -> list[tuple]:
     items = [("box", BORDER, "Día normal", ""), ("box", BAND, "Fin de semana", "")]
     items += [("box", color, kind, "") for kind, color in EVENT_COLORS.items()]
     if references:
@@ -55,17 +69,18 @@ def calendar_legend(references: bool = False) -> list[tuple[str, str, str, str]]
     return items
 
 
-def pilot_legend() -> list[tuple[str, str, str, str]]:
+def pilot_legend() -> list[tuple]:
     return [
         ("box", BAND, "Línea base", "sin cambio (0 %)"),
-        ("box", MUTED, "Meta esperada", "la baja propuesta"),
-        ("box", SAGE, "Resultado: baja confirmada", "todo el rango está debajo de 0 %"),
-        ("box", AMBER, "Resultado: incierto", "el rango cruza 0 %"),
-        ("range", INK, "Rango del resultado", "valores compatibles con los datos"),
+        ("box", COBALT, "Meta esperada", "la baja propuesta"),
+        ("box", BELOW, "Resultado: baja confirmada", "todo el rango está debajo de 0 %"),
+        ("box", UNCERTAIN, "Resultado: incierto", "el rango cruza 0 %"),
+        ("box", ABOVE, "Resultado: subida", "todo el rango está arriba de 0 %"),
+        ("interval", INK, "Rango del resultado", "valores compatibles con los datos"),
     ]
 
 
-def strategy_legend() -> list[tuple[str, str, str, str]]:
+def strategy_legend() -> list[tuple]:
     return [
         ("box", SAGE, rules.viability(1), "se ve en una temporada"),
         ("box", COBALT_HOVER, rules.viability(2), "hacen falta 2 o 3 temporadas"),
@@ -82,8 +97,9 @@ def time_series(
     height: int = 260,
     highlight: bool = True,
 ) -> alt.LayerChart:
-    """Observed NOx (line) and NOx without the weather (dashed) against normal days, with the normal range of
-    one day (grey band), the chosen days (shaded) and the atypical days (amber marks)."""
+    """Observed NOx (solid) and NOx without the weather (dashed) against normal days, with the normal range of
+    one day (light band with fine edges), the chosen days (shaded), the atypical days (amber) and each line
+    named at its end."""
     a, b = pd.Timestamp(start), pd.Timestamp(end)
     t = table[table["day"].between(a - pd.Timedelta(days=pad), b + pd.Timedelta(days=pad))].copy()
     suffix = "_all" if include_atypical else ""
@@ -91,10 +107,15 @@ def time_series(
         [t.assign(serie=OBSERVED, value=t[f"obs{suffix}"]), t.assign(serie=ADJUSTED, value=t[f"adj{suffix}"])]
     ).dropna(subset=["value"])
     x = alt.X("day:T", title=None, axis=alt.Axis(labelExpr=SPANISH_DAY, tickCount=8, grid=False))
-    band = alt.Chart(t).mark_area(color=NORMAL_RANGE).encode(x=x, y="band_lo:Q", y2="band_hi:Q")
+    y = alt.Y("value:Q", title="Frente a un día normal", axis=alt.Axis(format="+%", tickCount=5))
+    band = alt.Chart(t).mark_area(color=RANGE_FILL).encode(x=x, y="band_lo:Q", y2="band_hi:Q")
+    edges = [
+        alt.Chart(t).mark_line(color=RANGE_EDGE, strokeWidth=1).encode(x=x, y=alt.Y(f"{side}:Q"))
+        for side in ("band_lo", "band_hi")
+    ]
     chosen = (
         alt.Chart(pd.DataFrame({"a": [a], "b": [b + pd.Timedelta(days=1)]}))
-        .mark_rect(color=COBALT, opacity=0.08)
+        .mark_rect(color=CHOSEN, opacity=0.7)
         .encode(x="a:T", x2="b:T")
     )
     odd = events()[lambda e: (e["end"] >= t["day"].min()) & (e["start"] <= t["day"].max())].assign(
@@ -105,19 +126,20 @@ def time_series(
         .mark_rect(color=AMBER, opacity=0.2)
         .encode(x="start:T", x2="stop:T", tooltip=[alt.Tooltip("name:N", title="Día atípico")])
     )
+    color = alt.Color(
+        "serie:N",
+        scale=alt.Scale(domain=[OBSERVED, ADJUSTED], range=[OBSERVED_COLOR, ADJUSTED_COLOR]),
+        legend=None,
+    )
     line = (
         alt.Chart(lines)
-        .mark_line(strokeWidth=2)
+        .mark_line(strokeWidth=LINE_WIDTH)
         .encode(
             x=x,
-            y=alt.Y("value:Q", title="Frente a un día normal", axis=alt.Axis(format="+%")),
-            color=alt.Color(
-                "serie:N",
-                scale=alt.Scale(domain=[OBSERVED, ADJUSTED], range=[OBSERVED_LINE, COBALT]),
-                legend=None,
-            ),
+            y=y,
+            color=color,
             strokeDash=alt.StrokeDash(
-                "serie:N", scale=alt.Scale(domain=[OBSERVED, ADJUSTED], range=[[1, 0], [5, 4]]), legend=None
+                "serie:N", scale=alt.Scale(domain=[OBSERVED, ADJUSTED], range=[[1, 0], DASH]), legend=None
             ),
             tooltip=[
                 alt.Tooltip("day:T", title="Día", format="%d/%m/%Y"),
@@ -126,9 +148,38 @@ def time_series(
             ],
         )
     )
-    zero = alt.Chart(pd.DataFrame({"y": [0.0]})).mark_rule(color=BAND, strokeDash=[2, 2]).encode(y="y:Q")
-    layers = [band, *([marks] if len(odd) else []), *([chosen] if highlight else []), zero, line]
-    return alt.layer(*layers).properties(height=height)
+    # Each line named at its last day; the higher label nudged up and the lower one down so they never collide.
+    ends = lines.sort_values("day").groupby("serie").tail(1).assign(label=lambda d: d["serie"].map(SHORT))
+    ends["dy"] = (ends["value"].rank(method="first") == 2).map({True: -7, False: 7}) if len(ends) == 2 else 0
+    labels = [
+        alt.Chart(ends[ends["serie"] == s])
+        .mark_text(
+            align="left",
+            dx=6,
+            dy=float(ends.loc[ends["serie"] == s, "dy"].iloc[0]),
+            fontSize=12,
+            fontWeight=600,
+        )
+        .encode(x=x, y=y, text="label:N", color=color)
+        for s in ends["serie"]
+    ]
+    zero = (
+        alt.Chart(pd.DataFrame({"y": [0.0]}))
+        .mark_rule(color=MUTED, strokeDash=[2, 3], opacity=0.6)
+        .encode(y="y:Q")
+    )
+    layers = [
+        band,
+        *edges,
+        *([marks] if len(odd) else []),
+        *([chosen] if highlight else []),
+        zero,
+        line,
+        *labels,
+    ]
+    return alt.layer(*layers).properties(
+        height=height, padding={"left": 4, "top": 8, "right": 84, "bottom": 4}
+    )
 
 
 def heatmap(
@@ -207,9 +258,9 @@ def pilot_bars(target: float | None, result: dict | None) -> alt.LayerChart:
     range is a drop, amber when it crosses 0."""
     rows = [{"row": "Línea base", "value": 0.0, "color": BAND}]
     if target is not None:
-        rows.append({"row": "Meta esperada", "value": target, "color": MUTED})
+        rows.append({"row": "Meta esperada", "value": target, "color": COBALT})
     if result is not None:
-        color = SAGE if result["hi"] < 0 else AMBER if result["lo"] < 0 else BAND
+        color = BELOW if result["hi"] < 0 else ABOVE if result["lo"] > 0 else UNCERTAIN
         rows.append(
             {
                 "row": "Resultado real",

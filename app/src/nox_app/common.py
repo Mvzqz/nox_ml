@@ -12,7 +12,6 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -37,54 +36,6 @@ SIMAT_SEASONS = [s for s, (_, end) in SEASONS.items() if end <= "2024-12-31"]
 MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
 MONTH_NAMES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]  # fmt: skip
 DAY_ABBR = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
-# Brand palette (context/UI_BUSINESS_CONTEXT.md, section 5); the Streamlit theme is in .streamlit/config.toml.
-COBALT, COBALT_HOVER = "#1E3A8A", "#1D4ED8"  # structure, navigation and section 1 (Emisiones)
-SAGE, SAGE_HOVER = "#0F766E", "#115E59"  # section 2 (Pilotos) and confirmed drops
-AMBER = "#D97706"  # holidays, atypical weather and preliminary states
-INK, MUTED, BORDER, BAND = "#0F172A", "#475569", "#E2E8F0", "#CBD5E1"
-OBSERVED_LINE = "#0D9488"  # observed NOx: a vivid teal of the sage family, apart from the cobalt dashed line
-NORMAL_RANGE = "#E6EBF1"  # the normal-range band, solid so the legend shows the same colour as the chart
-BODY_FONT = "Public Sans, Helvetica Neue, Helvetica, Arial, sans-serif"
-# Icons (section 7): Material Symbols Outlined, thin (FILL 0, wght 400, opsz 20) and small (16-20 px), as
-# quiet accents in headings, badges and states. Streamlit ships the Rounded set; STYLE swaps the font.
-ICONS = {
-    "emissions": ":material/air:",
-    "weather": ":material/partly_cloudy_day:",
-    "calendar": ":material/calendar_today:",
-    "pilots": ":material/science:",
-    "duplicate": ":material/content_copy:",
-    "caution": ":material/data_alert:",
-}
-# Calendar events are all "caution": shades of amber, darker for the stronger anomalies.
-EVENT_COLORS = {
-    "Contingencia": "#92400E",
-    "Festivo": AMBER,
-    "Fin de año": "#F59E0B",
-    "Semana Santa": "#FCD34D",
-}
-# Streamlit has one primary colour: section 2 containers (key "sage...") turn their primary buttons sage, and
-# containers keyed "card..." become white cards on the slate background. Typography (section 6): the fonts are in
-# the theme; headings get the -0.02em tracking and numbers tabular figures here.
-STYLE = f"""<style>
-@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0&display=block");
-[data-testid="stIconMaterial"], span[role="img"][aria-label$=" icon"] {{
-  /* Outlined from Google Fonts; if that request is blocked, the Rounded set Streamlit bundles, never the icon's
-     name as plain text */
-  font-family: "Material Symbols Outlined", "Material Symbols Rounded" !important;
-  font-variation-settings: "FILL" 0, "wght" 400, "opsz" 20;
-}}
-:is(h1, h2, h3, h4) :is([data-testid="stIconMaterial"], span[role="img"][aria-label$=" icon"]) {{
-  font-size: 20px !important; vertical-align: middle !important; margin-right: 4px;
-}}
-button[kind="primary"]:hover {{ background-color: {COBALT_HOVER}; border-color: {COBALT_HOVER}; }}
-[class*="st-key-sage"] button[kind="primary"] {{ background-color: {SAGE}; border-color: {SAGE}; }}
-[class*="st-key-sage"] button[kind="primary"]:hover {{ background-color: {SAGE_HOVER}; border-color: {SAGE_HOVER}; }}
-[class*="st-key-card"] {{ background-color: #FFFFFF; }}
-h1, h2, h3, h4, h5, h6 {{ letter-spacing: -0.02em; }}
-[data-testid="stMetricValue"], [data-testid="stMetricDelta"], [data-testid="stDataFrame"], [data-testid="stTable"],
-.stMarkdown, [data-testid="stCaptionContainer"] {{ font-variant-numeric: tabular-nums; }}
-</style>"""
-
 VIEWER, PLANNER = "viewer", "planner"
 ROLES = {VIEWER: "Consulta (viewer)", PLANNER: "Planeación (planner)"}
 PAGES: dict[str, Any] = {}  # filled by main(): key -> st.Page
@@ -140,54 +91,6 @@ def short_date(day: str | date) -> str:
 
 def period_label(start: str | date | None, end: str | date | None) -> str:
     return f"{short_date(start)} – {short_date(end)}" if start and end else "Sin fechas"
-
-
-def metric(col, label: str, value: str, note: str = "", help: str | None = None) -> None:
-    col.metric(label, value, note or None, delta_color="off", delta_arrow="off", help=help)
-
-
-def show_chart(chart: alt.TopLevelMixin, **kwargs) -> None:
-    """Draw a chart with full axis and legend labels (Altair cuts them at 180 px by default) on a transparent
-    background, so it sits on the page or on a white card alike."""
-    chart = (
-        chart.configure(background="transparent", font=BODY_FONT)
-        .configure_axis(labelLimit=0, labelFontSize=12, titleFontSize=12)
-        .configure_legend(labelLimit=0, labelFontSize=12)
-    )
-    st.altair_chart(chart, width="stretch", **kwargs)
-
-
-# A swatch per kind of mark, drawn with CSS (st.html strips SVG) in a 22 x 14 px box next to its meaning.
-SWATCHES = {
-    "box": "width:16px;height:12px;border-radius:2px;background:{c}",
-    "band": "width:22px;height:10px;border-radius:1px;background:{c}",
-    "line": "width:22px;height:0;border-top:3px solid {c}",
-    "dash": "width:22px;height:0;border-top:3px dashed {c}",
-    "outline": "width:14px;height:10px;border-radius:2px;background:#FFFFFF;border:2.5px solid {c}",
-    "dot": "width:9px;height:9px;border-radius:50%;background:{c}",
-    "range": "width:20px;height:10px;border-left:2px solid {c};border-right:2px solid {c};"
-    "background:linear-gradient({c},{c}) center/100% 2px no-repeat",
-}
-
-
-def legend_html(items: list[tuple[str, str, str, str]]) -> str:
-    """A legend as a list: one row per (swatch kind, colour, label, meaning), wrapping into columns."""
-    rows = "".join(
-        f'<div style="display:flex;align-items:center;gap:10px;padding:4px 0">'
-        f'<span style="flex:none;width:22px;display:flex;justify-content:center" aria-hidden="true">'
-        f'<span style="display:block;box-sizing:border-box;{SWATCHES[kind].format(c=color)}"></span></span>'
-        f'<span><strong style="color:{INK}">{label}</strong>'
-        f"{f'<span style=color:{MUTED}> · {meaning}</span>' if meaning else ''}</span></div>"
-        for kind, color, label, meaning in items
-    )
-    return (
-        f'<div role="list" aria-label="Leyenda" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));'
-        f'column-gap:24px;font-size:0.875rem;line-height:1.3;border-top:1px solid {BORDER};padding-top:6px;margin-bottom:8px">{rows}</div>'
-    )
-
-
-def show_legend(items: list[tuple[str, str, str, str]]) -> None:
-    st.html(legend_html(items))
 
 
 def season_of(day: date | str) -> str | None:

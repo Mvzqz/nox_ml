@@ -13,13 +13,11 @@ import streamlit as st
 
 from nox_app import charts, rules
 from nox_app.common import (
-    ICONS,
     RUNS,
     add_pilot,
     event_tuples,
     go,
     is_planner,
-    metric,
     new_pilot_id,
     pct,
     period_label,
@@ -27,16 +25,15 @@ from nox_app.common import (
     pilots,
     read_csv,
     short_date,
-    show_chart,
-    show_legend,
     today,
 )
+from nox_app.design import ICONS, kpi, page_header, show_chart, show_legend
 
 VERDICT_COLORS = {
     rules.CONFIRMED: "green",
     rules.NO_CHANGE: "gray",
     rules.INCONCLUSIVE: "orange",
-    rules.INSUFFICIENT: "red",
+    rules.INSUFFICIENT: "orange",
 }
 STATUS_ICONS = {rules.WAITING: ICONS["caution"], rules.PRELIMINARY: ICONS["caution"]}
 STATUS_COLORS = {rules.DRAFT: "gray", rules.SCHEDULED: "blue", rules.RUNNING: "blue", rules.WAITING: "orange",
@@ -308,8 +305,11 @@ def pilot_detail(p: dict) -> None:
         if v != rules.INSUFFICIENT:
             r = p["result"]
             c1, c2 = st.columns(2)
-            metric(c1, "Impacto real detectado", pct(r["change"]), f"rango {pct(r['lo'])} a {pct(r['hi'])}")
-            metric(c2, "Meta propuesta", pct(p["target"]) if p.get("target") is not None else "Sin meta")
+            impact = "below" if r["hi"] < 0 else "above" if r["lo"] > 0 else "normal"
+            kpi(c1, "Impacto real detectado", pct(r["change"]), f"rango {pct(r['lo'])} a {pct(r['hi'])}", status=impact,
+                text={"below": "Baja confirmada", "above": "Subida", "normal": "Incierto: el rango cruza 0 %"}[impact])  # fmt: skip
+            kpi(c2, "Meta propuesta", pct(p["target"]) if p.get("target") is not None else "Sin meta",
+                "la baja que se esperaba lograr")  # fmt: skip
             show_chart(charts.pilot_bars(p.get("target"), r))
             show_legend(charts.pilot_legend())
         st.markdown("#### Mensajes clave para toma de decisiones")
@@ -327,7 +327,10 @@ def pilot_detail(p: dict) -> None:
 
 
 def pilots_page() -> None:
-    st.title("Planes y Pilotos")
+    page_header(
+        "Planes y Pilotos",
+        "Seguimiento y evaluación de los pilotos planeados con esta herramienta: el impacto real frente a la meta.",
+    )
     if (wanted := st.session_state.pop("pilot_id", None)) is not None:
         st.session_state["pilot_open"] = wanted
     open_id = st.session_state.get("pilot_open")
@@ -366,7 +369,10 @@ def strategies(effect: float, kind: str, carry: bool) -> pd.DataFrame:
 
 
 def planning_page() -> None:
-    st.title("Planear un piloto")
+    page_header(
+        "Planear un piloto",
+        "Cuánto tiempo y con qué diseño aplicar una medida para poder ver su efecto en la emisión de NOₓ.",
+    )
     plan_new()
 
 
