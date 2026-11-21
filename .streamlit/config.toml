@@ -1,0 +1,23 @@
+# Brand palette of context/UI_BUSINESS_CONTEXT.md, section 5 (Cobalto Atmosférico + Salvia Mineral).
+# Streamlit Community Cloud reads this file from the repository root.
+[theme]
+base = "light"
+primaryColor = "#1E3A8A"            # cobalt: structure, navigation, section 1
+backgroundColor = "#F8FAFC"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#0F172A"
+borderColor = "#E2E8F0"
+linkColor = "#1D4ED8"
+blueColor = "#1E3A8A"
+greenColor = "#0F766E"              # sage: section 2 and confirmed drops
+orangeColor = "#D97706"
+redColor = "#B42318"                # above normal: more NOx than usual (design.ABOVE)             # amber: holidays, atypical weather, preliminary states
+grayColor = "#475569"
+# Typography (section 6): Outfit SemiBold for headings, Public Sans for everything else (Google Fonts).
+font = "Public Sans:https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap, Helvetica Neue, Helvetica, Arial, sans-serif"
+headingFont = "Outfit:https://fonts.googleapis.com/css2?family=Outfit:wght@600&display=swap, Helvetica Neue, sans-serif"
+headingFontWeights = 600
+chartCategoricalColors = ["#1E3A8A", "#0F766E", "#D97706", "#475569", "#CBD5E1"]
+
+[theme.sidebar]
+backgroundColor = "#FFFFFF"
