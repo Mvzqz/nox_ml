@@ -14,6 +14,7 @@ reaches the whole app:
 """
 
 import re
+from pathlib import Path
 
 import altair as alt
 import streamlit as st
@@ -21,6 +22,8 @@ import streamlit as st
 from nox_app import onboarding
 
 # ---------------------------------------------------------------- tokens
+
+LOGO = Path(__file__).parent / "assets" / "logo.png"  # the app logo, also the browser tab icon
 
 # Brand (section 5). The Streamlit theme in .streamlit/config.toml repeats these values.
 COBALT, COBALT_HOVER = "#1E3A8A", "#1D4ED8"  # structure, navigation, section 1 (Emisiones)
@@ -198,6 +201,13 @@ h1, h2, h3, h4, h5, h6 {{ letter-spacing: -0.02em; }}
 button[kind="primary"]:hover {{ background-color: {COBALT_HOVER}; border-color: {COBALT_HOVER}; }}
 [class*="st-key-sage"] button[kind="primary"] {{ background-color: {SAGE}; border-color: {SAGE}; }}
 [class*="st-key-sage"] button[kind="primary"]:hover {{ background-color: {SAGE_HOVER}; border-color: {SAGE_HOVER}; }}
+
+/* Sidebar: the app name beside the logo (st.logo draws only an image), in the heading font. */
+[data-testid="stSidebarHeader"] > div:has(> img[data-testid="stSidebarLogo"]) {{ display: flex; align-items: center; gap: 0.6rem; }}
+[data-testid="stSidebarHeader"] > div:has(> img[data-testid="stSidebarLogo"])::after {{
+  content: "NOxML"; font-family: "Outfit", "Helvetica Neue", sans-serif; font-weight: 600; font-size: 1.35rem;
+  letter-spacing: -0.02em; color: {INK};
+}}
 
 /* Sidebar: sections read as headings, their pages sit indented under them. */
 [data-testid="stNavSectionHeader"] {{

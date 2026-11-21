@@ -17,7 +17,7 @@ import streamlit as st
 
 from nox_app import emissions, home, onboarding, pilots
 from nox_app.common import PAGES, PLANNER, ROLES, VIEWER, is_planner, keep
-from nox_app.design import ICONS, STYLE
+from nox_app.design import ICONS, LOGO, STYLE
 
 
 def header() -> None:
@@ -38,7 +38,10 @@ def header() -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Monitor NOx CDMX", layout="wide", page_icon=":material/air:")
+    st.set_page_config(page_title="Monitor NOx CDMX", layout="wide", page_icon=str(LOGO))
+    # The logo sits at the top of the sidebar (of the page when it is collapsed). No link: st.logo takes only
+    # absolute URLs, which differ between local and Community Cloud; Inicio is the first entry under it.
+    st.logo(str(LOGO), size="large")
     st.html(STYLE)
     header()
     onboarding.storage()
