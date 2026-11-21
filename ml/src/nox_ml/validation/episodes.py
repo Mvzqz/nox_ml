@@ -166,8 +166,9 @@ def diagnose_episode(
     seed: int = 0,
 ) -> dict[str, Any]:
     """The ratios of the episode `days` (rows of the daily table `d`; `tempo` from `tempo_parts`), their
-    null intervals, the share of the log change of the concentration due to weather and to emission, and the
-    `verdict`. `excluded` (e.g. contingency days) are neither references nor fake days."""
+    null intervals, the share of the log change of the concentration due to weather and to emission, the
+    `verdict` and the ``references``: the normal days the episode was compared with.
+    `excluded` (e.g. contingency days) are neither references nor fake days."""
     days = pd.DatetimeIndex([x for x in days if x in d.index])
     if days.empty:
         raise ValueError("no episode day has data")
@@ -189,8 +190,10 @@ def diagnose_episode(
     )
     label, notes = prudent_verdict(ratios, null)
     detail, detail_notes = verdict(ratios, null)
+    references = sorted({r for day in days for r in reference_days(d, day, real)})
     return {
         "days": [x.date().isoformat() for x in days],
+        "references": [x.date().isoformat() for x in references],
         "ratios": ratios,
         "null": null,
         "shares": shares,

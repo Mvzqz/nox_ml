@@ -125,6 +125,20 @@ def test_excluded_days_are_neither_references_nor_fake_days():
     assert calm["ratios"]["emission"] == pytest.approx(1.6, rel=0.1)
 
 
+def test_the_references_are_the_same_weekdays_within_four_weeks_minus_the_excluded():
+    d, bg = table()
+    wild = pd.date_range("2023-11-27", "2023-12-01")
+
+    refs = pd.DatetimeIndex(episodes.diagnose_episode(d, bg, EPISODE, excluded=wild, n_fake=10)["references"])
+
+    assert set(refs.weekday) == set(EPISODE.weekday)
+    window = pd.Timedelta(days=28)
+    assert EPISODE[0] - window <= min(refs)
+    assert max(refs) <= EPISODE[-1] + window
+    assert not refs.isin(EPISODE).any() and not refs.isin(wild).any()
+    assert len(refs) == 5 * 7  # four weeks on each side, one of them excluded
+
+
 def test_an_episode_without_data_is_refused():
     d, bg = table()
 
