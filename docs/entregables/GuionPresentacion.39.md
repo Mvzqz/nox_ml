@@ -16,7 +16,7 @@ Guion de 12 minutos en tres partes, una por presentador. Cada bloque indica la d
 | 6 | el gemelo del clima | La solución | 2 | 4:45–5:45 |
 | 7 | la pinn: de dónde viene | La solución | 2 | 5:45–6:50 |
 | 8 | la evaluación: el confinamiento | La solución | 2 | 6:50–7:25 |
-| 9 | acierta, no inventa y dice cuánto sabe | La solución | 2 | 7:25–8:00 |
+| 9 | acierta, no inventa y da rangos de confianza | La solución | 2 | 7:25–8:00 |
 | 10 | si quitamos coches, ¿baja el ozono? | Impacto y futuro | 3 | 8:00–9:30 |
 | 11 | qué cambia | Impacto y futuro | 3 | 9:30–10:20 |
 | 12 | posibles mejoras | Impacto y futuro | 3 | 10:20–11:00 |
@@ -105,7 +105,7 @@ Miren el mapa: una sola bocanada que sale de esta zona se estira con el viento y
 
 ¿Cómo sabemos que funciona? Le pusimos un examen con la respuesta conocida: el confinamiento de 2020, cuando la ciudad se detuvo. Tiene que ver una caída enorme en la llave. Y la vio: menos 50 %, justo en el rango que esperaban los expertos.
 
-### Diapositiva 9 · acierta, no inventa y dice cuánto sabe
+### Diapositiva 9 · acierta, no inventa y da rangos de confianza
 
 **Presentador 2 · 7:25–8:00**
 
