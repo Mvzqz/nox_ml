@@ -13,6 +13,16 @@ Esta carpeta reúne la documentación que pide el curso (equipo 39). El código,
 
 Cada archivo enlaza a los cuadernos y a los datos que usa. Al subir uno, cambiar su estado en esta tabla.
 
+## Presentación
+
+Presentación de 12 minutos para público no técnico, en tres partes (el problema, la solución, impacto y futuro).
+
+| Archivo | Contenido |
+|---|---|
+| [`presentacion/index.html`](presentacion/index.html) | Las 14 diapositivas en HTML con sus imágenes; se abre con doble clic. Cómo navegar y editar: [`presentacion/LEEME.md`](presentacion/LEEME.md) |
+| [`GuionPresentacion.39.md`](GuionPresentacion.39.md) | Guion por diapositiva, con presentador y tiempos |
+| [`PreguntasRespuestas.39.md`](PreguntasRespuestas.39.md) | Preguntas probables del público con respuesta corta y cifras de respaldo |
+
 ## Cuadernos
 
 Los cuadernos están en [`notebooks/`](../../notebooks/) sin salidas. Las exportaciones HTML, ya ejecutadas, van en [`html/`](html/): se generan al final, en la máquina del dueño donde están todas las corridas, con `bin/export-notebooks` (ver [`notebooks/README.md`](../../notebooks/README.md)).

@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>¿Fue el clima o fue la ciudad?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400..700&family=Montserrat:wght@400..700&display=swap">
+<link rel="stylesheet" href="deck.css">
+<link rel="stylesheet" href="visor.css">
+</head>
+<body>
+<!--
+  Presentación NOx·ML · Equipo 39.
+  Cada diapositiva es un <section> de 1920 × 1080 px. Los elementos con la clase "pin" se colocan con left/top en píxeles.
+  Las notas del presentador están en el <aside> de cada diapositiva (tecla N para verlas).
+  Lo que aparece con clic lleva class="fragment" y data-fragment-index="1, 2, 3…".
+  Colores, tipografía y animaciones: deck.css. Imágenes: carpeta assets/.
+-->
+<div id="stage">
+
+<!-- ##################### Parte 1, el problema: no sabemos si una medida funcionó porque el clima lo confunde todo. ##################### -->
+<!-- ===================== Diapositiva 1 · portada ===================== -->
+<section id="portada" data-transition="fade">
+<svg class="pin" style="left:0px; top:0px; width:1920px; height:1080px" width="1920" height="1080" viewBox="0 0 1920 1080" aria-label="Fondo oscuro con brillos de cielo azul y textura granulada">
+<defs>
+<radialGradient id="p-ga" cx="1760" cy="0" r="1500" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8CC8F7"/><stop offset="0.30" stop-color="#5A9EE6"/><stop offset="0.74" stop-color="#24487E" stop-opacity="0.65"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="p-gb" cx="1920" cy="0" r="1050" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5A9EE6" stop-opacity="0.8"/><stop offset="0.61" stop-color="#2F5C9E" stop-opacity="0.45"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="p-gc" cx="0" cy="1080" r="1350" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2F5C9E" stop-opacity="0.6"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<filter id="p-warp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="3" seed="47"/><feDisplacementMap in="SourceGraphic" scale="380" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="p-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0"/></filter>
+</defs>
+<rect width="1920" height="1080" fill="#0B1424"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#p-gc)" filter="url(#p-warp)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#p-gb)" filter="url(#p-warp)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#p-ga)" filter="url(#p-warp)"/>
+<rect width="1920" height="1080" fill="#FFFFFF" filter="url(#p-grain)"/>
+</svg>
+<p class="pin side" style="width:360px;transform:none;text-align:right;top:1015px;left:1532px">Equipo 39 · 2026</p>
+<img class="pin frame fade" src="assets/cdmx-dia-limpio.jpg" alt="Ciudad de México en un día despejado, con los volcanes Iztaccíhuatl y Popocatépetl detrás de los edificios" style="--i:0;border:none;left:0;width:940px;height:438px;box-sizing:border-box;top:162px">
+<img class="pin frame fade" src="assets/cdmx-dia-con-bruma.jpg" alt="Vista aérea de la Ciudad de México bajo una franja amarillo-café de smog que borra el horizonte" data-crop="1.2256 90.91% 74.264%" style="--i:1;border:none;width:980px;height:438px;box-sizing:border-box;top:162px;right:0">
+<div class="pin brand fade" style="left:260px; top:566px; width:700px; --i:2">
+<img src="assets/logo-noxml.png" alt="Logo NOx·ML" style="width:48px;height:48px;transform:translate(-214px, -530px)">
+<p class="brand-t" style="transform:translate(-217px, -530px)">NOx·ML · Hub de Ciencia de Datos</p>
+</div>
+<h1 class="pin display rise" style="font-size:88px;--i:3;white-space:nowrap;top:693px;left:364px;width:1193px;text-align:center;box-sizing:border-box">¿fue el clima o fue la emisión?</h1>
+<p class="pin body rise" style="text-align:left;--i:4;width:1431px;box-sizing:border-box;top:802px;left:245px">Separar la emisión de NOx del clima en la Ciudad de México, con estaciones, un satélite y machine learning.</p>
+<p class="pin meta rise" style="--i:5;width:1100px;box-sizing:border-box;top:1015px;left:33px">Isabella Arango · Isaí Ambrocio · Manuel Vázquez · Tec de Monterrey</p>
+<aside>PRESENTADOR 1 (0:00–0:45)
+
+Miren estas dos fotos. Es la misma ciudad en dos días distintos. En una el cielo está limpio y se ven los volcanes; en la otra, una capa amarillenta borra el horizonte y no se ve ni un volcán. ¿Qué cambió? ¿Fue el clima… o fue la ciudad?
+
+Hoy nadie puede responder eso. Las estaciones nos dicen cuánta contaminación respiramos, pero no cuánta produce la ciudad, ni por qué cambió.</aside>
+</section>
+<!-- ===================== Diapositiva 2 · importa ===================== -->
+<section id="importa">
+<svg class="pin" style="left:0px; top:0px; width:1920px; height:1080px" width="1920" height="1080" viewBox="0 0 1920 1080" aria-label="Fondo oscuro con brillos de cielo azul y textura granulada">
+<defs>
+<radialGradient id="i-ga" cx="0" cy="1080" r="1575" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5A9EE6"/><stop offset="0.47" stop-color="#2F5C9E" stop-opacity="0.7"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="i-gb" cx="1920" cy="0" r="1230" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8CC8F7" stop-opacity="0.85"/><stop offset="0.54" stop-color="#5A9EE6" stop-opacity="0.45"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<filter id="i-warp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="3" seed="35"/><feDisplacementMap in="SourceGraphic" scale="380" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="i-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0"/></filter>
+</defs>
+<rect width="1920" height="1080" fill="#0B1424"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#i-ga)" filter="url(#i-warp)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#i-gb)" filter="url(#i-warp)"/>
+<rect width="1920" height="1080" fill="#FFFFFF" filter="url(#i-grain)"/>
+</svg>
+<p class="pin side" style="left:1192px; top:118px; width:600px; transform:none; text-align:right">01 · El problema</p>
+<div class="pin brand" style="left:260px; top:110px; width:600px">
+<img src="assets/logo-noxml.png" alt="Logo NOx·ML" style="width:44px; height:44px">
+<p class="brand-t">NOx·ML</p>
+</div>
+<h2 class="pin h2 rise" style="left:260px; top:200px; width:1532px; --i:0">por qué importa el NOx</h2>
+<div class="pin cols" style="left:260px; top:380px; width:1532px">
+<div class="col rise" style="--i:1">
+<div class="col-top"><p class="col-n">01</p><div class="src-ic"><svg style="width:44px; height:44px; flex:none" width="44" height="44" viewBox="0 0 72 72" aria-label="Ícono de pulmones"><g fill="none" stroke="#F5F8FC" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M36 6 V30 M36 30 L28 38 M36 30 L44 38"/><path d="M28 20 C16 22 10 36 10 50 C10 60 16 64 24 62 C30 60 32 54 32 46 V30"/><path d="M44 20 C56 22 62 36 62 50 C62 60 56 64 48 62 C42 60 40 54 40 46 V30"/></g></svg></div></div>
+<h3 class="h3">daña por sí solo</h3>
+<p class="body">Irrita los pulmones y agrava el asma, sobre todo en niños.</p>
+</div>
+<div class="col rise" style="--i:2">
+<div class="col-top"><p class="col-n">02</p><div class="src-ic"><svg style="width:44px; height:44px; flex:none" width="44" height="44" viewBox="0 0 72 72" aria-label="Ícono de flama"><g fill="none" stroke="#F5F8FC" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M36 6 C44 18 54 28 54 44 C54 56 46 66 36 66 C26 66 18 56 18 44 C18 34 24 28 28 20 C30 28 32 32 36 34 C39 26 39 16 36 6 Z"/><path d="M36 66 C31 66 28 62 28 56 C28 50 33 46 36 42 C39 46 44 50 44 56 C44 62 41 66 36 66 Z"/></g></svg></div></div>
+<h3 class="h3">delata la combustión</h3>
+<p class="body">Sale junto con CO2, hollín y partículas: es la huella del escape.</p>
+</div>
+<div class="col rise" style="--i:3">
+<div class="col-top"><p class="col-n">03</p><div class="src-ic"><svg style="width:44px; height:44px; flex:none" width="44" height="44" viewBox="0 0 72 72" aria-label="Ícono de sol"><g fill="none" stroke="#F5F8FC" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><circle cx="36" cy="36" r="13"/><path d="M36 6 V14 M36 58 V66 M6 36 H14 M58 36 H66 M15 15 L21 21 M51 51 L57 57 M15 57 L21 51 M51 21 L57 15"/></g></svg></div></div>
+<h3 class="h3">forma otros contaminantes</h3>
+<p class="body">Con el sol forma ozono; en el aire, partículas finas.</p>
+</div>
+</div>
+<p class="pin kicker fade" style="left:260px; top:770px; width:1532px; --i:5">Y más allá de la salud</p>
+<div class="pin chips fade" style="left:260px; top:820px; width:1532px; --i:6">
+<div class="chip"><svg style="width:36px; height:36px; flex:none" width="36" height="36" viewBox="0 0 40 40" aria-label="Ícono de espiga"><g fill="none" stroke="#FF8F7A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 38 V6"/><path d="M20 14 C14 13 12 8 12 5 C17 6 20 9 20 14 Z"/><path d="M20 14 C26 13 28 8 28 5 C23 6 20 9 20 14 Z"/><path d="M20 25 C14 24 12 19 12 16 C17 17 20 20 20 25 Z"/><path d="M20 25 C26 24 28 19 28 16 C23 17 20 20 20 25 Z"/></g></svg><p class="chip-t">Menos cosechas</p></div>
+<div class="chip"><svg style="width:36px; height:36px; flex:none" width="36" height="36" viewBox="0 0 40 40" aria-label="Ícono de nube con lluvia"><g fill="none" stroke="#FF8F7A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 24 C4 24 4 15 11 15 C12 8 22 6 25 12 C32 11 36 17 32 24 Z"/><path d="M13 29 L11 35 M21 29 L19 35 M29 29 L27 35"/></g></svg><p class="chip-t">Lluvia ácida</p></div>
+<div class="chip"><svg style="width:36px; height:36px; flex:none" width="36" height="36" viewBox="0 0 40 40" aria-label="Ícono de bruma"><g fill="none" stroke="#FF8F7A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 Q11 6 18 12 T32 12 T38 10"/><path d="M4 21 Q11 15 18 21 T32 21 T38 19"/><path d="M4 30 Q11 24 18 30 T32 30 T38 28"/></g></svg><p class="chip-t">Bruma café</p></div>
+<div class="chip"><svg style="width:36px; height:36px; flex:none" width="36" height="36" viewBox="0 0 40 40" aria-label="Ícono de señal de alto"><g fill="none" stroke="#FF8F7A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="14,4 26,4 36,14 36,26 26,36 14,36 4,26 4,14"/><path d="M12 20 H28"/></g></svg><p class="chip-t">Contingencias</p></div>
+</div>
+<p class="pin pg" style="left:1592px; top:990px; width:200px">02 / 13</p>
+<aside>PRESENTADOR 1 (0:45–2:10)
+
+¿Por qué nos importa tanto el NOₓ, los óxidos de nitrógeno? Por tres razones.
+
+Primera: daña por sí solo. Irrita los pulmones y agrava el asma; en niños, respirarlo por años se asocia con que más desarrollen asma.
+
+Segunda: delata la combustión. Sale de cada motor que quema gasolina o diésel, siempre acompañado de dióxido de carbono, hollín, monóxido de carbono y partículas finas. Por eso, si vemos bajar el NOₓ, sabemos que bajó la quema de combustible: es la huella del escape de la ciudad.
+
+Tercera: se transforma. Con el sol forma ozono, el contaminante de las contingencias, y en el aire forma partículas finas que le dan a la ciudad ese tono café.
+
+Y el daño no se queda en la salud: lluvia ácida que daña bosques y edificios, cosechas más pobres, y cada contingencia detiene la ciudad y cuesta dinero.
+
+Por eso la ciudad invierte tanto en reducirlo. Pero lo que no se mide no se puede mejorar.</aside>
+</section>
+<!-- ===================== Diapositiva 3 · hoy ===================== -->
+<section id="hoy">
+<svg class="pin" style="left:0px; top:0px; width:1920px; height:1080px" width="1920" height="1080" viewBox="0 0 1920 1080" aria-label="Fondo oscuro con un brillo de cielo azul y textura granulada">
+<defs>
+<radialGradient id="h-ga" cx="1920" cy="0" r="1350" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5A9EE6" stop-opacity="0.75"/><stop offset="0.61" stop-color="#2F5C9E" stop-opacity="0.35"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="h-gb" cx="0" cy="1080" r="1050" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2F5C9E" stop-opacity="0.55"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<filter id="h-warp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="3" seed="31"/><feDisplacementMap in="SourceGraphic" scale="380" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="h-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0"/></filter>
+</defs>
+<rect width="1920" height="1080" fill="#0B1424"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#h-ga)" filter="url(#h-warp)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#h-gb)" filter="url(#h-warp)"/>
+<rect width="1920" height="1080" fill="#FFFFFF" filter="url(#h-grain)"/>
+</svg>
+<p class="pin side" style="left:1192px; top:118px; width:600px; transform:none; text-align:right">01 · El problema</p>
+<div class="pin brand" style="left:260px; top:110px; width:600px">
+<img src="assets/logo-noxml.png" alt="Logo NOx·ML" style="width:44px; height:44px">
+<p class="brand-t">NOx·ML</p>
+</div>
+<h2 class="pin h2 rise" style="left:260px; top:200px; width:1532px; --i:0">cómo se mide hoy</h2>
+<div class="pin glass rise" style="left:260px;top:340px;width:500px;padding:32px;display:flex;flex-direction:column;gap:20px;--i:1;background:none">
+<h3 class="h3">el inventario</h3>
+<div class="inv">
+<div class="inv-row"><p class="inv-op"></p><svg style="width:32px; height:32px; flex:none" width="32" height="32" viewBox="0 0 36 36" aria-label="Ícono de coche"><g fill="none" stroke="#D5DEEA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 25 V18 L8 10 H28 L32 18 V25 Z"/><path d="M4 18 H32"/><circle cx="11" cy="27" r="3"/><circle cx="25" cy="27" r="3"/></g></svg><p class="inv-t">Coches</p></div>
+<div class="inv-row"><p class="inv-op">×</p><svg style="width:32px; height:32px; flex:none" width="32" height="32" viewBox="0 0 36 36" aria-label="Ícono de carretera"><g fill="none" stroke="#D5DEEA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 33 L15 3 M27 33 L21 3"/><path d="M18 30 V26 M18 20 V16 M18 10 V7"/></g></svg><p class="inv-t">Kilómetros recorridos</p></div>
+<div class="inv-row"><p class="inv-op">×</p><svg style="width:32px; height:32px; flex:none" width="32" height="32" viewBox="0 0 36 36" aria-label="Ícono de escape con humo"><g fill="none" stroke="#D5DEEA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 26 H15 V22 H3"/><circle cx="21" cy="21" r="3"/><circle cx="27" cy="14" r="4"/><circle cx="31" cy="6" r="2.5"/></g></svg><p class="inv-t">Emisión por motor</p></div>
+<div class="inv-row"><p class="inv-op">+</p><svg style="width:32px; height:32px; flex:none" width="32" height="32" viewBox="0 0 36 36" aria-label="Ícono de fábrica"><g fill="none" stroke="#D5DEEA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 32 V18 L11 23 V18 L19 23 V8 H25 V32 Z"/><path d="M3 32 H33 V20 H25"/></g></svg><p class="inv-t">Fábricas y comercios</p></div>
+<div class="inv-row"><p class="inv-op">=</p><svg style="width:32px; height:32px; flex:none" width="32" height="32" viewBox="0 0 36 36" aria-label="Ícono de documento"><g fill="none" stroke="#FF8F7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 H22 L29 10 V33 H8 Z"/><path d="M22 3 V10 H29"/><path d="M13 18 H24 M13 24 H24"/></g></svg><p class="inv-t res">Toneladas estimadas</p></div>
+</div>
+<div class="yrs"><p class="yr">Medido en 2018</p><p class="yr">Publicado en 2021</p></div>
+<div class="tl"></div>
+<p class="delay">3 años de retraso</p>
+</div>
+<h3 class="pin h3 rise" style="left:820px; top:340px; width:240px; --i:2">el antes y después</h3>
+<p class="pin colhead rise" style="left:1080px; top:346px; width:230px; --i:2">Clima</p>
+<p class="pin colhead rise" style="left:1340px; top:346px; width:140px; --i:2">Nivel</p>
+<p class="pin colhead rise" style="left:1510px; top:346px; width:282px; --i:2">Veredicto</p>
+<svg class="pin fragment" data-fragment-index="1" style="left:820px; top:360px; width:972px; height:460px" width="972" height="460" viewBox="0 0 972 460" aria-label="Rama de arriba: de la medida a una semana con viento y lluvia, el nivel baja y el veredicto es funcionó">
+<path d="M210 130 C 238 130, 232 45, 260 45 L 690 45 L 690 115 L 260 115 C 232 115, 238 200, 210 200 Z" fill="#F5F8FC" opacity="0.18"/>
+</svg>
+<svg class="pin fragment" data-fragment-index="2" style="left:820px; top:360px; width:972px; height:460px" width="972" height="460" viewBox="0 0 972 460" aria-label="Rama de abajo: de la medida a una semana quieta y fría, el nivel sube y el veredicto es fracasó">
+<path d="M210 200 C 238 200, 232 345, 260 345 L 690 345 L 690 415 L 260 415 C 232 415, 238 270, 210 270 Z" fill="#FF8F8F" opacity="0.3"/>
+</svg>
+<div class="pin measure rise" style="left:820px; top:430px; width:210px; height:260px; --i:3">
+<p class="measure-t">la misma medida</p>
+<p class="measure-s">p. ej., Doble Hoy No Circula</p>
+</div>
+<div class="pin node fragment" data-fragment-index="1" style="left:1080px; top:390px; width:230px; height:100px"><svg style="width:32px; height:32px; flex:none" width="32" height="32" viewBox="0 0 40 40" aria-label="Ícono de nube con lluvia y viento"><g fill="none" stroke="#F5F8FC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19 C3 19 3 11 10 11 C11 5 20 4 23 9 C29 8 33 13 30 19 Z"/><path d="M10 24 L8 30 M17 24 L15 30 M24 24 L22 30"/><path d="M28 27 H38 M30 33 H38"/></g></svg><p class="node-t" style="min-width:0;width:157px;flex:0 0 auto;box-sizing:border-box">viento y lluvia</p></div>
+<div class="pin node fragment" data-fragment-index="1" style="left:1340px; top:400px; width:140px; height:80px"><svg style="width:28px; height:28px; flex:none" width="28" height="28" viewBox="0 0 32 32" aria-label="Flecha hacia abajo"><path d="M16 4 V26 M7 17 L16 26 L25 17" fill="none" stroke="#F5F8FC" stroke-width="4"/></svg><p class="node-t">baja</p></div>
+<div class="pin node good fragment" data-fragment-index="1" style="left:1510px; top:390px; width:282px; height:100px"><svg style="width:36px; height:36px; flex:none" width="36" height="36" viewBox="0 0 40 40" aria-label="Ícono de palomita"><g fill="none" stroke="#A8E6B8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="20" r="17"/><path d="M12 20 L18 26 L29 14"/></g></svg><p class="node-t">¡funcionó!</p></div>
+<div class="pin node fragment" data-fragment-index="2" style="left:1080px; top:690px; width:230px; height:100px"><svg style="width:32px; height:32px; flex:none" width="32" height="32" viewBox="0 0 40 40" aria-label="Ícono de termómetro con copo de nieve"><g fill="none" stroke="#F5F8FC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 24 V7 A4 4 0 0 1 18 7 V24 A7 7 0 1 1 10 24 Z"/><circle cx="14" cy="29" r="2.5" fill="#F5F8FC"/><path d="M31 4 V18 M24 11 H38 M26 6 L36 16 M36 6 L26 16"/></g></svg><p class="node-t">quieta y fría</p></div>
+<div class="pin node fragment" data-fragment-index="2" style="left:1340px; top:700px; width:140px; height:80px"><svg style="width:28px; height:28px; flex:none" width="28" height="28" viewBox="0 0 32 32" aria-label="Flecha hacia arriba"><path d="M16 28 V6 M7 15 L16 6 L25 15" fill="none" stroke="#FF8F8F" stroke-width="4"/></svg><p class="node-t">sube</p></div>
+<div class="pin node bad fragment" data-fragment-index="2" style="left:1510px; top:690px; width:282px; height:100px"><svg style="width:36px; height:36px; flex:none" width="36" height="36" viewBox="0 0 40 40" aria-label="Ícono de tache"><g fill="none" stroke="#FF8F8F" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="20" r="17"/><path d="M14 14 L26 26 M26 14 L14 26"/></g></svg><p class="node-t">fracasó</p></div>
+<p class="pin truth fragment" data-fragment-index="3" style="left:820px; top:830px; width:972px">En ambos casos la emisión bajó igual: lo que cambió fue el clima</p>
+<p class="pin pg" style="left:1592px; top:990px; width:200px">03 / 13</p>
+<aside>PRESENTADOR 1 (2:10–3:10)
+
+¿Cómo se mide hoy lo que emite la ciudad? Con el inventario oficial de emisiones. Es una gran suma: cuántos coches hay, cuántos kilómetros recorren, cuánto contamina cada motor, más fábricas y comercios. Es un trabajo enorme y valioso, pero es una estimación en papel, no una medición del aire, y tarda años: el de 2018 se publicó en 2021.
+
+Mientras tanto, se hace lo más sencillo: comparar la contaminación antes y después de una medida. Imaginen la misma medida, aplicada igual. (Clic.) Si después llega una semana con viento y lluvia, el nivel baja y decimos: «¡funcionó!». (Clic.) Si llega una semana quieta y fría, sube y decimos: «fracasó». (Clic.) Pero en los dos casos la emisión bajó exactamente igual. Lo único que cambió fue el clima.</aside>
+</section>
+<!-- ===================== Diapositiva 4 · tina ===================== -->
+<section id="tina">
+<svg class="pin" style="left:0px; top:0px; width:1920px; height:1080px" width="1920" height="1080" viewBox="0 0 1920 1080" aria-label="Fondo oscuro con brillos de cielo azul a la derecha y textura granulada">
+<defs>
+<radialGradient id="t-ga" cx="1920" cy="0" r="1500" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5A9EE6" stop-opacity="0.8"/><stop offset="0.61" stop-color="#2F5C9E" stop-opacity="0.35"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="t-gb" cx="1920" cy="1080" r="1050" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8CC8F7" stop-opacity="0.55"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<filter id="t-warp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="3" seed="51"/><feDisplacementMap in="SourceGraphic" scale="380" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="t-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0"/></filter>
+</defs>
+<rect width="1920" height="1080" fill="#0B1424"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#t-ga)" filter="url(#t-warp)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#t-gb)" filter="url(#t-warp)"/>
+<rect width="1920" height="1080" fill="#FFFFFF" filter="url(#t-grain)"/>
+</svg>
+<p class="pin side" style="left:1192px; top:118px; width:600px; transform:none; text-align:right">01 · El problema</p>
+<div class="pin brand" style="left:260px; top:110px; width:600px">
+<img src="assets/logo-noxml.png" alt="Logo NOx·ML" style="width:44px; height:44px">
+<p class="brand-t">NOx·ML</p>
+</div>
+<h2 class="pin h2 rise" style="left:260px; top:200px; width:1532px; --i:0">la tina de baño</h2>
+<svg class="pin fade" style="left:260px; top:330px; width:860px; height:590px; --i:1" width="860" height="590" viewBox="0 0 860 590" aria-label="Tina de baño con tres partes numeradas: 1, la llave por la que entra el agua; 2, el nivel del agua; 3, el desagüe por el que sale">
+<defs><linearGradient id="t-wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9FD3FA"/><stop offset="0.45" stop-color="#4C8FDD"/><stop offset="1" stop-color="#1D4C93"/></linearGradient><filter id="t-wn" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.32" numOctaves="2" seed="9"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.6 -0.62"/></filter></defs>
+<rect class="tub-stream" x="218" y="120" width="24" height="375" fill="#9FD3FA" opacity="0.9"/>
+<g class="tub-water"><rect x="125" y="330" width="590" height="165" fill="url(#t-wg)"/>
+<rect x="125" y="330" width="590" height="165" fill="#FFFFFF" filter="url(#t-wn)"/></g>
+<path d="M120 160 V500 H720 V160" fill="none" stroke="#F5F8FC" stroke-width="10" stroke-linejoin="miter"/>
+<rect class="tub-knob" x="30" y="40" width="44" height="44" fill="#F0604D"/>
+<path d="M74 62 H230 V110" fill="none" stroke="#F5F8FC" stroke-width="18" stroke-linejoin="miter"/>
+<rect x="280" y="130" width="8" height="24" fill="#FF8F7A"/>
+<polygon points="270,152 298,152 284,180" fill="#FF8F7A"/>
+<line x1="720" y1="330" x2="800" y2="330" stroke="#F5F8FC" stroke-width="3" stroke-dasharray="10 8"/>
+<rect x="640" y="496" width="40" height="12" fill="#F5F8FC"/>
+<path d="M660 508 V550 H812" fill="none" stroke="#F5F8FC" stroke-width="12" stroke-linejoin="miter"/>
+<polygon points="808,536 840,550 808,564" fill="#FF8F7A"/>
+<g class="tub-out"><path class="tub-flow" d="M660 500 V550 H806" fill="none" stroke="#9FD3FA" stroke-width="5" stroke-dasharray="14 12"/></g>
+<path class="tub-clog" d="M636 478 L684 526 M684 478 L636 526" stroke="#FFA38F" stroke-width="7"/>
+</svg>
+<div class="pin tub-caps" style="left:260px; top:926px; width:860px; height:40px"><p class="lbl tub-cap c1">Llave abierta · desagüe abierto: el nivel se mantiene</p><p class="lbl tub-cap c2">Cerramos la llave a medias: el nivel baja</p><p class="lbl tub-cap c3">El clima tapa el desagüe: el nivel sube aunque entre menos</p><p class="lbl tub-cap c4">Se destapa y vuelve a abrirse: regresa a su nivel</p></div>
+<p class="pin num fill" style="left:518px; top:366px">1</p>
+<p class="pin num light" style="left:1070px; top:634px">2</p>
+<p class="pin num" style="left:1110px; top:854px">3</p>
+<div class="pin" style="left:1180px; top:330px; width:612px; display:flex; flex-direction:column; gap:28px">
+<div class="lg-row rise" style="--i:2"><p class="num fill">1</p><div><p class="lg-t">la llave</p><p class="lg-s">Lo que emite la ciudad: coches, fábricas</p></div></div>
+<div class="lg-row rise" style="--i:3"><p class="num light">2</p><div><p class="lg-t">el nivel del agua</p><p class="lg-s">Lo que respiramos. Es lo único que miden las estaciones</p></div></div>
+<div class="lg-row rise" style="--i:4"><p class="num">3</p><div><p class="lg-t">el desagüe</p><p class="lg-s">El clima: el viento y la lluvia se llevan la contaminación</p></div></div>
+</div>
+<p class="pin step fragment" data-fragment-index="1" style="left:1180px; top:690px; width:612px">1 · Cerramos la llave: entra menos</p>
+<p class="pin step warn fragment" data-fragment-index="2" style="left:1180px; top:752px; width:612px">2 · El clima tapa el desagüe: el nivel sube de igual manera.</p>
+<p class="pin truth fragment" data-fragment-index="3" style="left:1180px; top:840px; width:612px">Mirando solo el nivel, no sabemos quién lo movió</p>
+<p class="pin pg" style="left:1592px; top:990px; width:200px">04 / 13</p>
+<aside>PRESENTADOR 1 (3:10–4:00)
+
+¿Por qué pasa esto? Piensen en el aire como una tina de baño. Uno, la llave: es lo que emitimos. Tres, el desagüe: es el clima; una semana con viento y lluvia lo destapa, una quieta y fría lo tapa. Y dos, el nivel del agua: es lo que respiramos.
+
+Las estaciones solo miden el nivel del agua. (Clic.) Podemos cerrar la llave… (clic) y si el clima tapa el desagüe, el agua sube igual. (Clic.) Por eso, mirando solo el nivel, nunca sabemos quién lo movió.
+
+Entonces la pregunta es: ¿se puede ver la llave, cada semana, separándola del clima? Eso es lo que construimos, y mi compañero les va a contar cómo.</aside>
+</section>
+<!-- ##################### Parte 2, la solución: separar el clima de la ciudad con estaciones, satélite y una PINN, y probar que funciona. ##################### -->
+<!-- ===================== Diapositiva 5 · fuentes ===================== -->
+<section id="fuentes">
+<svg class="pin" style="left:0px; top:0px; width:1920px; height:1080px" width="1920" height="1080" viewBox="0 0 1920 1080" aria-label="Fondo oscuro con brillos de cielo azul y textura granulada">
+<defs>
+<radialGradient id="f-ga" cx="1920" cy="1080" r="1650" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8CC8F7"/><stop offset="0.34" stop-color="#5A9EE6"/><stop offset="0.80" stop-color="#24487E" stop-opacity="0.6"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="f-gb" cx="0" cy="0" r="1200" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2F5C9E" stop-opacity="0.6"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<filter id="f-warp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="3" seed="19"/><feDisplacementMap in="SourceGraphic" scale="380" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="f-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0"/></filter>
+</defs>
+<rect width="1920" height="1080" fill="#0B1424"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#f-gb)" filter="url(#f-warp)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#f-ga)" filter="url(#f-warp)"/>
+<rect width="1920" height="1080" fill="#FFFFFF" filter="url(#f-grain)"/>
+</svg>
+<p class="pin side" style="left:1192px; top:118px; width:600px; transform:none; text-align:right">02 · La solución</p>
+<div class="pin brand" style="left:260px; top:110px; width:600px">
+<img src="assets/logo-noxml.png" alt="Logo NOx·ML" style="width:44px; height:44px">
+<p class="brand-t">NOx·ML</p>
+</div>
+<h2 class="pin h2 rise" style="left:260px; top:200px; width:1532px; --i:0">tres fuentes, una respuesta</h2>
+<div class="pin cols" style="left:260px; top:380px; width:1532px">
+<div class="col rise" style="--i:1"><div class="src-ic"><x-icon name="Activity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></x-icon></div><h3 class="h3">24 estaciones</h3><p class="body">El aire a nivel de calle</p></div>
+<div class="col rise" style="--i:2"><div class="src-ic"><x-icon name="Globe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></x-icon></div><h3 class="h3">satélite TEMPO</h3><p class="body">NASA: una foto de la contaminación cada hora</p></div>
+<div class="col rise" style="--i:3"><div class="src-ic"><x-icon name="Cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg></x-icon></div><h3 class="h3">clima</h3><p class="body">Viento, lluvia, temperatura</p></div>
+</div>
+<svg class="pin fade" style="left:260px; top:630px; width:1532px; height:170px; --i:4" width="1532" height="170" viewBox="260 630 1532 170" aria-label="Diagrama de flujo: tres ramas, una por fuente (estaciones, satélite y clima), bajan y se juntan en el bloque ¿clima o ciudad?"><path d="M300 636 H466 C466 718.0 942 718.0 942 800 H776 C776 718.0 300 718.0 300 636 Z" fill="#F5F8FC" opacity="0.3"/><rect x="300" y="630" width="166" height="6" fill="#F5F8FC"/><path d="M811 636 H977 C977 718.0 1108 718.0 1108 800 H942 C942 718.0 811 718.0 811 636 Z" fill="#8CC8F7" opacity="0.5"/><rect x="811" y="630" width="166" height="6" fill="#8CC8F7"/><path d="M1321 636 H1487 C1487 718.0 1275 718.0 1275 800 H1109 C1109 718.0 1321 718.0 1321 636 Z" fill="#B6EA7E" opacity="0.45"/><rect x="1321" y="630" width="166" height="6" fill="#B6EA7E"/></svg>
+<div class="pin hub rise" style="left:776px; top:800px; width:500px; height:100px; --i:5"><p class="hub-t">¿clima o ciudad?</p></div>
+<p class="pin kicker fade" style="left:676px; top:926px; width:700px; text-align:center; --i:7">100 % datos públicos y gratuitos</p>
+<p class="pin pg" style="left:1592px; top:990px; width:200px">05 / 13</p>
+<aside>PRESENTADOR 2 (4:00–4:45)
+
+Gracias. Para ver la llave usamos tres fuentes que ya existen y que cualquiera puede descargar gratis. 24 estaciones que miden el aire a nivel de calle. TEMPO, un satélite de la NASA que desde el espacio toma una foto de la contaminación sobre la ciudad cada hora. Y el clima: viento, lluvia, temperatura. Cada una sola cuenta una parte de la historia; juntas, la cuentan completa.</aside>
+</section>
+<!-- ===================== Diapositiva 6 · gemelo ===================== -->
+<section id="gemelo">
+<svg class="pin" style="left:0px; top:0px; width:1920px; height:1080px" width="1920" height="1080" viewBox="0 0 1920 1080" aria-label="Fondo oscuro con un brillo de cielo azul y textura granulada">
+<defs>
+<radialGradient id="g-ga" cx="1920" cy="0" r="1350" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5A9EE6" stop-opacity="0.7"/><stop offset="0.61" stop-color="#2F5C9E" stop-opacity="0.3"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="g-gb" cx="0" cy="1080" r="1050" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2F5C9E" stop-opacity="0.5"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<filter id="g-warp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="3" seed="27"/><feDisplacementMap in="SourceGraphic" scale="380" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="g-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0"/></filter>
+</defs>
+<rect width="1920" height="1080" fill="#0B1424"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#g-ga)" filter="url(#g-warp)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#g-gb)" filter="url(#g-warp)"/>
+<rect width="1920" height="1080" fill="#FFFFFF" filter="url(#g-grain)"/>
+</svg>
+<p class="pin side" style="left:1192px; top:118px; width:600px; transform:none; text-align:right">02 · La solución</p>
+<div class="pin brand" style="left:260px; top:110px; width:600px">
+<img src="assets/logo-noxml.png" alt="Logo NOx·ML" style="width:44px; height:44px">
+<p class="brand-t">NOx·ML</p>
+</div>
+<h2 class="pin h2 rise" style="left:260px; top:200px; width:1532px; --i:0">el gemelo del clima</h2>
+<svg class="pin fragment" data-fragment-index="2" style="left:1122px; top:330px; width:296px; height:470px" width="296" height="470" viewBox="0 0 296 470" aria-label="Zona resaltada en verde: las semanas en que la línea sale de la banda"><rect width="296" height="470" fill="#7FD15A" opacity="0.3"/><rect width="296" height="8" fill="#7FD15A"/></svg>
+<svg class="pin" style="left:260px; top:330px; width:1532px; height:470px" width="1532" height="470" viewBox="0 0 1532 470" aria-label="Gráfica ilustrativa: una banda punteada marca lo esperado con el clima de cada semana; la línea verde lima de lo observado se queda dentro de la banda salvo tres semanas en que cae por debajo">
+<defs><pattern id="g-dots" width="14" height="14" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="2.2" fill="#F5F8FC" opacity="0.45"/></pattern></defs>
+<line x1="10" y1="460" x2="1520" y2="460" stroke="#34465F" stroke-width="3"/>
+<polygon points="30,200 128,170 226,220 324,190 422,240 520,210 618,180 716,200 814,230 912,190 1010,210 1108,180 1206,200 1304,220 1402,190 1500,210 1500,330 1402,310 1304,340 1206,320 1108,300 1010,330 912,310 814,350 716,320 618,300 520,330 422,360 324,310 226,340 128,290 30,320" fill="#F5F8FC" opacity="0.08"/>
+<polygon points="30,200 128,170 226,220 324,190 422,240 520,210 618,180 716,200 814,230 912,190 1010,210 1108,180 1206,200 1304,220 1402,190 1500,210 1500,330 1402,310 1304,340 1206,320 1108,300 1010,330 912,310 814,350 716,320 618,300 520,330 422,360 324,310 226,340 128,290 30,320" fill="url(#g-dots)"/>
+<polyline class="draw" points="30,250 128,250 226,255 324,265 422,280 520,280 618,265 716,245 814,310 912,400 1010,440 1108,400 1206,280 1304,270 1402,265 1500,265" fill="none" stroke="#C9F27A" stroke-width="8" stroke-linejoin="miter"/>
+</svg>
+<p class="pin note fragment" data-fragment-index="1" style="left:300px; top:356px; width:640px">dentro de la banda: fue el clima</p>
+<p class="pin note hot fragment" data-fragment-index="2" style="left:1140px; top:352px; width:270px">fuera: ya no es el clima, es la ciudad</p>
+<div class="pin legend" style="left:260px; top:840px; width:1532px">
+<div class="sw" style="background:#2E3F5C"></div><p class="lbl">Lo esperado con ese clima (banda punteada)</p>
+<div class="sw" style="height:8px; background:#C9F27A"></div><p class="lbl">Lo que pasó</p>
+<p class="lbl" style="margin-left:40px; font-style:italic">Semanas · datos ilustrativos</p>
+</div>
+<p class="pin pg" style="left:1592px; top:990px; width:200px">06 / 13</p>
+<aside>PRESENTADOR 2 (4:45–5:45)
+
+¿Cómo separamos el clima de la ciudad? Construimos un gemelo del clima. El sistema aprende, año tras año, cuánta contaminación debería haber con cada tipo de clima si la ciudad se comportara igual que siempre. Esa es la banda punteada.
+
+Luego lo comparamos con lo que realmente pasó. (Clic.) Si la línea se queda dentro de la banda, fue el clima. (Clic.) Si se sale, el clima ya no lo explica: algo cambió en la llave. Y lo vemos cada semana, no cada tres años.</aside>
+</section>
+<!-- ===================== Diapositiva 7 · pinn ===================== -->
+<section id="pinn">
+<svg class="pin" style="left:0px; top:0px; width:1920px; height:1080px" width="1920" height="1080" viewBox="0 0 1920 1080" aria-label="Fondo oscuro con brillos de cielo azul y textura granulada">
+<defs>
+<radialGradient id="n-ga" cx="1920" cy="0" r="1425" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8CC8F7" stop-opacity="0.7"/><stop offset="0.41" stop-color="#5A9EE6" stop-opacity="0.55"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="n-gb" cx="0" cy="1080" r="1050" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2F5C9E" stop-opacity="0.5"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<filter id="n-warp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="3" seed="43"/><feDisplacementMap in="SourceGraphic" scale="380" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="n-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0"/></filter>
+</defs>
+<rect width="1920" height="1080" fill="#0B1424"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#n-ga)" filter="url(#n-warp)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#n-gb)" filter="url(#n-warp)"/>
+<rect width="1920" height="1080" fill="#FFFFFF" filter="url(#n-grain)"/>
+</svg>
+<p class="pin side" style="left:1192px; top:118px; width:600px; transform:none; text-align:right">02 · La solución</p>
+<div class="pin brand" style="left:260px; top:110px; width:600px">
+<img src="assets/logo-noxml.png" alt="Logo NOx·ML" style="width:44px; height:44px">
+<p class="brand-t">NOx·ML</p>
+</div>
+<h2 class="pin h2 rise" style="left:260px; top:200px; width:1532px; --i:0">la pinn: de dónde viene</h2>
+<svg class="pin frame fade" style="left:260px; top:320px; width:820px; height:547px; --i:1" width="820" height="547" viewBox="0 0 900 600" aria-label="Mapa ilustrado de la ciudad en tonos oscuros. De una zona sale una bocanada de contaminación verde que el viento estira hacia el este y que alcanza a tres estaciones a la vez; las demás estaciones quedan fuera">
+<defs>
+<clipPath id="n-map"><rect x="0" y="0" width="900" height="600"/></clipPath>
+<clipPath id="n-ca"><path d="M0 0 H330 L380 300 L250 420 L0 470 Z"/></clipPath>
+<clipPath id="n-cb"><path d="M330 0 H740 L760 230 L620 250 L600 420 L520 470 L380 300 Z"/></clipPath>
+<clipPath id="n-cc"><path d="M0 470 L250 420 L380 300 L520 470 L600 420 L620 250 L760 230 L900 230 V600 H0 Z"/></clipPath>
+<path id="n-lots" d="M-300 -300 V900 M-252 -300 V900 M-204 -300 V900 M-156 -300 V900 M-108 -300 V900 M-60 -300 V900 M-12 -300 V900 M36 -300 V900 M84 -300 V900 M132 -300 V900 M180 -300 V900 M228 -300 V900 M276 -300 V900 M324 -300 V900 M372 -300 V900 M420 -300 V900 M468 -300 V900 M516 -300 V900 M564 -300 V900 M612 -300 V900 M660 -300 V900 M708 -300 V900 M756 -300 V900 M804 -300 V900 M852 -300 V900 M900 -300 V900 M948 -300 V900 M996 -300 V900 M1044 -300 V900 M1092 -300 V900 M1140 -300 V900 M1188 -300 V900 M-300 -300 H1200 M-300 -264 H1200 M-300 -228 H1200 M-300 -192 H1200 M-300 -156 H1200 M-300 -120 H1200 M-300 -84 H1200 M-300 -48 H1200 M-300 -12 H1200 M-300 24 H1200 M-300 60 H1200 M-300 96 H1200 M-300 132 H1200 M-300 168 H1200 M-300 204 H1200 M-300 240 H1200 M-300 276 H1200 M-300 312 H1200 M-300 348 H1200 M-300 384 H1200 M-300 420 H1200 M-300 456 H1200 M-300 492 H1200 M-300 528 H1200 M-300 564 H1200 M-300 600 H1200 M-300 636 H1200 M-300 672 H1200 M-300 708 H1200 M-300 744 H1200 M-300 780 H1200 M-300 816 H1200 M-300 852 H1200 M-300 888 H1200" fill="none" stroke="#1D2940" stroke-width="1.6"/>
+</defs>
+<g clip-path="url(#n-map)">
+<rect x="0" y="0" width="900" height="600" fill="#131D31"/>
+<g clip-path="url(#n-ca)"><use href="#n-lots" transform="rotate(-12 160 220)"/></g>
+<g clip-path="url(#n-cb)"><use href="#n-lots" transform="rotate(14 540 180)"/></g>
+<g clip-path="url(#n-cc)"><use href="#n-lots" transform="rotate(-24 450 480)"/></g>
+<g fill="#172238">
+<path d="M268 200 L318 190 L358 286 L300 290 Z"/>
+<path d="M600 0 H706 L694 60 L622 72 Z"/>
+<path d="M0 330 L150 300 C 176 360, 170 432, 90 500 L0 530 Z"/>
+<path d="M380 0 H600 L560 60 C 500 92, 430 110, 372 120 Z"/>
+<path d="M452 330 L600 292 L540 412 Z"/>
+<path d="M300 470 L500 470 L540 600 H320 Z"/>
+</g>
+<path d="M840 -20 C 870 100, 900 200, 860 320 C 820 430, 790 520, 820 620" fill="none" stroke="#172238" stroke-width="96"/>
+<path d="M840 -20 C 870 100, 900 200, 860 320 C 820 430, 790 520, 820 620" fill="none" stroke="#2A3B5A" stroke-width="28"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="#23314A">
+<g stroke-width="14">
+<path d="M200 -20 L250 140"/>
+<path d="M160 300 C 190 380, 170 450, 80 520 L-20 560"/>
+<path d="M-20 470 L250 420 L520 470 L790 420"/>
+<path d="M250 420 L300 620"/>
+<path d="M620 250 L600 420 L640 620"/>
+<path d="M520 470 L560 620"/>
+<path d="M380 300 L520 470"/>
+<path d="M560 92 L620 250"/>
+<path d="M60 -20 L90 136"/>
+<path d="M-20 230 L170 212 L160 300"/>
+<path d="M640 70 L700 120"/>
+</g>
+<g stroke-width="24">
+<path d="M-20 120 C 150 150, 250 170, 330 160 L640 70 L920 -10"/>
+<path d="M330 160 L380 300 L430 620"/>
+<path d="M-20 330 L160 300 L380 300 L620 250 L760 230"/>
+<path d="M740 -20 L700 120 L760 230 L800 400 C 815 470, 800 540, 770 620"/>
+</g>
+</g>
+<circle cx="330" cy="160" r="44" fill="#23314A"/>
+<circle cx="330" cy="160" r="22" fill="#172238"/>
+<path d="M0 0 H232 L250 140 L330 160 L160 300 L0 330 Z" fill="#7FD15A" opacity="0.4"/>
+<path d="M0 0 H232 L250 140 L330 160 L160 300 L0 330" fill="none" stroke="#C9F27A" stroke-width="4" stroke-linejoin="miter"/>
+<path d="M200 140 C 360 110, 600 140, 770 215 C 792 280, 772 345, 728 375 C 560 335, 360 235, 200 190 Z" fill="#7FD15A" opacity="0.22"/>
+<path d="M200 150 C 360 132, 570 172, 735 245 C 745 280, 735 312, 712 325 C 545 292, 360 222, 200 180 Z" fill="#7FD15A" opacity="0.3"/>
+<circle cx="200" cy="165" r="14" fill="#C9F27A" opacity="0">
+<animateMotion path="M0 0 C 170 0, 350 40, 510 120" dur="4s" begin="0s" repeatCount="indefinite"/>
+<animate attributeName="r" values="14;48" dur="4s" begin="0s" repeatCount="indefinite"/>
+<animate attributeName="opacity" values="0;0.7;0" dur="4s" begin="0s" repeatCount="indefinite"/>
+</circle>
+<circle cx="200" cy="165" r="14" fill="#C9F27A" opacity="0">
+<animateMotion path="M0 0 C 170 0, 350 40, 510 120" dur="4s" begin="1.33s" repeatCount="indefinite"/>
+<animate attributeName="r" values="14;48" dur="4s" begin="1.33s" repeatCount="indefinite"/>
+<animate attributeName="opacity" values="0;0.7;0" dur="4s" begin="1.33s" repeatCount="indefinite"/>
+</circle>
+<circle cx="200" cy="165" r="14" fill="#C9F27A" opacity="0">
+<animateMotion path="M0 0 C 170 0, 350 40, 510 120" dur="4s" begin="2.66s" repeatCount="indefinite"/>
+<animate attributeName="r" values="14;48" dur="4s" begin="2.66s" repeatCount="indefinite"/>
+<animate attributeName="opacity" values="0;0.7;0" dur="4s" begin="2.66s" repeatCount="indefinite"/>
+</circle>
+<g fill="none" stroke="#C9F27A" stroke-width="3">
+<circle cx="370" cy="183" r="16" opacity="0"><animate attributeName="r" values="16;34" dur="2s" begin="0.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.9;0" dur="2s" begin="0.6s" repeatCount="indefinite"/></circle>
+<circle cx="530" cy="232" r="16" opacity="0"><animate attributeName="r" values="16;34" dur="2s" begin="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.9;0" dur="2s" begin="1.2s" repeatCount="indefinite"/></circle>
+<circle cx="680" cy="290" r="16" opacity="0"><animate attributeName="r" values="16;34" dur="2s" begin="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.9;0" dur="2s" begin="1.8s" repeatCount="indefinite"/></circle>
+</g>
+<g fill="#7586A2" stroke="#0B1424" stroke-width="4">
+<circle cx="230" cy="400" r="11"/>
+<circle cx="420" cy="500" r="11"/>
+<circle cx="640" cy="480" r="11"/>
+<circle cx="725" cy="150" r="11"/>
+<circle cx="420" cy="380" r="11"/>
+<circle cx="700" cy="360" r="11"/>
+<circle cx="90" cy="240" r="11"/>
+</g>
+<g fill="#C9F27A" stroke="#0B1424" stroke-width="4">
+<circle cx="370" cy="183" r="14"/>
+<circle cx="530" cy="232" r="14"/>
+<circle cx="680" cy="290" r="14"/>
+</g>
+<rect x="596" y="20" width="236" height="44" fill="#0B1424" opacity="0.85"/>
+<line x1="712" y1="42" x2="790" y2="42" stroke="#F5F8FC" stroke-width="5"/>
+<polygon points="786,30 814,42 786,54" fill="#F5F8FC"/>
+<rect x="24" y="548" width="250" height="40" fill="#0B1424" opacity="0.85"/>
+<g stroke="#F5F8FC" stroke-width="4">
+<line x1="40" y1="574" x2="160" y2="574"/>
+<line x1="40" y1="564" x2="40" y2="580"/>
+<line x1="160" y1="564" x2="160" y2="580"/>
+</g>
+</g>
+</svg>
+<p class="pin zone-t fade" style="left:282px; top:384px; --i:2">Zona que emite</p>
+<p class="pin map-t fade" style="left:815px; top:344px; width:100px; --i:2">Viento</p>
+<p class="pin map-t fade" style="left:418px; top:822px; width:110px; --i:2">≈ 10 km</p>
+<div class="pin legend fade" style="left:260px; top:884px; width:820px; --i:3">
+<div style="width:22px; height:22px; border-radius:11px; background:#7586A2; flex:none"></div><p class="lbl">Estación</p>
+<div style="width:26px; height:26px; border-radius:13px; background:#C9F27A; flex:none"></div><p class="lbl">bocanada de NOx</p>
+</div>
+<div class="pin" style="left:1140px; top:320px; width:652px; display:flex; flex-direction:column; gap:28px">
+<p class="hero rise" style="font-size:150px; --i:2">PINN</p>
+<p class="h3 rise" style="--i:3">red neuronal + leyes de la física</p>
+<div class="checks rise" style="--i:4">
+<div class="check"><x-icon name="Check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></x-icon><p class="check-t">Aprende la física, no memoriza</p></div>
+<div class="check"><x-icon name="Check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></x-icon><p class="check-t">Funciona con solo 24 estaciones</p></div>
+<div class="check"><x-icon name="Check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></x-icon><p class="check-t">Dice qué zona emite</p></div>
+</div>
+<p class="body fade" style="text-align:left; font-style:italic; --i:6">Una bocanada llega a varias estaciones; cada estación recibe humo de varias zonas. La PINN las desenreda.</p>
+</div>
+<p class="pin pg" style="left:1592px; top:990px; width:200px">07 / 13</p>
+<aside>PRESENTADOR 2 (5:45–6:50)
+
+Saber cuánto cambió no basta; también queremos saber de dónde viene. Para eso usamos una PINN, una red neuronal informada por la física. Una red neuronal común aprende de miles de ejemplos. Nosotros solo tenemos 24 estaciones: con tan pocos datos, memorizaría en lugar de entender. Por eso a la nuestra no le enseñamos datos, le enseñamos la ley física de cómo el viento arrastra y dispersa el humo.
+
+Miren el mapa: una sola bocanada que sale de esta zona se estira con el viento y llega a tres estaciones a la vez, cada vez más diluida. Y cada estación, a su vez, recibe humo de varias zonas. Con la PINN seguimos todas esas bocanadas y luego hacemos la pregunta al revés: ¿cuánto tuvo que emitir cada zona para explicar lo que miden las estaciones? Es como deducir qué llave está abierta viendo dónde se moja el piso. Es la opción adecuada porque respeta la física, funciona con pocos datos y no puede hacer trampa copiando la respuesta.</aside>
+</section>
+<!-- ===================== Diapositiva 8 · confinamiento ===================== -->
+<section id="confinamiento">
+<svg class="pin" style="left:0px; top:0px; width:1920px; height:1080px" width="1920" height="1080" viewBox="0 0 1920 1080" aria-label="Fondo oscuro con brillos de cielo azul y textura granulada">
+<defs>
+<radialGradient id="c-ga" cx="1920" cy="1080" r="1500" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8CC8F7" stop-opacity="0.85"/><stop offset="0.41" stop-color="#5A9EE6" stop-opacity="0.6"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="c-gb" cx="0" cy="0" r="1200" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2F5C9E" stop-opacity="0.55"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<filter id="c-warp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="3" seed="11"/><feDisplacementMap in="SourceGraphic" scale="380" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="c-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0"/></filter>
+</defs>
+<rect width="1920" height="1080" fill="#0B1424"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#c-gb)" filter="url(#c-warp)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#c-ga)" filter="url(#c-warp)"/>
+<rect width="1920" height="1080" fill="#FFFFFF" filter="url(#c-grain)"/>
+</svg>
+<p class="pin side" style="left:1192px; top:118px; width:600px; transform:none; text-align:right">02 · La solución</p>
+<div class="pin brand" style="left:260px; top:110px; width:600px">
+<img src="assets/logo-noxml.png" alt="Logo NOx·ML" style="width:44px; height:44px">
+<p class="brand-t">NOx·ML</p>
+</div>
+<h2 class="pin h2 rise" style="left:260px; top:200px; width:1532px; --i:0">el examen: el confinamiento</h2>
+<img class="pin frame fade" src="assets/avenida-juarez-confinamiento.jpg" alt="Avenida Juárez casi vacía el 6 de abril de 2020, con jacarandas en flor" style="left:260px; top:330px; width:720px; height:480px; --i:1">
+<p class="pin lbl" style="left:260px; top:826px; width:720px">Avenida Juárez, 6 de abril de 2020 · Foto: EneasMx, Wikimedia Commons, CC BY-SA 4.0</p>
+<p class="pin hero rise" style="left:1060px; top:330px; width:732px; --i:2">−50 %</p>
+<p class="pin h3 rise" style="left:1060px; top:530px; width:732px; --i:3">caída de la emisión que vio el sistema</p>
+<svg class="pin fade" style="left:1060px; top:660px; width:732px; height:100px; --i:4" width="732" height="100" viewBox="0 0 732 100" aria-label="Escala de −70 a −30 por ciento: la banda punteada marca lo esperado por expertos, de −60 a −40 por ciento, y el cuadro verde, el resultado del sistema, cae en −50 por ciento">
+<defs><pattern id="c-dots" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="2" fill="#F5F8FC" opacity="0.55"/></pattern></defs>
+<line x1="20" y1="50" x2="712" y2="50" stroke="#7586A2" stroke-width="4"/>
+<rect x="193" y="28" width="346" height="44" fill="#F5F8FC" opacity="0.1"/>
+<rect x="193" y="28" width="346" height="44" fill="url(#c-dots)"/>
+<line x1="20" y1="36" x2="20" y2="64" stroke="#7586A2" stroke-width="4"/>
+<line x1="366" y1="36" x2="366" y2="64" stroke="#7586A2" stroke-width="4"/>
+<line x1="712" y1="36" x2="712" y2="64" stroke="#7586A2" stroke-width="4"/>
+<rect x="346" y="30" width="40" height="40" fill="#7FD15A" stroke="#0B1424" stroke-width="4"/>
+</svg>
+<div class="pin fade" style="left:1060px; top:770px; width:732px; display:flex; justify-content:space-between; --i:4"><p class="lbl">−70 %</p><p class="lbl">−50 %</p><p class="lbl">−30 %</p></div>
+<p class="pin lbl fade" style="left:1060px; top:830px; width:732px; --i:5">Banda punteada: lo esperado por expertos (−40 a −60 %)<br>Cuadro verde: lo que midió el sistema</p>
+<p class="pin pg" style="left:1592px; top:990px; width:200px">08 / 13</p>
+<aside>PRESENTADOR 2 (6:50–7:25)
+
+¿Cómo sabemos que funciona? Le pusimos un examen con la respuesta conocida: el confinamiento de 2020, cuando la ciudad se detuvo. Tiene que ver una caída enorme en la llave. Y la vio: menos 50 %, justo en el rango que esperaban los expertos.</aside>
+</section>
+<!-- ===================== Diapositiva 9 · validacion ===================== -->
+<section id="validacion">
+<svg class="pin" style="left:0px; top:0px; width:1920px; height:1080px" width="1920" height="1080" viewBox="0 0 1920 1080" aria-label="Fondo oscuro con brillos de cielo azul y textura granulada">
+<defs>
+<radialGradient id="v-ga" cx="0" cy="1080" r="1500" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5A9EE6" stop-opacity="0.85"/><stop offset="0.47" stop-color="#2F5C9E" stop-opacity="0.6"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="v-gb" cx="1920" cy="0" r="1140" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8CC8F7" stop-opacity="0.6"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<filter id="v-warp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="3" seed="55"/><feDisplacementMap in="SourceGraphic" scale="380" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="v-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0"/></filter>
+</defs>
+<rect width="1920" height="1080" fill="#0B1424"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#v-ga)" filter="url(#v-warp)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#v-gb)" filter="url(#v-warp)"/>
+<rect width="1920" height="1080" fill="#FFFFFF" filter="url(#v-grain)"/>
+</svg>
+<p class="pin side" style="left:1192px; top:118px; width:600px; transform:none; text-align:right">02 · La solución</p>
+<div class="pin brand" style="left:260px; top:110px; width:600px">
+<img src="assets/logo-noxml.png" alt="Logo NOx·ML" style="width:44px; height:44px">
+<p class="brand-t">NOx·ML</p>
+</div>
+<h2 class="pin h2 rise" style="left:260px; top:200px; width:1532px; font-size:72px; --i:0">no inventa cambios y dice cuánto sabe</h2>
+<div class="pin cols" style="left:260px; top:380px; width:1532px">
+<div class="col rise" style="--i:1">
+<svg style="width:430px; height:136px" width="430" height="136" viewBox="0 0 430 136" aria-label="52 cuadros, uno por episodio: 49 claros de acierto y 3 rojos de error">
+<g fill="#F5F8FC" opacity="0.85">
+<rect x="4" y="4" width="24" height="24"/><rect x="37" y="4" width="24" height="24"/><rect x="70" y="4" width="24" height="24"/><rect x="103" y="4" width="24" height="24"/><rect x="136" y="4" width="24" height="24"/><rect x="169" y="4" width="24" height="24"/><rect x="202" y="4" width="24" height="24"/><rect x="235" y="4" width="24" height="24"/><rect x="268" y="4" width="24" height="24"/><rect x="301" y="4" width="24" height="24"/><rect x="334" y="4" width="24" height="24"/><rect x="367" y="4" width="24" height="24"/><rect x="400" y="4" width="24" height="24"/>
+<rect x="4" y="37" width="24" height="24"/><rect x="37" y="37" width="24" height="24"/><rect x="70" y="37" width="24" height="24"/><rect x="103" y="37" width="24" height="24"/><rect x="136" y="37" width="24" height="24"/><rect x="169" y="37" width="24" height="24"/><rect x="202" y="37" width="24" height="24"/><rect x="235" y="37" width="24" height="24"/><rect x="268" y="37" width="24" height="24"/><rect x="301" y="37" width="24" height="24"/><rect x="334" y="37" width="24" height="24"/><rect x="367" y="37" width="24" height="24"/><rect x="400" y="37" width="24" height="24"/>
+<rect x="4" y="70" width="24" height="24"/><rect x="37" y="70" width="24" height="24"/><rect x="70" y="70" width="24" height="24"/><rect x="103" y="70" width="24" height="24"/><rect x="136" y="70" width="24" height="24"/><rect x="169" y="70" width="24" height="24"/><rect x="202" y="70" width="24" height="24"/><rect x="235" y="70" width="24" height="24"/><rect x="268" y="70" width="24" height="24"/><rect x="301" y="70" width="24" height="24"/><rect x="334" y="70" width="24" height="24"/><rect x="367" y="70" width="24" height="24"/><rect x="400" y="70" width="24" height="24"/>
+<rect x="4" y="103" width="24" height="24"/><rect x="37" y="103" width="24" height="24"/><rect x="70" y="103" width="24" height="24"/><rect x="103" y="103" width="24" height="24"/><rect x="136" y="103" width="24" height="24"/><rect x="169" y="103" width="24" height="24"/><rect x="202" y="103" width="24" height="24"/><rect x="235" y="103" width="24" height="24"/><rect x="268" y="103" width="24" height="24"/><rect x="301" y="103" width="24" height="24"/>
+</g>
+<g fill="#FF8F8F"><rect x="334" y="103" width="24" height="24"/><rect x="367" y="103" width="24" height="24"/><rect x="400" y="103" width="24" height="24"/></g>
+</svg>
+<p class="big">49 de 52</p>
+<p class="lbl">episodios reales con la causa correcta (claro: acierto, rojo: error)</p>
+</div>
+<div class="col rise" style="--i:2">
+<svg style="width:430px; height:136px" width="430" height="136" viewBox="0 0 430 136" aria-label="Dos barras: antes 18 por ciento, en gris; ahora 9 por ciento, en verde lima">
+<rect x="0" y="16" width="380" height="44" fill="#34465F"/>
+<rect x="0" y="80" width="190" height="44" fill="#C9F27A"/>
+</svg>
+<p class="big">18 % → 9 %</p>
+<p class="lbl">veces que se culpa a la ciudad de lo que fue el clima (gris: antes, verde lima: ahora)</p>
+</div>
+<div class="col rise" style="--i:3">
+<svg style="width:430px; height:136px" width="430" height="136" viewBox="0 0 430 136" aria-label="Un valor con su rango de confianza: un cuadro con una línea a cada lado">
+<line x1="50" y1="68" x2="380" y2="68" stroke="#F5F8FC" stroke-width="5"/>
+<line x1="50" y1="44" x2="50" y2="92" stroke="#F5F8FC" stroke-width="5"/>
+<line x1="380" y1="44" x2="380" y2="92" stroke="#F5F8FC" stroke-width="5"/>
+<rect x="195" y="48" width="40" height="40" fill="#C9F27A" stroke="#0B1424" stroke-width="4"/>
+</svg>
+<p class="big">siempre</p>
+<p class="lbl">cada cifra sale con su rango de confianza</p>
+</div>
+</div>
+<p class="pin pg" style="left:1592px; top:990px; width:200px">09 / 13</p>
+<aside>PRESENTADOR 2 (7:25–8:00)
+
+Igual de importante es no inventar cambios. En 52 episodios con causa conocida acertó la causa en 49, y redujimos a la mitad las veces que se culpa a la ciudad de algo que fue el clima. Además, nunca da un número solo: siempre dice qué tan seguro está.
+
+Pero un sistema que funciona no sirve de nada si no cambia algo. Y aquí viene lo más interesante: lo que descubrimos al usarlo.</aside>
+</section>
+<!-- ##################### Parte 3, impacto y futuro: el hallazgo del ozono, qué cambia, posibles mejoras y riesgos. ##################### -->
+<!-- ===================== Diapositiva 10 · domingos ===================== -->
+<section id="domingos">
+<svg class="pin" style="left:0px; top:0px; width:1920px; height:1080px" width="1920" height="1080" viewBox="0 0 1920 1080" aria-label="Fondo oscuro con brillos de cielo azul y textura granulada">
+<defs>
+<radialGradient id="d-ga" cx="1760" cy="60" r="1650" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8CC8F7"/><stop offset="0.30" stop-color="#5A9EE6"/><stop offset="0.74" stop-color="#24487E" stop-opacity="0.6"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="d-gb" cx="0" cy="1080" r="1050" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2F5C9E" stop-opacity="0.55"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<filter id="d-warp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="3" seed="15"/><feDisplacementMap in="SourceGraphic" scale="380" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="d-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0"/></filter>
+</defs>
+<rect width="1920" height="1080" fill="#0B1424"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#d-gb)" filter="url(#d-warp)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#d-ga)" filter="url(#d-warp)"/>
+<rect width="1920" height="1080" fill="#FFFFFF" filter="url(#d-grain)"/>
+</svg>
+<p class="pin side" style="left:1192px; top:118px; width:600px; transform:none; text-align:right">03 · Impacto y futuro</p>
+<div class="pin brand" style="left:260px; top:110px; width:600px">
+<img src="assets/logo-noxml.png" alt="Logo NOx·ML" style="width:44px; height:44px">
+<p class="brand-t">NOx·ML</p>
+</div>
+<h2 class="pin h2 rise" style="left:260px; top:200px; width:1532px; font-size:80px; --i:0">si quitamos coches, ¿baja el ozono?</h2>
+<p class="pin cat fade" style="left:300px; top:400px; width:260px; --i:1">NOx</p>
+<p class="pin cat fade" style="left:720px; top:400px; width:260px; --i:1">ozono</p>
+<div class="pin fade" style="left:260px; top:500px; width:860px; height:3px; background:#7586A2; --i:1"></div>
+<div class="pin bar-nox fragment" data-fragment-index="1" style="left:300px; top:503px; width:260px; height:300px"><p class="bar-v">−30 %</p></div>
+<div class="pin fragment" data-fragment-index="2" style="left:720px; top:476px; width:260px; height:24px; background:#5FB4FF"></div>
+<p class="pin o3-v fragment" data-fragment-index="2" style="left:680px; top:530px; width:340px">≈ igual</p>
+<div class="pin why fragment" data-fragment-index="3" style="left:1200px; top:400px; width:592px">
+<p class="kicker">Por qué</p>
+<p class="h3" style="font-size:44px">en el centro, el ozono depende de otros vapores</p>
+<p class="body" style="text-align:left">Gasolina que se evapora, solventes, gas LP.</p>
+</div>
+<p class="pin lbl" style="left:260px; top:860px; width:960px">80 domingos comparados con días hábiles de clima parecido</p>
+<p class="pin pg" style="left:1592px; top:990px; width:200px">10 / 13</p>
+<aside>PRESENTADOR 3 (8:00–9:30)
+
+Gracias. Les hago una pregunta: si quitamos coches de la calle, ¿baja el ozono, el contaminante de las contingencias? La intuición dice que sí. Por eso la medida principal en una contingencia es el Doble Hoy No Circula. Usamos el sistema para revisarlo con un experimento que la ciudad hace sola cada semana: el domingo. Comparamos 80 domingos con días hábiles de clima parecido. (Clic.) El NOₓ cae 30 %. (Clic.) Y el ozono… se queda igual. En el confinamiento pasó lo mismo. (Clic.) ¿Por qué? Porque en el centro de la ciudad el ozono no depende tanto de los escapes, sino de otros vapores: gasolina que se evapora, solventes, gas LP. Esto sugiere que las contingencias podrían atacarse mejor por otro lado. No es una conclusión nuestra sola: coincide con lo que encontraron otros investigadores con otro satélite. Y ahora la ciudad puede revisarlo cada temporada, casi sin costo.</aside>
+</section>
+<!-- ===================== Diapositiva 11 · cambia ===================== -->
+<section id="cambia">
+<svg class="pin" style="left:0px; top:0px; width:1920px; height:1080px" width="1920" height="1080" viewBox="0 0 1920 1080" aria-label="Fondo oscuro con brillos de cielo azul y textura granulada">
+<defs>
+<radialGradient id="k-ga" cx="0" cy="0" r="1350" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5A9EE6" stop-opacity="0.7"/><stop offset="0.54" stop-color="#2F5C9E" stop-opacity="0.4"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="k-gb" cx="1920" cy="1080" r="1200" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8CC8F7" stop-opacity="0.7"/><stop offset="0.47" stop-color="#5A9EE6" stop-opacity="0.45"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<filter id="k-warp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="3" seed="7"/><feDisplacementMap in="SourceGraphic" scale="380" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="k-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0"/></filter>
+</defs>
+<rect width="1920" height="1080" fill="#0B1424"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#k-ga)" filter="url(#k-warp)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#k-gb)" filter="url(#k-warp)"/>
+<rect width="1920" height="1080" fill="#FFFFFF" filter="url(#k-grain)"/>
+</svg>
+<p class="pin side" style="left:1192px; top:118px; width:600px; transform:none; text-align:right">03 · Impacto y futuro</p>
+<div class="pin brand" style="left:260px; top:110px; width:600px">
+<img src="assets/logo-noxml.png" alt="Logo NOx·ML" style="width:44px; height:44px">
+<p class="brand-t">NOx·ML</p>
+</div>
+<h2 class="pin h2 rise" style="left:260px; top:200px; width:1532px; --i:0">qué cambia</h2>
+<div class="pin" style="left:260px; top:330px; width:880px">
+<div class="chg rise" style="--i:1"><p class="before">Inventario cada 3 años</p><x-shape kind="arrow-right"></x-shape><p class="after">señal cada semana</p></div>
+<div class="chg rise" style="--i:2"><p class="before">Pilotos imposibles de evaluar</p><x-shape kind="arrow-right"></x-shape><p class="after">asistente para pilotos medibles</p></div>
+<div class="chg rise" style="--i:3"><p class="before">Adivinar si fue el clima</p><x-shape kind="arrow-right"></x-shape><p class="after">boletín público cada mes</p></div>
+<p class="pill rise" style="margin-top:36px; --i:5">Operarlo: ~6 mil pesos al mes · datos gratuitos</p>
+</div>
+<img class="pin frame fade" src="assets/boletin-septiembre-2026.png" alt="Captura de la app Monitor NOx: el Boletín de NOx de septiembre de 2026 con NOx observado −11 %, NOx sin el efecto del clima +1 %, 2 de 4 semanas fuera de lo común y la gráfica diaria" style="left:1200px; top:340px; width:592px; height:386px; object-fit:contain; background:#F5F8FC; --i:4">
+<p class="pin lbl fade" style="left:1200px; top:744px; width:592px; --i:4">Boletín de septiembre de 2026 en la app: 2 semanas fuera de lo común, y el boletín dice por qué</p>
+<p class="pin pg" style="left:1592px; top:990px; width:200px">11 / 13</p>
+<aside>PRESENTADOR 3 (9:30–10:20)
+
+¿Qué cambia con esto? Pasamos de ver la llave cada tres años a verla cada semana. Antes de lanzar una medida, un asistente le dice a la ciudad cómo diseñar el piloto para que sí se pueda medir: cuántas semanas necesita y cómo alternarlas. Y lo entregamos como un bien público: un boletín mensual abierto y datos que cualquiera puede citar. Miren septiembre: la concentración cayó 11 %, pero sin el efecto del clima la emisión quedó igual. El boletín marca las dos semanas raras y dice cuál explicó el clima y cuál no. Para un periodista, un funcionario o un investigador, significa poder preguntar «¿fue el clima?» y tener una respuesta con evidencia. Operarlo cuesta unos 6 mil pesos al mes.</aside>
+</section>
+<!-- ===================== Diapositiva 12 · mejoras ===================== -->
+<section id="mejoras">
+<svg class="pin" style="left:0px; top:0px; width:1920px; height:1080px" width="1920" height="1080" viewBox="0 0 1920 1080" aria-label="Fondo oscuro con un brillo de cielo azul y textura granulada">
+<defs>
+<radialGradient id="m-ga" cx="1920" cy="0" r="1350" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5A9EE6" stop-opacity="0.7"/><stop offset="0.61" stop-color="#2F5C9E" stop-opacity="0.3"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="m-gb" cx="0" cy="1080" r="1050" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2F5C9E" stop-opacity="0.5"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<filter id="m-warp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="3" seed="39"/><feDisplacementMap in="SourceGraphic" scale="380" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="m-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0"/></filter>
+</defs>
+<rect width="1920" height="1080" fill="#0B1424"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#m-ga)" filter="url(#m-warp)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#m-gb)" filter="url(#m-warp)"/>
+<rect width="1920" height="1080" fill="#FFFFFF" filter="url(#m-grain)"/>
+</svg>
+<p class="pin side" style="left:1192px; top:118px; width:600px; transform:none; text-align:right">03 · Impacto y futuro</p>
+<div class="pin brand" style="left:260px; top:110px; width:600px">
+<img src="assets/logo-noxml.png" alt="Logo NOx·ML" style="width:44px; height:44px">
+<p class="brand-t">NOx·ML</p>
+</div>
+<h2 class="pin h2 rise" style="left:260px; top:200px; width:1532px; --i:0">posibles mejoras</h2>
+<p class="pin lbl" style="left:340px; top:300px; width:400px; letter-spacing:3px; text-transform:uppercase">↑ Más impacto</p>
+<svg class="pin fade" style="left:260px; top:330px; width:1532px; height:540px; --i:1" width="1532" height="540" viewBox="0 0 1532 540" aria-label="Matriz de impacto contra esfuerzo con siete mejoras. Mucho impacto y poco esfuerzo: pilotos en semanas alternas, salud y equidad por zona, y separar tráfico de industria con CO. Más esfuerzo: datos de tráfico y emisión por alcaldía, con impacto alto; otras ciudades bajo TEMPO, con impacto medio. Gran apuesta: un viento más fino">
+<defs><pattern id="m-dots" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="2" fill="#9FD3FA" opacity="0.3"/></pattern></defs>
+<rect x="64" y="20" width="696" height="250" fill="#5FB4FF" opacity="0.12"/>
+<rect x="64" y="20" width="696" height="250" fill="url(#m-dots)"/>
+<g stroke="#D5DEEA" stroke-width="4" stroke-dasharray="16 10" opacity="0.85">
+<line x1="760" y1="24" x2="760" y2="516"/>
+<line x1="64" y1="270" x2="1500" y2="270"/>
+</g>
+<g stroke="#7586A2" stroke-width="4">
+<line x1="60" y1="520" x2="60" y2="30"/>
+<line x1="60" y1="520" x2="1498" y2="520"/>
+</g>
+<polygon points="60,8 48,32 72,32" fill="#7586A2"/>
+<polygon points="1522,520 1498,508 1498,532" fill="#7586A2"/>
+<g stroke="#0B1424" stroke-width="4">
+<circle cx="221" cy="99" r="18" fill="#BFE3FF"/>
+<circle cx="396" cy="153" r="18" fill="#BFE3FF"/>
+<circle cx="515" cy="216" r="18" fill="#BFE3FF"/>
+<circle cx="902" cy="99" r="18" fill="#F5F8FC"/>
+<circle cx="1040" cy="198" r="18" fill="#F5F8FC"/>
+<circle cx="929" cy="360" r="18" fill="#F5F8FC"/>
+<circle cx="1352" cy="81" r="22" fill="#A99BFF"/>
+</g>
+</svg>
+<p class="pin kicker fade" style="left:340px; top:360px; width:300px; --i:2">Primero</p>
+<p class="pin pt fade" style="left:505px; top:412px; width:420px; --i:3">Pilotos en semanas alternas</p>
+<p class="pin pt fade" style="left:680px; top:466px; width:300px; --i:3">Salud y equidad por zona</p>
+<p class="pin pt fade" style="left:799px; top:529px; width:300px; --i:3">Separar tráfico e industria con CO</p>
+<p class="pin pt fade" style="left:1186px; top:412px; width:300px; --i:4">Datos de tráfico</p>
+<p class="pin pt fade" style="left:1324px; top:511px; width:320px; --i:4">Emisión por alcaldía</p>
+<p class="pin pt fade" style="left:1213px; top:673px; width:400px; --i:4">Otras ciudades bajo TEMPO</p>
+<p class="pin pt fade" style="left:1300px; top:362px; width:290px; text-align:right; --i:5">Viento más fino</p>
+<div class="pin legend" style="left:340px; top:880px; width:900px">
+<div style="width:22px; height:22px; border-radius:11px; background:#BFE3FF; flex:none"></div><p class="lbl" style="margin-right:24px">Primero: barato y útil</p>
+<div style="width:22px; height:22px; border-radius:11px; background:#F5F8FC; flex:none"></div><p class="lbl" style="margin-right:24px">Después</p>
+<div style="width:22px; height:22px; border-radius:11px; background:#A99BFF; flex:none"></div><p class="lbl">Gran apuesta</p>
+</div>
+<p class="pin lbl" style="left:1432px; top:880px; width:360px; text-align:right; letter-spacing:3px; text-transform:uppercase">Más esfuerzo →</p>
+<p class="pin pg" style="left:1592px; top:990px; width:200px">12 / 13</p>
+<aside>PRESENTADOR 3 (10:20–11:00)
+
+¿Y qué sigue? Ordenamos las mejoras por impacto y por esfuerzo. Arriba a la izquierda está lo primero, lo barato que más ayuda: diseñar pilotos en semanas alternas, cruzar la emisión con salud y con quién la respira en cada zona, y usar el monóxido de carbono para separar el tráfico de la industria. Con más esfuerzo: conseguir datos de tráfico y repartir la emisión por alcaldía. Y la gran apuesta es un viento más fino sobre el valle, que mejora todo lo demás. Además, el mismo método puede llevarse a otras ciudades que cubre el satélite.</aside>
+</section>
+<!-- ===================== Diapositiva 13 · futuro ===================== -->
+<section id="futuro">
+<svg class="pin" style="left:0px; top:0px; width:1920px; height:1080px" width="1920" height="1080" viewBox="0 0 1920 1080" aria-label="Fondo oscuro con brillos de cielo azul y textura granulada">
+<defs>
+<radialGradient id="z-ga" cx="1920" cy="1080" r="1350" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5A9EE6" stop-opacity="0.75"/><stop offset="0.61" stop-color="#2F5C9E" stop-opacity="0.35"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="z-gb" cx="0" cy="0" r="1050" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2F5C9E" stop-opacity="0.5"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<filter id="z-warp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="3" seed="23"/><feDisplacementMap in="SourceGraphic" scale="380" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="z-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0"/></filter>
+</defs>
+<rect width="1920" height="1080" fill="#0B1424"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#z-gb)" filter="url(#z-warp)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#z-ga)" filter="url(#z-warp)"/>
+<rect width="1920" height="1080" fill="#FFFFFF" filter="url(#z-grain)"/>
+</svg>
+<p class="pin side" style="left:1192px; top:118px; width:600px; transform:none; text-align:right">03 · Impacto y futuro</p>
+<div class="pin brand" style="left:260px; top:110px; width:600px">
+<img src="assets/logo-noxml.png" alt="Logo NOx·ML" style="width:44px; height:44px">
+<p class="brand-t">NOx·ML</p>
+</div>
+<h2 class="pin h2 rise" style="left:260px; top:200px; width:1532px; --i:0">riesgos y lo que está en juego</h2>
+<div class="pin cols" style="left:260px; top:380px; width:1532px">
+<div class="col rise" style="--i:1">
+<p class="kicker">Lo que aún no ve</p>
+<ul class="list">
+<li>Cambios de 5–10 % en una sola temporada</li>
+<li>Toneladas exactas: siempre da un rango</li>
+<li>Que nadie lo use: necesita un responsable</li>
+</ul>
+</div>
+<div class="col rise" style="--i:3">
+<p class="kicker">Lo que está en juego</p>
+<ul class="list">
+<li>Decisiones con evidencia, no a merced del clima</li>
+<li>Contingencias atacadas por la causa correcta</li>
+<li>−10 % de emisión del tráfico: cientos de muertes evitadas al año (orden de magnitud)</li>
+</ul>
+</div>
+</div>
+<p class="pin pg" style="left:1592px; top:990px; width:200px">13 / 13</p>
+<div class="pin fragment" data-fragment-index="1" style="left:0px; top:0px; width:1920px; height:1080px; background:#0B1424"></div>
+<svg class="pin fragment" data-fragment-index="1" style="left:0px; top:0px; width:1920px; height:1080px" width="1920" height="1080" viewBox="0 0 1920 1080" aria-label="Brillos azules de cierre">
+<defs>
+<radialGradient id="z-gc" cx="1760" cy="60" r="1725" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8CC8F7"/><stop offset="0.30" stop-color="#5A9EE6"/><stop offset="0.74" stop-color="#24487E" stop-opacity="0.65"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="z-gd" cx="0" cy="1080" r="1350" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5A9EE6" stop-opacity="0.8"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<filter id="z-warp2" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="3" seed="41"/><feDisplacementMap in="SourceGraphic" scale="380" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="z-grain2" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0"/></filter>
+</defs>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#z-gc)" filter="url(#z-warp2)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#z-gd)" filter="url(#z-warp2)"/>
+<rect width="1920" height="1080" fill="#FFFFFF" filter="url(#z-grain2)"/>
+</svg>
+<p class="pin display fragment" data-fragment-index="1" style="left:260px; top:300px; width:1532px; font-size:120px">¿fue el clima o fue la ciudad?</p>
+<p class="pin fin-a fragment" data-fragment-index="1" style="left:260px; top:640px; width:1532px; text-align:left">ahora podemos saberlo.</p>
+<p class="pin meta fragment" data-fragment-index="1" style="left:260px; top:780px; width:800px">Gracias · NOx·ML · Hub de Ciencia de Datos</p>
+<aside>PRESENTADOR 3 (11:00–12:00)
+
+Queremos ser honestos con los límites. Una medida que baje la emisión 5 o 10 % no se nota en una sola temporada, por eso no damos toneladas exactas y siempre publicamos el rango. El otro riesgo es más humano: que nadie lo use; por eso proponemos un responsable y un primer usuario externo antes del sexto mes.
+
+Y lo que está en juego no es menor: una baja de 10 % en las emisiones del tráfico podría evitar, como orden de magnitud, cientos de muertes al año.
+
+(Clic: cierre.) Volvamos a las dos fotos del inicio. Hasta hoy, nadie podía decirles qué cambió entre una y otra. Ahora sí. La pregunta ya no es si podemos saberlo, sino qué vamos a hacer con lo que sabemos. Gracias.</aside>
+</section>
+<!-- ===================== Diapositiva 14 · creditos ===================== -->
+<section id="creditos">
+<svg class="pin" style="left:0px; top:0px; width:1920px; height:1080px" width="1920" height="1080" viewBox="0 0 1920 1080" aria-label="Fondo oscuro con brillos de cielo azul y textura granulada">
+<defs>
+<radialGradient id="q-ga" cx="1920" cy="1080" r="1350" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5A9EE6" stop-opacity="0.75"/><stop offset="0.61" stop-color="#2F5C9E" stop-opacity="0.35"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<radialGradient id="q-gb" cx="0" cy="0" r="1050" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2F5C9E" stop-opacity="0.5"/><stop offset="1" stop-color="#0B1424" stop-opacity="0"/></radialGradient>
+<filter id="q-warp" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="3" seed="23"/><feDisplacementMap in="SourceGraphic" scale="380" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="q-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0"/></filter>
+</defs>
+<rect width="1920" height="1080" fill="#0B1424"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#q-gb)" filter="url(#q-warp)"/>
+<rect x="-300" y="-300" width="2520" height="1680" fill="url(#q-ga)" filter="url(#q-warp)"/>
+<rect width="1920" height="1080" fill="#FFFFFF" filter="url(#q-grain)"/>
+</svg>
+<p class="pin side" style="left:1192px; top:118px; width:600px; transform:none; text-align:right">Créditos</p>
+<div class="pin brand" style="left:260px; top:110px; width:600px">
+<img src="assets/logo-noxml.png" alt="Logo NOx·ML" style="width:44px; height:44px">
+<p class="brand-t">NOx·ML</p>
+</div>
+<h2 class="pin h2 rise" style="left:260px; top:200px; width:1532px; --i:0">fuentes de las fotos</h2>
+<img class="pin frame fade" src="assets/cdmx-dia-limpio.jpg" alt="Ciudad de México en un día despejado" style="left:260px; top:340px; width:484px; height:300px; --i:1">
+<div class="pin rise" style="left:260px; top:668px; width:484px; display:flex; flex-direction:column; gap:6px; --i:2"><p class="kicker" style="color:#9FD3FA">Portada · día limpio</p><p class="h3" style="font-size:34px">Ukaizen</p><p class="lbl">Wikimedia Commons · CC BY-SA 4.0</p></div>
+<img class="pin frame fade" src="assets/cdmx-dia-con-bruma.jpg" alt="Ciudad de México bajo una franja de smog" style="left:784px; top:340px; width:484px; height:300px; --i:2">
+<div class="pin rise" style="left:784px; top:668px; width:484px; display:flex; flex-direction:column; gap:6px; --i:3"><p class="kicker" style="color:#9FD3FA">Portada · día con bruma</p><p class="h3" style="font-size:34px">Fidel Gonzalez</p><p class="lbl">Wikimedia Commons · CC BY-SA 3.0</p></div>
+<img class="pin frame fade" src="assets/avenida-juarez-confinamiento.jpg" alt="Avenida Juárez casi vacía, 6 de abril de 2020" style="left:1308px; top:340px; width:484px; height:300px; --i:3">
+<div class="pin rise" style="left:1308px; top:668px; width:484px; display:flex; flex-direction:column; gap:6px; --i:4"><p class="kicker" style="color:#9FD3FA">Confinamiento</p><p class="h3" style="font-size:34px">EneasMx</p><p class="lbl">Wikimedia Commons · CC BY-SA 4.0</p></div>
+<p class="pin lbl fade" style="left:260px; top:880px; width:1532px; --i:5">La captura del boletín (diapositiva 11) es de la app del proyecto. Mapas, diagramas e íconos: elaboración propia del Equipo 39.</p>
+<aside>Diapositiva de apoyo, no se presenta. Créditos de las fotografías usadas en la presentación.</aside>
+</section>
+</div>
+<div id="notes"></div>
+<div id="counter"></div>
+<script src="visor.js"></script>
+</body>
+</html>
