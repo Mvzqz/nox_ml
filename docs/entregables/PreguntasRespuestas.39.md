@@ -75,13 +75,15 @@ Reglas para responder:
 
 **Responde:** Presentador 2
 
-**Respuesta corta:** Lo probamos con datos que nunca vio. Vio la caída del confinamiento de 2020 (−50 %, justo en el −40 a −60 % que esperaban los expertos), acertó la causa en 49 de 52 episodios reales y, cuando no hubo ningún cambio, no inventó uno.
+**Respuesta corta:** Lo probamos con datos que nunca vio y con cuatro pruebas. Le escondemos una estación y adivina lo que mide 14 % mejor que nuestra línea base. Cuando no hubo ningún cambio, no inventó uno. Su rango de confianza contiene el valor real 91 de cada 100 veces. Y vio la caída del confinamiento de 2020: −50 %, justo en el −40 a −60 % que esperaban los expertos.
 
 **Respaldo:**
 
-- Prueba de "cambio falso" (placebo): 0.95–1.11, con 1 como ideal.
-- Su rango de confianza contiene el valor real el 91 % de las veces (meta: 90 %), con 5 % de falsas alarmas.
-- Las veces que culpa a la ciudad de lo que fue el clima bajaron de 18 % a 9 %.
+- **Estación oculta:** escondemos cada una de las 24 estaciones, ajustamos con las demás y predecimos la oculta. Error de 11.7 ppb, frente a 13.6 de la línea base; igual que interpolar (11.6) y, combinado con kriging, el mejor de todos (10.2). La interpolación solo rellena el mapa; nuestro modelo además estima la emisión.
+- **Placebo:** días hábiles sin cambio, partidos al azar en dos grupos falsos. Da 0.95–1.11, con 1 como ideal, en las cuatro temporadas ciegas.
+- **Rango honesto:** en 960 pruebas con cambios conocidos de 0 % y 20 %, el rango contuvo el valor real el 91 % de las veces (meta: 90 %), con 5 % de falsas alarmas.
+- **Episodios:** acertó la causa en 49 de 52 episodios reales.
+- **Si preguntan por el ancho del rango:** que el rango sea honesto no significa que sea angosto. Con solo 9 días, una baja real de 20 % se detecta el 46 % de las veces; con más días o varias temporadas el rango se angosta (con dos temporadas, 78 %).
 
 ### 6. ¿Qué es una PINN y por qué no otra inteligencia artificial?
 
