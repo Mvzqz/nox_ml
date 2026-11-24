@@ -109,7 +109,7 @@ Miren el mapa: una sola bocanada que sale de esta zona se estira con el viento y
 
 **Presentador 2 · 7:25–8:00**
 
-Igual de importante es no inventar cambios. En 52 episodios con causa conocida acertó la causa en 49. Y para saber si de verdad entiende el aire, le escondemos una estación: el modelo no la ve y tiene que adivinar qué mide con las demás. Lo hace 14 % mejor que nuestra línea base, y además nos dice cuánto se emite. Además, nunca da un número solo: siempre lo acompaña de un rango, y ese rango es honesto. Lo probamos con cambios simulados: el valor real cayó dentro del rango 91 de cada 100 veces, justo lo que promete.
+¿Cómo sabemos que podemos confiar en él? Con cuatro pruebas. Primero, que acierte: le escondemos una estación, el modelo no la ve y tiene que adivinar qué mide con las demás. Lo hace 14 % mejor que nuestra línea base, y además nos dice cuánto se emite. Segundo, que no invente: le damos días en los que no pasó nada, los partimos al azar como si fueran una medida, y responde que no cambió nada. Tampoco culpa a quien no es: en 52 periodos con causa conocida, como festivos, vacaciones o semanas muy estancadas o muy ventiladas, no se equivocó de causa en 49. Y por último, nunca da un número solo: siempre lo acompaña de un rango, y ese rango es honesto. Lo probamos con cambios simulados: el valor real cayó dentro del rango 91 de cada 100 veces, justo lo que promete.
 
 Pero un sistema que funciona no sirve de nada si no cambia algo. Y aquí viene lo más interesante: lo que descubrimos al usarlo.
 
