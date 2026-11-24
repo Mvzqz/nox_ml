@@ -12,11 +12,11 @@ Guion de 12 minutos en tres partes, una por presentador. Cada bloque indica la d
 | 2 | por qué importa el NOx | El problema | 1 | 0:45–2:10 |
 | 3 | cómo se mide hoy | El problema | 1 | 2:10–3:10 |
 | 4 | la tina de baño | El problema | 1 | 3:10–4:00 |
-| 5 | tres fuentes, una respuesta | La solución | 2 | 4:00–4:45 |
+| 5 | la solución | La solución | 2 | 4:00–4:45 |
 | 6 | el gemelo del clima | La solución | 2 | 4:45–5:45 |
 | 7 | la pinn: de dónde viene | La solución | 2 | 5:45–6:50 |
-| 8 | el examen: el confinamiento | La solución | 2 | 6:50–7:25 |
-| 9 | no inventa cambios y dice cuánto sabe | La solución | 2 | 7:25–8:00 |
+| 8 | la evaluación: el confinamiento | La solución | 2 | 6:50–7:25 |
+| 9 | acierta, no inventa y dice cuánto sabe | La solución | 2 | 7:25–8:00 |
 | 10 | si quitamos coches, ¿baja el ozono? | Impacto y futuro | 3 | 8:00–9:30 |
 | 11 | qué cambia | Impacto y futuro | 3 | 9:30–10:20 |
 | 12 | posibles mejoras | Impacto y futuro | 3 | 10:20–11:00 |
@@ -77,11 +77,11 @@ Entonces la pregunta es: ¿se puede ver la llave, cada semana, separándola del 
 
 *Parte 2, la solución: separar el clima de la ciudad con estaciones, satélite y una PINN, y probar que funciona.*
 
-### Diapositiva 5 · tres fuentes, una respuesta
+### Diapositiva 5 · la solución
 
 **Presentador 2 · 4:00–4:45**
 
-Gracias. Para ver la llave usamos tres fuentes que ya existen y que cualquiera puede descargar gratis. 24 estaciones que miden el aire a nivel de calle. TEMPO, un satélite de la NASA que desde el espacio toma una foto de la contaminación sobre la ciudad cada hora. Y el clima: viento, lluvia, temperatura. Cada una sola cuenta una parte de la historia; juntas, la cuentan completa.
+Gracias. Para ver la llave usamos tres fuentes que ya existen y que cualquiera puede descargar gratis. 24 estaciones que miden el aire a nivel de calle. TEMPO, un satélite de la NASA que desde el espacio toma una foto de la contaminación sobre la ciudad cada hora. Y el clima: viento, lluvia, temperatura. Cada una sola cuenta una parte de la historia; juntas, la cuentan completa. Todos los días las limpiamos y las pasamos por dos piezas que les voy a mostrar: el gemelo del clima, que dice cuánto cambió la emisión, y la PINN, que dice de dónde viene. Juntas responden la pregunta de cada semana: ¿fue el clima o fue la ciudad?, siempre con su rango.
 
 ### Diapositiva 6 · el gemelo del clima
 
@@ -99,17 +99,17 @@ Saber cuánto cambió no basta; también queremos saber de dónde viene. Para es
 
 Miren el mapa: una sola bocanada que sale de esta zona se estira con el viento y llega a tres estaciones a la vez, cada vez más diluida. Y cada estación, a su vez, recibe humo de varias zonas. Con la PINN seguimos todas esas bocanadas y luego hacemos la pregunta al revés: ¿cuánto tuvo que emitir cada zona para explicar lo que miden las estaciones? Es como deducir qué llave está abierta viendo dónde se moja el piso. Es la opción adecuada porque respeta la física, funciona con pocos datos y no puede hacer trampa copiando la respuesta.
 
-### Diapositiva 8 · el examen: el confinamiento
+### Diapositiva 8 · la evaluación: el confinamiento
 
 **Presentador 2 · 6:50–7:25**
 
 ¿Cómo sabemos que funciona? Le pusimos un examen con la respuesta conocida: el confinamiento de 2020, cuando la ciudad se detuvo. Tiene que ver una caída enorme en la llave. Y la vio: menos 50 %, justo en el rango que esperaban los expertos.
 
-### Diapositiva 9 · no inventa cambios y dice cuánto sabe
+### Diapositiva 9 · acierta, no inventa y dice cuánto sabe
 
 **Presentador 2 · 7:25–8:00**
 
-Igual de importante es no inventar cambios. En 52 episodios con causa conocida acertó la causa en 49, y redujimos a la mitad las veces que se culpa a la ciudad de algo que fue el clima. Además, nunca da un número solo: siempre dice qué tan seguro está.
+Igual de importante es no inventar cambios. En 52 episodios con causa conocida acertó la causa en 49. Y para saber si de verdad entiende el aire, le escondemos una estación: el modelo no la ve y tiene que adivinar qué mide con las demás. Lo hace 14 % mejor que nuestra línea base, y además nos dice cuánto se emite. Además, nunca da un número solo: siempre lo acompaña de un rango, y ese rango es honesto. Lo probamos con cambios simulados: el valor real cayó dentro del rango 91 de cada 100 veces, justo lo que promete.
 
 Pero un sistema que funciona no sirve de nada si no cambia algo. Y aquí viene lo más interesante: lo que descubrimos al usarlo.
 
