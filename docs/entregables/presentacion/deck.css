@@ -1,0 +1,173 @@
+/* Experimento oscuro: azul noche que se abre a cielo despejado (#8CC8F7), textura granulada,
+   títulos grandes en minúsculas (Jost) y texto en Montserrat.
+   Tinta #0B1424 · claro #F5F8FC · texto suave #D5DEEA · verde #7FD15A · verde lima #C9F27A · acento de texto #B6EA7E */
+section { box-sizing: border-box; padding: 0; background: #0B1424; color: #F5F8FC; font-family: 'Montserrat', Arial, sans-serif; font-size: 26px; line-height: 1.4; }
+.pin { position: absolute; margin: 0; }
+
+/* Marco común */
+.vline { background: #7586A2; }
+.side { margin: 0; font-family: 'Montserrat', Arial, sans-serif; font-size: 24px; font-weight: 500; letter-spacing: 4px; text-transform: uppercase; color: #F5F8FC; text-align: center; white-space: nowrap; transform: rotate(90deg); }
+.brand { display: flex; align-items: center; gap: 16px; }
+.brand-t { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 26px; font-weight: 600; letter-spacing: 2px; line-height: 1.05; text-transform: uppercase; color: #F5F8FC; }
+.pg { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 24px; letter-spacing: 3px; color: #D5DEEA; text-align: right; }
+
+/* Tipografía */
+.display { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 112px; font-weight: 600; line-height: 0.95; letter-spacing: -2px; color: #F5F8FC; }
+.h2 { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 88px; font-weight: 600; line-height: 0.95; letter-spacing: -1.5px; color: #F5F8FC; }
+.h3 { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 40px; font-weight: 600; line-height: 1.05; color: #F5F8FC; }
+.body { margin: 0; font-size: 26px; line-height: 1.55; color: #D5DEEA; text-align: justify; }
+.meta { margin: 0; font-size: 24px; letter-spacing: 2px; line-height: 1.4; color: #B6EA7E; }
+.kicker { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 4px; text-transform: uppercase; color: #B6EA7E; }
+
+/* Fotos */
+.frame { box-sizing: border-box; border: 2px solid #DCE6F3; object-fit: cover; }
+.tag { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: #F5F8FC; background: #0B1424; padding: 8px 16px; }
+.credit { margin: 0; font-size: 24px; color: #F5F8FC; text-align: right; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85); }
+
+/* Columnas y chips */
+.cols { display: flex; }
+.col { flex: 1; box-sizing: border-box; padding: 0 40px; border-left: 2px solid #34465F; display: flex; flex-direction: column; gap: 16px; }
+.col .body { text-align: left; }
+.col-n { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 56px; font-weight: 500; line-height: 1; color: #B6EA7E; }
+.chips { display: flex; gap: 20px; }
+.chip { flex: 1; margin: 0; box-sizing: border-box; border: 2px solid #506480; background: rgba(11, 20, 36, 0.35); padding: 14px 20px; display: flex; align-items: center; justify-content: center; gap: 14px; }
+.chip-t { margin: 0; font-size: 26px; font-weight: 600; color: #F5F8FC; }
+.col-top { display: flex; align-items: center; justify-content: flex-start; gap: 20px; }
+.col-top .src-ic { width: 76px; height: 76px; }
+
+/* Cómo se mide hoy */
+.glass { box-sizing: border-box; background: #152038; border: 2px solid #34465F; }
+.inv { display: flex; flex-direction: column; gap: 14px; }
+.inv-row { display: flex; align-items: center; gap: 16px; }
+.inv-op { width: 28px; flex: none; margin: 0; text-align: center; font-family: 'Jost', Arial, sans-serif; font-size: 32px; color: #D5DEEA; }
+.inv-t { margin: 0; font-size: 26px; font-weight: 600; color: #F5F8FC; }
+.inv-t.res { color: #B6EA7E; }
+.yrs { display: flex; justify-content: space-between; }
+.yr { margin: 0; font-size: 24px; font-weight: 600; color: #F5F8FC; }
+.tl { height: 4px; background: linear-gradient(to right, #F5F8FC, #7FD15A); }
+.delay { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 32px; font-weight: 600; color: #B6EA7E; }
+.colhead { margin: 0; font-size: 24px; letter-spacing: 3px; text-transform: uppercase; color: #D5DEEA; text-align: center; }
+.node { box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 12px; border: 2px solid #506480; background: #152038; }
+.node-t { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 30px; font-weight: 600; line-height: 1.1; color: #F5F8FC; }
+.node.good .node-t { color: #A8E6B8; }
+.node.bad .node-t { color: #FF8F8F; }
+.measure { box-sizing: border-box; background: #7FD15A; padding: 24px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+.measure-t { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 36px; font-weight: 600; line-height: 1.05; color: #0B1424; }
+.measure-s { margin: 0; font-size: 24px; color: #12260E; }
+.truth { margin: 0; box-sizing: border-box; background: #F5F8FC; color: #0B1424; font-family: 'Jost', Arial, sans-serif; font-size: 30px; font-weight: 600; line-height: 1.2; padding: 18px 28px; }
+
+/* Tina */
+.num { margin: 0; width: 52px; height: 52px; box-sizing: border-box; font-family: 'Jost', Arial, sans-serif; font-size: 28px; font-weight: 600; line-height: 48px; text-align: center; border: 2px solid #F5F8FC; color: #F5F8FC; }
+.num.fill { background: #7FD15A; border-color: #7FD15A; color: #0B1424; }
+.num.light { background: #F5F8FC; color: #0B1424; }
+.lg-row { display: flex; gap: 20px; align-items: flex-start; }
+.lg-row .num { flex: none; }
+.lg-t { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 34px; font-weight: 600; line-height: 1.1; color: #F5F8FC; }
+.lg-s { margin: 4px 0 0 0; font-size: 24px; line-height: 1.4; color: #D5DEEA; }
+.step { margin: 0; box-sizing: border-box; border-left: 4px solid #F5F8FC; padding: 6px 0 6px 18px; font-family: 'Jost', Arial, sans-serif; font-size: 28px; font-weight: 600; color: #F5F8FC; }
+.step.warn { border-left-color: #7FD15A; color: #B6EA7E; }
+
+/* Fuentes */
+.src-ic { width: 72px; height: 72px; box-sizing: border-box; border: 2px solid #F5F8FC; display: flex; align-items: center; justify-content: center; }
+.src-ic x-icon { width: 40px; height: 40px; color: #F5F8FC; }
+.hub { box-sizing: border-box; background: #7FD15A; display: flex; align-items: center; justify-content: center; }
+.hub-t { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 48px; font-weight: 600; color: #0B1424; }
+.conn { color: #7586A2; border-width: 3px; }
+
+/* Gráficas */
+.note { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 30px; font-weight: 600; line-height: 1.15; color: #D5DEEA; }
+.note.hot { color: #B6EA7E; }
+.legend { display: flex; align-items: center; gap: 18px; }
+.sw { width: 52px; height: 24px; flex: none; }
+.lbl { margin: 0; font-size: 24px; line-height: 1.35; color: #D5DEEA; }
+.pt { margin: 0; font-size: 26px; font-weight: 600; line-height: 1.25; color: #F5F8FC; }
+
+/* PINN */
+.checks { display: flex; flex-direction: column; gap: 22px; }
+.check { display: flex; align-items: center; gap: 18px; }
+.check x-icon { width: 36px; height: 36px; color: #B6EA7E; flex: none; }
+.check-t { margin: 0; font-size: 28px; font-weight: 600; color: #F5F8FC; }
+.zone-t { margin: 0; font-size: 24px; font-weight: 700; color: #0B1424; background: #C9F27A; padding: 6px 14px; }
+.map-t { margin: 0; font-size: 24px; font-weight: 700; color: #F5F8FC; }
+
+/* Cifras grandes */
+.hero { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 200px; font-weight: 600; line-height: 0.9; letter-spacing: -6px; color: #C9F27A; }
+.big { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 72px; font-weight: 600; line-height: 1; letter-spacing: -1px; color: #F5F8FC; }
+
+/* Domingos */
+.cat { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 44px; font-weight: 600; color: #F5F8FC; text-align: center; }
+.bar-nox { box-sizing: border-box; background: #F5F8FC; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 24px; }
+.bar-v { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 72px; font-weight: 600; color: #0B1424; }
+.o3-v { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 72px; font-weight: 600; color: #B6EA7E; text-align: center; }
+.why { box-sizing: border-box; border-left: 2px solid #7586A2; padding-left: 32px; display: flex; flex-direction: column; gap: 18px; }
+
+/* Qué cambia */
+.chg { display: flex; align-items: center; gap: 28px; padding: 26px 0; border-bottom: 2px solid #24324C; }
+.before { width: 360px; flex: none; margin: 0; font-size: 26px; color: #A8B6CC; }
+.chg x-shape { width: 64px; height: 32px; flex: none; background: #7FD15A; }
+.after { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 44px; font-weight: 600; line-height: 1.05; color: #F5F8FC; }
+.pill { margin: 0; display: inline-block; border: 2px solid #B6EA7E; color: #B6EA7E; font-size: 26px; font-weight: 600; padding: 12px 24px; }
+
+/* Riesgos y cierre */
+.list { margin: 0; padding-left: 34px; font-size: 28px; line-height: 1.4; color: #F5F8FC; }
+.list li { margin-top: 14px; }
+.fin-a { margin: 0; font-family: 'Jost', Arial, sans-serif; font-size: 72px; font-weight: 600; color: #C9F27A; text-align: center; }
+
+/* Movimiento */
+.rise { animation: rise 800ms cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 140ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0px); } }
+.fade { animation: fadein 1000ms ease-out both; animation-delay: calc(var(--i, 0) * 140ms); }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+.fragment { opacity: 0; transition: opacity 450ms ease-out; }
+.fragment.visible { opacity: 1; }
+
+/* Legibilidad sobre el cielo claro: un halo oscuro suave detrás del texto suelto */
+.display, .h2, .h3, .body, .meta, .kicker, .pg, .side, .brand-t, .lbl, .note, .lg-t, .lg-s, .list, .after, .before, .col-n, .hero, .big, .fin-a, .o3-v, .cat, .pt, .check-t, .colhead, .step { text-shadow: 0 2px 18px rgba(11, 20, 36, 0.75), 0 0 4px rgba(11, 20, 36, 0.35); }
+.pg, .kicker, .meta, .lbl, .lg-s, .credit { text-shadow: 0 1px 3px rgba(11, 20, 36, 0.9), 0 2px 16px rgba(11, 20, 36, 0.8); }
+.pg { color: #F5F8FC; font-weight: 600; }
+
+/* Acentos por parte: el problema en rojo (#F0604D, texto #FF8F7A); la solución y el impacto en verde */
+#portada .meta, #importa .col-n, #importa .kicker, #hoy .inv-t.res, #hoy .delay, #tina .step.warn { color: #FF8F7A; }
+#hoy .tl { background: linear-gradient(to right, #F5F8FC, #F0604D); }
+#hoy .measure { background: #F0604D; }
+#hoy .measure-s { color: #3A0F0A; }
+#tina .num.fill { background: #F0604D; border-color: #F0604D; }
+#tina .step.warn { border-left-color: #F0604D; }
+
+/* Etiqueta de sección por parte: problema en rojo, solución en verde, impacto y futuro en azul */
+.side { font-weight: 600; text-shadow: 0 1px 3px rgba(11, 20, 36, 0.9), 0 2px 16px rgba(11, 20, 36, 0.8); }
+#importa .side, #hoy .side, #tina .side { color: #FF8F7A; }
+#fuentes .side, #gemelo .side, #pinn .side, #confinamiento .side, #validacion .side { color: #B6EA7E; }
+#domingos .side, #cambia .side, #mejoras .side, #futuro .side { color: #9FD3FA; }
+
+/* Acentos de la parte 3 (impacto y futuro) en azul claro (#5FB4FF, texto #9FD3FA), más brillante que el fondo */
+#domingos .kicker, #domingos .o3-v, #mejoras .kicker, #futuro .kicker, #futuro .meta { color: #9FD3FA; }
+#cambia .chg x-shape { background: #5FB4FF; }
+#cambia .pill { border-color: #9FD3FA; color: #9FD3FA; }
+#futuro .fin-a { color: #BFE3FF; }
+
+/* Gemelo: la línea se dibuja cada vez que aparece la diapositiva */
+.draw { stroke-dasharray: 2400; stroke-dashoffset: 2400; animation: draw 2200ms cubic-bezier(0.4, 0, 0.2, 1) 500ms forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* Tina: ciclo de 14 s. Llave abierta → llave a medias (baja) → desagüe tapado (sube) → todo abierto */
+.tub-water { transform-box: fill-box; transform-origin: 50% 100%; animation: tub-level 14s ease-in-out infinite; }
+@keyframes tub-level { 0%, 18% { transform: scaleY(1); } 38%, 48% { transform: scaleY(0.62); } 72%, 80% { transform: scaleY(1.42); } 96%, 100% { transform: scaleY(1); } }
+.tub-stream { transform-box: fill-box; transform-origin: 50% 0%; animation: tub-stream 14s ease-in-out infinite; }
+@keyframes tub-stream { 0%, 18% { transform: scaleX(1); opacity: 0.9; } 24%, 80% { transform: scaleX(0.3); opacity: 0.75; } 88%, 100% { transform: scaleX(1); opacity: 0.9; } }
+.tub-knob { transform-box: fill-box; transform-origin: 50% 50%; animation: tub-knob 14s ease-in-out infinite; }
+@keyframes tub-knob { 0%, 18% { transform: rotate(0deg); } 24%, 80% { transform: rotate(-70deg); } 88%, 100% { transform: rotate(0deg); } }
+.tub-out { animation: tub-out 14s ease-in-out infinite; }
+@keyframes tub-out { 0%, 48% { opacity: 1; } 52%, 80% { opacity: 0; } 84%, 100% { opacity: 1; } }
+.tub-flow { animation: tub-flow 700ms linear infinite; }
+@keyframes tub-flow { to { stroke-dashoffset: -26; } }
+.tub-clog { opacity: 0; animation: tub-clog 14s ease-in-out infinite; }
+@keyframes tub-clog { 0%, 48% { opacity: 0; } 52%, 80% { opacity: 1; } 84%, 100% { opacity: 0; } }
+.tub-caps { position: absolute; }
+.tub-cap { position: absolute; left: 0; top: 0; width: 100%; margin: 0; opacity: 0; color: #F5F8FC; font-weight: 600; animation: 14s ease-in-out infinite; }
+.tub-cap.c1 { opacity: 1; animation-name: cap1; } .tub-cap.c2 { animation-name: cap2; } .tub-cap.c3 { animation-name: cap3; } .tub-cap.c4 { animation-name: cap4; }
+@keyframes cap1 { 0%, 18% { opacity: 1; } 22%, 100% { opacity: 0; } }
+@keyframes cap2 { 0%, 20% { opacity: 0; } 24%, 46% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes cap3 { 0%, 48% { opacity: 0; } 52%, 78% { opacity: 1; } 82%, 100% { opacity: 0; } }
+@keyframes cap4 { 0%, 80% { opacity: 0; } 84%, 98% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .tub-water, .tub-stream, .tub-knob, .tub-out, .tub-flow, .tub-clog { animation: none; } .tub-clog { opacity: 0; } .tub-cap { animation: none; } .tub-cap.c1 { opacity: 1; } .draw { animation: none; stroke-dashoffset: 0; } }

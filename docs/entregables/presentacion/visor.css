@@ -1,0 +1,17 @@
+/* Visor de la presentación: muestra una diapositiva de 1920 × 1080 a la vez, escalada a la ventana.
+   El estilo de las diapositivas está en deck.css; este archivo solo controla el visor. */
+html, body { margin: 0; height: 100%; background: #05080F; overflow: hidden; }
+#stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: 0 0; }
+#stage > section { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; display: none; isolation: isolate; }
+#stage > section.current { display: block; }
+#stage > section > aside { display: none; }
+p, h1, h2, h3, li { overflow-wrap: break-word; }
+h1, h2, h3 { font-weight: 600; }
+x-icon { display: inline-flex; } x-icon svg { width: 100%; height: 100%; }
+x-shape { display: block; }
+x-shape[kind="arrow-right"] { clip-path: polygon(0 32%, 62% 32%, 62% 0, 100% 50%, 62% 100%, 62% 68%, 0 68%); }
+#notes { position: fixed; left: 0; right: 0; bottom: 0; max-height: 40%; overflow: auto; background: rgba(5, 8, 15, 0.94); color: #F5F8FC;
+  font: 18px/1.5 Montserrat, Arial, sans-serif; padding: 18px 28px; white-space: pre-wrap; display: none; border-top: 2px solid #34465F; }
+body.show-notes #notes { display: block; }
+#counter { position: fixed; right: 14px; bottom: 10px; color: #7586A2; font: 14px Montserrat, Arial, sans-serif; }
+body.show-notes #counter { display: none; }
